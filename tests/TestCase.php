@@ -4,9 +4,20 @@ namespace Tests;
 
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Testing\TestResponse;
+use Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful;
+use Tests\Support\InteractsWithAuth;
 
 abstract class TestCase extends BaseTestCase
 {
+    use InteractsWithAuth;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config(['sanctum.stateful' => []]);
+        $this->withoutMiddleware(EnsureFrontendRequestsAreStateful::class);
+    }
     protected function assertApiSuccess(TestResponse $response, int $status = 200): TestResponse
     {
         return $response
