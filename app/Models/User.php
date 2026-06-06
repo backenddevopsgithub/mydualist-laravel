@@ -8,6 +8,7 @@ use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -22,6 +23,8 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     protected $fillable = [
         'name',
+        'first_name',
+        'last_name',
         'email',
         'password',
         'role',
@@ -63,6 +66,22 @@ class User extends Authenticatable implements MustVerifyEmail
     public function isActive(): bool
     {
         return $this->status === UserStatus::Active;
+    }
+
+    /**
+     * @return HasMany<DuaList, $this>
+     */
+    public function duaLists(): HasMany
+    {
+        return $this->hasMany(DuaList::class);
+    }
+
+    /**
+     * @return HasMany<DuaSubmission, $this>
+     */
+    public function duaSubmissions(): HasMany
+    {
+        return $this->hasMany(DuaSubmission::class);
     }
 
     public function sendEmailVerificationNotification(): void

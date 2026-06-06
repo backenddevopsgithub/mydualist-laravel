@@ -19,7 +19,7 @@ class RegisterUserAction extends Action
     }
 
     /**
-     * @param  array{name: string, email: string, password: string, device_name?: string|null}  $data
+     * @param  array{name?: string, first_name?: string, last_name?: string, email: string, password: string, device_name?: string|null}  $data
      */
     public function handle(mixed ...$args): mixed
     {
@@ -27,7 +27,9 @@ class RegisterUserAction extends Action
 
         return DB::transaction(function () use ($data) {
             $user = User::query()->create([
-                'name' => $data['name'],
+                'name' => $data['name'] ?? trim(($data['first_name'] ?? '').' '.($data['last_name'] ?? '')),
+                'first_name' => $data['first_name'] ?? null,
+                'last_name' => $data['last_name'] ?? null,
                 'email' => $data['email'],
                 'password' => $data['password'],
                 'role' => UserRole::User,
