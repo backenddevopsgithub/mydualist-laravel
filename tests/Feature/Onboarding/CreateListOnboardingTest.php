@@ -139,7 +139,7 @@ test('onboarding completes end to end and creates first list', function () {
 
     $this->post('/create-list/verify', [
         'code' => str_split($code),
-    ])->assertRedirect(route('onboarding.show', 'success'));
+    ])->assertRedirect(route('dashboard'));
 
     $duaList = DuaList::query()->firstOrFail();
 
@@ -148,11 +148,6 @@ test('onboarding completes end to end and creates first list', function () {
         ->and($duaList->cover_image_path)->toBe($path)
         ->and($duaList->slug)->toBe("arsalan-hajj-{$duaList->id}")
         ->and($duaList->user->email)->toBe('creator@example.com');
-
-    $this->get('/create-list/success')
-        ->assertOk()
-        ->assertSee('Your List is Ready!')
-        ->assertSee(route('dashboard'));
 
     $this->get('/dashboard')
         ->assertOk()
@@ -203,7 +198,5 @@ test('logged in homepage header shows dashboard without create list cta', functi
 
     $this->actingAs($user)
         ->get('/')
-        ->assertOk()
-        ->assertSee('Dashboard')
-        ->assertDontSee('Create My List');
+        ->assertRedirect(route('dashboard'));
 });

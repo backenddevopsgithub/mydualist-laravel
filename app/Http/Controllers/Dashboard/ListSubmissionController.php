@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Dashboard;
 
-use App\Domains\Submissions\Actions\DeleteDuaSubmissionAction;
+use App\Domains\Billing\Services\UserEntitlementService;
 use App\Domains\Submissions\Actions\TransitionDuaSubmissionStatusAction;
 use App\Enums\DuaSubmissionStatus;
 use App\Http\Controllers\Controller;
@@ -15,9 +15,15 @@ use Illuminate\View\View;
 
 class ListSubmissionController extends Controller
 {
+    public function __construct(
+        private readonly UserEntitlementService $entitlements,
+    ) {
+    }
+
     public function index(Request $request, DuaList $duaList): View
     {
         $this->authorizeOwner($duaList);
+        $user = Auth::user();
 
         $status = $request->string('status')->toString() ?: DuaSubmissionStatus::Pending->value;
         $search = trim($request->string('search')->toString());
@@ -35,15 +41,24 @@ class ListSubmissionController extends Controller
                 });
             });
 
+        $paginatedSubmissions = $query->paginate(15)->withQueryString();
+        $hasPremium = $this->entitlements->hasPremium($user);
+
         return view('dashboard.lists.submissions', [
-            'user' => Auth::user(),
+            'user' => $user,
             'duaList' => $duaList->loadCount([
                 'submissions as submissions_count',
                 'submissions as completed_submissions_count' => fn ($query) => $query->where('status', DuaSubmissionStatus::Completed->value),
             ]),
-            'submissions' => $query->paginate(15)->withQueryString(),
+            'submissions' => $paginatedSubmissions,
             'currentStatus' => $status,
             'search' => $search,
+            'hasPremium' => $hasPremium,
+            'lockedSubmissionCount' => $this->entitlements->lockedSubmissionCount($user, $duaList),
+            'visibleSubmissionLimit' => $this->entitlements->visibleSubmissionLimit($user, $duaList),
+            'visibleSubmissionIds' => $hasPremium
+                ? $paginatedSubmissions->getCollection()->pluck('id')->all()
+                : $this->entitlements->visibleSubmissionIds($user, $duaList),
             'statusCounts' => [
                 DuaSubmissionStatus::Pending->value => $duaList->submissions()->status(DuaSubmissionStatus::Pending)->count(),
                 DuaSubmissionStatus::Completed->value => $duaList->submissions()->status(DuaSubmissionStatus::Completed)->count(),
@@ -67,7 +82,7 @@ class ListSubmissionController extends Controller
         $this->authorizeSubmission($duaList, $submission);
         $action($submission, DuaSubmissionStatus::Pending);
 
-        return back()->with('status', 'Dua moved back to pending.');
+        return back()->with('status', 'Dua moved back to incomplete.');
     }
 
     public function hide(DuaList $duaList, DuaSubmission $submission, TransitionDuaSubmissionStatusAction $action): RedirectResponse
@@ -83,7 +98,7 @@ class ListSubmissionController extends Controller
         $this->authorizeSubmission($duaList, $submission);
         $action($submission, DuaSubmissionStatus::Pending);
 
-        return back()->with('status', 'Dua restored to pending.');
+        return back()->with('status', 'Dua restored to incomplete.');
     }
 
     public function archive(DuaList $duaList, DuaSubmission $submission, TransitionDuaSubmissionStatusAction $action): RedirectResponse
@@ -97,23 +112,26 @@ class ListSubmissionController extends Controller
     public function report(DuaList $duaList, DuaSubmission $submission, TransitionDuaSubmissionStatusAction $action): RedirectResponse
     {
         $this->authorizeSubmission($duaList, $submission);
+
+        $data = request()->validate([
+            'report_reason' => ['required', 'string', 'in:spam,offensive,duplicate,irrelevant,other'],
+            'report_note' => ['nullable', 'required_if:report_reason,other', 'string', 'max:1000'],
+        ]);
+
         $action($submission, DuaSubmissionStatus::Reported);
+        $submission->forceFill([
+            'report_reason' => $data['report_reason'],
+            'report_note' => $data['report_note'] ?? null,
+        ])->save();
 
         return back()->with('status', 'Dua marked as reported.');
-    }
-
-    public function destroy(DuaList $duaList, DuaSubmission $submission, DeleteDuaSubmissionAction $action): RedirectResponse
-    {
-        $this->authorizeSubmission($duaList, $submission);
-        $action($submission);
-
-        return back()->with('status', 'Dua deleted.');
     }
 
     private function authorizeSubmission(DuaList $duaList, DuaSubmission $submission): void
     {
         $this->authorizeOwner($duaList);
         abort_unless($submission->dua_list_id === $duaList->id, 404);
+        abort_unless($this->entitlements->canViewSubmission(Auth::user(), $submission), 402);
     }
 
     private function authorizeOwner(DuaList $duaList): void

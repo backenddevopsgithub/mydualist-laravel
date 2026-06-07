@@ -16,7 +16,7 @@ class LoginController extends Controller
     public function create(): View|RedirectResponse
     {
         if (Auth::check()) {
-            return redirect()->intended(route('home'));
+            return redirect()->route('dashboard');
         }
 
         return view('auth.login');
@@ -46,6 +46,6 @@ class LoginController extends Controller
         Auth::login($user, (bool) ($credentials['remember'] ?? false));
         $request->session()->regenerate();
 
-        return redirect()->intended(route('home'));
+        return redirect()->intended(route('dashboard'));
     }
 }

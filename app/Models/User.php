@@ -84,6 +84,22 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(DuaSubmission::class);
     }
 
+    /**
+     * @return HasMany<UserEntitlement, $this>
+     */
+    public function entitlements(): HasMany
+    {
+        return $this->hasMany(UserEntitlement::class);
+    }
+
+    /**
+     * @return HasMany<StripePayment, $this>
+     */
+    public function stripePayments(): HasMany
+    {
+        return $this->hasMany(StripePayment::class);
+    }
+
     public function sendEmailVerificationNotification(): void
     {
         $this->notify(new VerifyEmailNotification);

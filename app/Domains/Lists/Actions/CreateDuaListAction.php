@@ -3,12 +3,19 @@
 namespace App\Domains\Lists\Actions;
 
 use App\Actions\Action;
+use App\Domains\Billing\Services\UserEntitlementService;
 use App\Models\DuaList;
 use App\Models\User;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class CreateDuaListAction extends Action
 {
+    public function __construct(
+        private readonly UserEntitlementService $entitlements,
+    ) {
+    }
+
     /**
      * @param  array{title: string, occasion: string, start_date?: string|null, end_date?: string|null, cover_image_path?: string|null}  $data
      */
@@ -17,6 +24,12 @@ class CreateDuaListAction extends Action
         /** @var User $user */
         $user = $args[0];
         $data = $args[1];
+
+        if (! $this->entitlements->canCreateList($user)) {
+            throw ValidationException::withMessages([
+                'billing' => 'You have reached the free list limit. Upgrade to Premium to create unlimited lists.',
+            ]);
+        }
 
         $duaList = DuaList::query()->create([
             'user_id' => $user->id,

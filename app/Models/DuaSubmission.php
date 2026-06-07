@@ -41,6 +41,8 @@ class DuaSubmission extends Model
         'hidden_at',
         'archived_at',
         'reported_at',
+        'report_reason',
+        'report_note',
     ];
 
     /**

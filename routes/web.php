@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\BillingController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\DashboardController;
@@ -8,14 +9,20 @@ use App\Http\Controllers\Dashboard\DuaListController;
 use App\Http\Controllers\Dashboard\ListSubmissionController;
 use App\Http\Controllers\Dashboard\MySubmissionsController;
 use App\Http\Controllers\Dashboard\ProfileController;
+use App\Http\Controllers\Dashboard\SupportController;
 use App\Http\Controllers\Dashboard\UpgradeController;
 use App\Http\Controllers\Onboarding\CreateListOnboardingController;
 use App\Http\Controllers\PublicDuaListController;
 use App\Http\Controllers\PublicDuaSubmissionController;
 use App\Models\DuaList;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
+    if (Auth::check()) {
+        return redirect()->route('dashboard');
+    }
+
     return view('welcome');
 })->name('home');
 
@@ -40,9 +47,16 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/dashboard/profile', [ProfileController::class, 'edit'])->name('dashboard.profile');
     Route::patch('/dashboard/profile', [ProfileController::class, 'update'])->name('dashboard.profile.update');
     Route::patch('/dashboard/profile/password', [ProfileController::class, 'password'])->name('dashboard.profile.password');
+    Route::patch('/dashboard/profile/list-settings', [ProfileController::class, 'listSettings'])->name('dashboard.profile.list-settings');
+    Route::post('/dashboard/profile/list-image', [ProfileController::class, 'listImage'])->name('dashboard.profile.list-image');
+    Route::get('/dashboard/profile/submissions.csv', [ProfileController::class, 'downloadSubmissions'])->name('dashboard.profile.submissions.download');
     Route::post('/logout', [ProfileController::class, 'logout'])->name('logout');
     Route::get('/dashboard/upgrade', UpgradeController::class)->name('dashboard.upgrade');
+    Route::post('/billing/checkout', [BillingController::class, 'checkout'])->name('billing.checkout');
+    Route::get('/billing/success', [BillingController::class, 'success'])->name('billing.success');
     Route::get('/dashboard/my-submissions', MySubmissionsController::class)->name('dashboard.submissions');
+    Route::get('/dashboard/help', [SupportController::class, 'create'])->name('dashboard.support');
+    Route::post('/dashboard/help', [SupportController::class, 'store'])->name('dashboard.support.store');
     Route::get('/dashboard/lists/{duaList}', [ListSubmissionController::class, 'index'])->name('dashboard.lists.show');
     Route::get('/dashboard/lists/{duaList}/edit', [DuaListController::class, 'edit'])->name('dashboard.lists.edit');
     Route::patch('/dashboard/lists/{duaList}', [DuaListController::class, 'update'])->name('dashboard.lists.update');
@@ -55,8 +69,9 @@ Route::middleware('auth')->group(function (): void {
     Route::patch('/dashboard/lists/{duaList}/submissions/{submission}/unhide', [ListSubmissionController::class, 'unhide'])->name('dashboard.submissions.unhide');
     Route::patch('/dashboard/lists/{duaList}/submissions/{submission}/archive', [ListSubmissionController::class, 'archive'])->name('dashboard.submissions.archive');
     Route::patch('/dashboard/lists/{duaList}/submissions/{submission}/report', [ListSubmissionController::class, 'report'])->name('dashboard.submissions.report');
-    Route::delete('/dashboard/lists/{duaList}/submissions/{submission}', [ListSubmissionController::class, 'destroy'])->name('dashboard.submissions.destroy');
 });
+
+Route::post('/stripe/webhook', [BillingController::class, 'webhook'])->name('stripe.webhook');
 
 Route::get('/lists/{duaList}', function (DuaList $duaList) {
     return redirect()->route('dua-lists.public', $duaList);

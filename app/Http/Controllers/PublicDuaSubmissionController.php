@@ -23,14 +23,19 @@ class PublicDuaSubmissionController extends Controller
             'last_name' => ['nullable', 'string', 'max:60'],
             'email' => ['nullable', 'email', 'max:255'],
             'is_anonymous' => ['nullable', 'boolean'],
-            'content' => ['required', 'string', 'min:3', 'max:1500'],
+            'content' => ['nullable', 'required_without:duas', 'string', 'min:3', 'max:1500'],
+            'duas' => ['nullable', 'array', 'min:1', 'max:35'],
+            'duas.*' => ['required', 'string', 'min:3', 'max:1500'],
             'note' => ['nullable', 'string', 'max:500'],
         ]);
 
-        $action($duaList, $data, $request->user());
+        $submissions = $action($duaList, $data, $request->user());
+        $count = $submissions->count();
 
         return redirect()
             ->route('dua-lists.public', $duaList)
-            ->with('submission_status', 'Your dua request has been submitted.');
+            ->with('submission_status', $count === 1
+                ? 'Your dua request has been submitted.'
+                : "Your {$count} dua requests have been submitted.");
     }
 }

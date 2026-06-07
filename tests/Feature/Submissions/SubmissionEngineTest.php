@@ -63,6 +63,53 @@ test('public submission supports anonymous requests and validates content', func
         ->and($submission->displayName())->toBe('Anonymous');
 });
 
+test('public visitor can submit multiple dua requests in one form', function () {
+    $duaList = DuaList::factory()->create([
+        'status' => DuaList::STATUS_ACTIVE,
+        'end_date' => now()->addMonth(),
+        'published_at' => now(),
+    ]);
+
+    $this->get(route('dua-lists.public', $duaList))
+        ->assertOk()
+        ->assertSee('+ Add Another Dua')
+        ->assertSee('Add up to 35 duas');
+
+    $this->post(route('dua-lists.submissions.store', $duaList), [
+        'first_name' => 'Amina',
+        'last_name' => 'Khan',
+        'email' => 'amina@example.com',
+        'duas' => [
+            'Please make dua for my family.',
+            'Please make dua for ease in my exams.',
+            'Please make dua for our health.',
+        ],
+    ])->assertRedirect(route('dua-lists.public', $duaList));
+
+    expect(DuaSubmission::query()->where('dua_list_id', $duaList->id)->count())->toBe(3);
+
+    $this->assertDatabaseHas('dua_submissions', [
+        'dua_list_id' => $duaList->id,
+        'email' => 'amina@example.com',
+        'content' => 'Please make dua for ease in my exams.',
+    ]);
+});
+
+test('public submission validates maximum batch size', function () {
+    $duaList = DuaList::factory()->create([
+        'status' => DuaList::STATUS_ACTIVE,
+        'end_date' => now()->addMonth(),
+        'published_at' => now(),
+    ]);
+
+    $this->from(route('dua-lists.public', $duaList))
+        ->post(route('dua-lists.submissions.store', $duaList), [
+            'duas' => array_fill(0, 36, 'Please make dua for us.'),
+        ])
+        ->assertRedirect(route('dua-lists.public', $duaList))
+        ->assertSessionHasErrors('duas');
+});
+
 test('closed archived and expired lists reject public submissions gracefully', function () {
     $archived = DuaList::factory()->create([
         'status' => DuaList::STATUS_ARCHIVED,
@@ -78,7 +125,7 @@ test('closed archived and expired lists reject public submissions gracefully', f
     $this->get(route('dua-lists.public', $archived))
         ->assertOk()
         ->assertSee('Submissions Closed')
-        ->assertSee('not accepting new dua requests');
+        ->assertSee('is not accepting any more duas');
 
     $this->from(route('dua-lists.public', $archived))
         ->post(route('dua-lists.submissions.store', $archived), [
@@ -102,7 +149,7 @@ test('per email submission limit is enforced per list', function () {
         'published_at' => now(),
     ]);
 
-    DuaSubmission::factory()->count(3)->create([
+    DuaSubmission::factory()->count(35)->create([
         'dua_list_id' => $duaList->id,
         'email' => 'same@example.com',
     ]);
@@ -175,16 +222,17 @@ test('owner workspace supports filtering search pagination and status transition
 
     $this->actingAs($owner)
         ->patch(route('dashboard.submissions.report', [$duaList, $submission]))
+        ->assertSessionHasErrors('report_reason');
+
+    $this->actingAs($owner)
+        ->patch(route('dashboard.submissions.report', [$duaList, $submission]), [
+            'report_reason' => 'spam',
+        ])
         ->assertRedirect();
 
     expect($submission->refresh()->status)->toBe(DuaSubmissionStatus::Reported)
-        ->and($submission->reported_at)->not->toBeNull();
-
-    $this->actingAs($owner)
-        ->delete(route('dashboard.submissions.destroy', [$duaList, $submission]))
-        ->assertRedirect();
-
-    expect(DuaSubmission::query()->whereKey($submission->id)->exists())->toBeFalse();
+        ->and($submission->reported_at)->not->toBeNull()
+        ->and($submission->report_reason)->toBe('spam');
 });
 
 test('users cannot manage submissions for lists they do not own', function () {

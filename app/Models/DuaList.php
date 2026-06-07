@@ -31,6 +31,9 @@ class DuaList extends Model
         'start_date',
         'end_date',
         'cover_image_path',
+        'dua_limit_per_person',
+        'display_order',
+        'email_frequency',
         'status',
         'published_at',
     ];
@@ -43,6 +46,7 @@ class DuaList extends Model
         return [
             'start_date' => 'date',
             'end_date' => 'date',
+            'dua_limit_per_person' => 'integer',
             'published_at' => 'datetime',
         ];
     }
@@ -107,7 +111,7 @@ class DuaList extends Model
     public function closedReason(): ?string
     {
         if ($this->isArchived()) {
-            return 'This list is paused and is not accepting new dua requests right now.';
+            return "{$this->title} is not accepting any more duas.";
         }
 
         if ($this->isExpired()) {

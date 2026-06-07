@@ -16,4 +16,11 @@ return [
         ],
     ],
 
+    'billing' => [
+        'free_list_limit' => 2,
+        'free_visible_submissions_per_list' => 25,
+        'premium_price' => env('MYDUALIST_PREMIUM_PRICE', '11.99'),
+        'premium_currency' => env('MYDUALIST_PREMIUM_CURRENCY', 'usd'),
+    ],
+
 ];

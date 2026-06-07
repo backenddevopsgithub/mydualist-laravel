@@ -2,8 +2,11 @@
 
 use App\Models\DuaList;
 use App\Models\DuaSubmission;
+use App\Models\SupportTicket;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\UploadedFile;
 
 test('authenticated user can view upgraded dashboard experience', function () {
     $user = User::factory()->create([
@@ -122,6 +125,88 @@ test('profile can be updated password can change and user can logout', function 
     $this->assertGuest();
 });
 
+test('profile list settings image upload and csv download work', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+    $duaList = DuaList::factory()->create(['user_id' => $user->id, 'title' => 'Hajj List']);
+    DuaSubmission::factory()->create([
+        'dua_list_id' => $duaList->id,
+        'content' => 'Please make dua for our family.',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard.profile'))
+        ->assertOk()
+        ->assertSee('List Settings')
+        ->assertSee('Profile Settings')
+        ->assertSee('Download Dua Submissions');
+
+    $this->actingAs($user)
+        ->patch(route('dashboard.profile.list-settings'), [
+            'dua_list_id' => $duaList->id,
+            'dua_limit_per_person' => 3,
+            'display_order' => 'person',
+            'email_frequency' => 'daily_summary',
+        ])
+        ->assertRedirect(route('dashboard.profile', ['tab' => 'list-settings']));
+
+    expect($duaList->refresh()->dua_limit_per_person)->toBe(3)
+        ->and($duaList->display_order)->toBe('person')
+        ->and($duaList->email_frequency)->toBe('daily_summary');
+
+    $this->actingAs($user)
+        ->post(route('dashboard.profile.list-image'), [
+            'dua_list_id' => $duaList->id,
+            'cover_image' => UploadedFile::fake()->image('cover.jpg', 1200, 800),
+        ])
+        ->assertRedirect(route('dashboard.profile', ['tab' => 'list-settings']));
+
+    Storage::disk('public')->assertExists($duaList->refresh()->cover_image_path);
+
+    $this->actingAs($user)
+        ->get(route('dashboard.profile.submissions.download', ['dua_list_id' => $duaList->id]))
+        ->assertOk()
+        ->assertHeader('content-type', 'text/csv; charset=utf-8');
+});
+
+test('help and support page stores validated requests', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->create([
+        'first_name' => 'Amina',
+        'last_name' => 'Khan',
+        'email' => 'amina@example.com',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard.support'))
+        ->assertOk()
+        ->assertSee('Reason for Contact')
+        ->assertDontSee('Contact Us');
+
+    $this->actingAs($user)
+        ->post(route('dashboard.support.store'), [
+            'reason' => 'bug',
+            'email' => 'amina@example.com',
+            'first_name' => 'Amina',
+            'surname' => 'Khan',
+            'comments' => 'The page is not loading correctly.',
+            'image' => UploadedFile::fake()->image('bug.png', 800, 600),
+        ])
+        ->assertRedirect(route('dashboard.support'));
+
+    expect(SupportTicket::query()->where('user_id', $user->id)->where('reason', 'bug')->exists())->toBeTrue();
+});
+
+test('authenticated users are redirected away from homepage', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('home'))
+        ->assertRedirect(route('dashboard'));
+});
+
 test('upgrade and my submissions foundations render', function () {
     $user = User::factory()->create();
     $duaList = DuaList::factory()->create(['user_id' => User::factory()->create()->id]);
@@ -136,7 +221,7 @@ test('upgrade and my submissions foundations render', function () {
         ->assertOk()
         ->assertSee('Upgrade Plan')
         ->assertSee('Current Plan: Free')
-        ->assertSee('Payments Coming Soon');
+        ->assertSee('Upgrade with Stripe');
 
     $this->actingAs($user)
         ->get(route('dashboard.submissions'))

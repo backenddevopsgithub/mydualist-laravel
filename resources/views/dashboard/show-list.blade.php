@@ -105,7 +105,26 @@
                                 Write the dua you would like {{ $creatorName }} to remember. Your name is optional, and you can submit anonymously.
                             </p>
 
-                            <form method="POST" action="{{ route('dua-lists.submissions.store', $duaList) }}" class="mt-7 space-y-5">
+                            <form
+                                method="POST"
+                                action="{{ route('dua-lists.submissions.store', $duaList) }}"
+                                class="mt-7 space-y-5"
+                                x-data="{
+                                    maxDuas: 35,
+                                    duas: @js(old('duas', old('content') ? [old('content')] : [''])),
+                                    addDua() {
+                                        if (this.duas.length < this.maxDuas) {
+                                            this.duas.push('');
+                                            this.$nextTick(() => this.$refs.duaBoxes?.querySelector('textarea:last-of-type')?.focus());
+                                        }
+                                    },
+                                    removeDua(index) {
+                                        if (this.duas.length > 1) {
+                                            this.duas.splice(index, 1);
+                                        }
+                                    },
+                                }"
+                            >
                                 @csrf
 
                                 <label class="flex cursor-pointer items-start gap-3 rounded-2xl bg-emerald-50/70 p-4 text-sm font-semibold text-emerald-950 ring-1 ring-emerald-900/10">
@@ -133,8 +152,51 @@
                                 </div>
 
                                 <div>
-                                    <label for="content" class="block text-sm font-bold text-stone-900">Your dua request</label>
-                                    <textarea id="content" name="content" rows="6" placeholder="Write your dua here..." class="mt-2 block w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm leading-7 outline-none transition placeholder:text-stone-400 focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100" required>{{ old('content') }}</textarea>
+                                    <div class="flex items-center justify-between gap-3">
+                                        <div>
+                                            <label class="block text-sm font-bold text-stone-900">Your dua requests</label>
+                                            <p class="mt-1 text-xs font-semibold text-stone-500">Add up to 35 duas before submitting.</p>
+                                        </div>
+                                        <span class="shrink-0 rounded-full bg-emerald-50 px-3 py-1 text-xs font-extrabold text-emerald-800" x-text="`${duas.length}/${maxDuas}`"></span>
+                                    </div>
+
+                                    <div x-ref="duaBoxes" class="mt-3 space-y-3">
+                                        <template x-for="(dua, index) in duas" :key="index">
+                                            <div class="rounded-2xl border border-stone-200 bg-white p-3">
+                                                <div class="mb-2 flex items-center justify-between gap-3">
+                                                    <p class="text-xs font-extrabold uppercase tracking-[0.14em] text-stone-500" x-text="`Dua ${index + 1}`"></p>
+                                                    <button
+                                                        type="button"
+                                                        x-show="duas.length > 1"
+                                                        x-on:click="removeDua(index)"
+                                                        class="rounded-full bg-red-50 px-3 py-1 text-xs font-extrabold text-red-700"
+                                                    >
+                                                        Remove
+                                                    </button>
+                                                </div>
+                                                <textarea
+                                                    name="duas[]"
+                                                    rows="4"
+                                                    x-model="duas[index]"
+                                                    placeholder="Write your dua here..."
+                                                    class="block w-full rounded-xl border border-stone-100 bg-stone-50 px-4 py-3 text-sm leading-7 outline-none transition placeholder:text-stone-400 focus:border-emerald-700 focus:bg-white focus:ring-4 focus:ring-emerald-100"
+                                                    required
+                                                ></textarea>
+                                            </div>
+                                        </template>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        x-on:click="addDua"
+                                        x-bind:disabled="duas.length >= maxDuas"
+                                        class="mt-3 flex w-full items-center justify-center rounded-2xl border border-emerald-900/15 bg-emerald-50 px-5 py-3 text-sm font-extrabold text-emerald-950 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        + Add Another Dua
+                                    </button>
+
+                                    @error('duas') <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p> @enderror
+                                    @error('duas.*') <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p> @enderror
                                     @error('content') <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p> @enderror
                                 </div>
 
@@ -145,7 +207,7 @@
                                 </div>
 
                                 <button type="submit" class="w-full rounded-2xl bg-emerald-900 px-6 py-4 text-sm font-extrabold text-white shadow-sm shadow-emerald-950/20 transition hover:bg-emerald-800">
-                                    Submit Dua Request
+                                    Submit Dua Requests
                                 </button>
                             </form>
                         @else

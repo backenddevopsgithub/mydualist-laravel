@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Onboarding;
 
 use App\Domains\Auth\Actions\RegisterUserAction;
+use App\Domains\Billing\Services\UserEntitlementService;
 use App\Domains\Lists\Actions\CreateDuaListAction;
 use App\Domains\Onboarding\Notifications\OnboardingVerificationCodeNotification;
 use App\Domains\Onboarding\Services\OnboardingState;
@@ -19,11 +20,17 @@ use Illuminate\View\View;
 
 class CreateListOnboardingController extends Controller
 {
-    public function start(OnboardingState $state): RedirectResponse
+    public function start(OnboardingState $state, UserEntitlementService $entitlements): RedirectResponse
     {
         $state->reset();
 
         if (Auth::check()) {
+            if (! $entitlements->canCreateList(Auth::user())) {
+                return redirect()
+                    ->route('dashboard.upgrade')
+                    ->withErrors(['billing' => 'You have reached the free list limit. Upgrade to Premium to create unlimited lists.']);
+            }
+
             $code = (string) random_int(1000, 9999);
             Auth::user()->notify(new OnboardingVerificationCodeNotification($code));
 
@@ -230,7 +237,9 @@ class CreateListOnboardingController extends Controller
             'current_step' => 'success',
         ]);
 
-        return redirect()->route('onboarding.show', 'success');
+        return redirect()
+            ->route('dashboard')
+            ->with('status', 'Your list is ready. Share it to start receiving duas.');
     }
 
     private function guardStep(string $step, OnboardingState $state): ?RedirectResponse

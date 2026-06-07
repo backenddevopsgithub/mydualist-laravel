@@ -40,7 +40,7 @@ test('user can login with frontend session form', function () {
     $this->post('/login', [
         'email' => 'web-login@example.com',
         'password' => 'Password123!',
-    ])->assertRedirect(route('home'));
+    ])->assertRedirect(route('dashboard'));
 
     $this->assertAuthenticatedAs($user);
 });

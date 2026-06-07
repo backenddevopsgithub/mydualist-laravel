@@ -7,15 +7,16 @@ use App\Enums\DuaSubmissionStatus;
 use App\Models\DuaList;
 use App\Models\DuaSubmission;
 use App\Models\User;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class CreateDuaSubmissionAction extends Action
 {
-    private const MAX_PER_EMAIL_PER_LIST = 3;
+    private const MAX_PER_EMAIL_PER_LIST = 35;
 
     /**
-     * @param  array{first_name?: string|null, last_name?: string|null, email?: string|null, content: string, note?: string|null, is_anonymous?: bool}  $data
+     * @param  array{first_name?: string|null, last_name?: string|null, email?: string|null, content?: string, duas?: array<int, string>, note?: string|null, is_anonymous?: bool}  $data
      */
     public function handle(mixed ...$args): mixed
     {
@@ -25,7 +26,7 @@ class CreateDuaSubmissionAction extends Action
         /** @var User|null $user */
         $user = $args[2] ?? null;
 
-        return DB::transaction(function () use ($duaList, $data, $user): DuaSubmission {
+        return DB::transaction(function () use ($duaList, $data, $user): Collection {
             /** @var DuaList $lockedList */
             $lockedList = DuaList::query()
                 ->whereKey($duaList->id)
@@ -35,31 +36,49 @@ class CreateDuaSubmissionAction extends Action
             abort_unless($lockedList->acceptsSubmissions(), 403, $lockedList->closedReason() ?? 'This list is not accepting submissions.');
 
             $email = isset($data['email']) ? mb_strtolower((string) $data['email']) : null;
+            $contents = $this->contents($data);
 
             if ($email) {
+                $limit = $lockedList->dua_limit_per_person ?: self::MAX_PER_EMAIL_PER_LIST;
                 $submittedCount = DuaSubmission::query()
                     ->where('dua_list_id', $lockedList->id)
                     ->where('email', $email)
                     ->count();
 
-                if ($submittedCount >= self::MAX_PER_EMAIL_PER_LIST) {
+                if ($submittedCount + count($contents) > $limit) {
                     throw ValidationException::withMessages([
                         'email' => 'You have reached the submission limit for this list.',
                     ]);
                 }
             }
 
-            return DuaSubmission::query()->create([
-                'dua_list_id' => $lockedList->id,
-                'user_id' => $user?->id,
-                'first_name' => $data['is_anonymous'] ?? false ? null : ($data['first_name'] ?? null),
-                'last_name' => $data['is_anonymous'] ?? false ? null : ($data['last_name'] ?? null),
-                'email' => $email,
-                'is_anonymous' => (bool) ($data['is_anonymous'] ?? false),
-                'content' => $data['content'],
-                'note' => $data['note'] ?? null,
-                'status' => DuaSubmissionStatus::Pending,
-            ]);
+            return collect($contents)
+                ->map(fn (string $content): DuaSubmission => DuaSubmission::query()->create([
+                    'dua_list_id' => $lockedList->id,
+                    'user_id' => $user?->id,
+                    'first_name' => $data['is_anonymous'] ?? false ? null : ($data['first_name'] ?? null),
+                    'last_name' => $data['is_anonymous'] ?? false ? null : ($data['last_name'] ?? null),
+                    'email' => $email,
+                    'is_anonymous' => (bool) ($data['is_anonymous'] ?? false),
+                    'content' => $content,
+                    'note' => $data['note'] ?? null,
+                    'status' => DuaSubmissionStatus::Pending,
+                ]));
         });
+    }
+
+    /**
+     * @param  array{content?: string, duas?: array<int, string>}  $data
+     * @return list<string>
+     */
+    private function contents(array $data): array
+    {
+        $contents = $data['duas'] ?? [$data['content'] ?? ''];
+
+        return collect($contents)
+            ->map(fn (mixed $content): string => trim((string) $content))
+            ->filter()
+            ->values()
+            ->all();
     }
 }
