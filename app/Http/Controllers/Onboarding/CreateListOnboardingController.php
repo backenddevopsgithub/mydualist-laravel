@@ -31,14 +31,19 @@ class CreateListOnboardingController extends Controller
                     ->withErrors(['billing' => 'You have reached the free list limit. Upgrade to Premium to create unlimited lists.']);
             }
 
-            $code = (string) random_int(1000, 9999);
-            Auth::user()->notify(new OnboardingVerificationCodeNotification($code));
-
-            $state->merge([
+            $data = [
                 'user_id' => Auth::id(),
-                'verification_code' => $code,
                 'current_step' => 'list',
-            ]);
+                'requires_verification' => ! Auth::user()->hasVerifiedEmail(),
+            ];
+
+            if ($data['requires_verification']) {
+                $code = (string) random_int(1000, 9999);
+                Auth::user()->notify(new OnboardingVerificationCodeNotification($code));
+                $data['verification_code'] = $code;
+            }
+
+            $state->merge($data);
 
             return redirect()->route('onboarding.show', 'list');
         }
@@ -94,7 +99,7 @@ class CreateListOnboardingController extends Controller
             'list' => $this->storeList($request, $state),
             'category' => $this->storeCategory($request, $state),
             'dates' => $this->storeDates($request, $state),
-            'image' => $this->storeImage($request, $state),
+            'image' => $this->storeImage($request, $state, $createDuaList),
             'verify' => $this->storeVerification($request, $state, $createDuaList),
             default => redirect()->route('onboarding.show', $state->currentStep()),
         };
@@ -178,10 +183,10 @@ class CreateListOnboardingController extends Controller
         return redirect()->route('onboarding.show', 'image');
     }
 
-    private function storeImage(Request $request, OnboardingState $state): RedirectResponse
+    private function storeImage(Request $request, OnboardingState $state, CreateDuaListAction $createDuaList): RedirectResponse
     {
         $data = $request->validate([
-            'cover_image' => ['nullable', 'image', 'max:2048'],
+            'cover_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'extensions:jpg,jpeg,png,webp', 'max:2048'],
         ]);
 
         $path = $state->get('image.cover_image_path');
@@ -196,8 +201,20 @@ class CreateListOnboardingController extends Controller
 
         $state->merge([
             'image' => ['cover_image_path' => $path],
-            'current_step' => 'verify',
+            'current_step' => $state->get('requires_verification', true) ? 'verify' : 'success',
         ]);
+
+        if (! $state->get('requires_verification', true)) {
+            $duaList = $this->createListFromState($state, $createDuaList);
+
+            $state->merge([
+                'dua_list_id' => $duaList->id,
+            ]);
+
+            return redirect()
+                ->route('dashboard')
+                ->with('status', 'Your list is ready. Share it to start receiving duas.');
+        }
 
         return redirect()->route('onboarding.show', 'verify');
     }
@@ -217,19 +234,11 @@ class CreateListOnboardingController extends Controller
                 ->withInput();
         }
 
-        User::query()
-            ->whereKey($state->get('user_id'))
-            ->update(['email_verified_at' => now()]);
-
         $user = User::query()->findOrFail($state->get('user_id'));
+        $user->forceFill(['email_verified_at' => now()])->save();
+        Auth::login($user);
 
-        $duaList = $createDuaList($user, [
-            'title' => $state->get('list.title'),
-            'occasion' => $state->get('category.occasion'),
-            'start_date' => $state->get('dates.start_date'),
-            'end_date' => $state->get('dates.end_date'),
-            'cover_image_path' => $state->get('image.cover_image_path'),
-        ]);
+        $duaList = $this->createListFromState($state, $createDuaList);
 
         $state->merge([
             'verified' => true,
@@ -269,6 +278,10 @@ class CreateListOnboardingController extends Controller
             return redirect()->route('onboarding.show', $state->currentStep());
         }
 
+        if ($step === 'verify' && ! $state->get('requires_verification', true)) {
+            return redirect()->route('dashboard');
+        }
+
         return null;
     }
 
@@ -289,5 +302,18 @@ class CreateListOnboardingController extends Controller
         }
 
         return DuaList::query()->find($id);
+    }
+
+    private function createListFromState(OnboardingState $state, CreateDuaListAction $createDuaList): DuaList
+    {
+        $user = User::query()->findOrFail($state->get('user_id'));
+
+        return $createDuaList($user, [
+            'title' => $state->get('list.title'),
+            'occasion' => $state->get('category.occasion'),
+            'start_date' => $state->get('dates.start_date'),
+            'end_date' => $state->get('dates.end_date'),
+            'cover_image_path' => $state->get('image.cover_image_path'),
+        ]);
     }
 }

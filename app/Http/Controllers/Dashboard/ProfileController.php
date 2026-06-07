@@ -92,7 +92,7 @@ class ProfileController extends Controller
     {
         $data = $request->validate([
             'dua_list_id' => ['required', Rule::exists('dua_lists', 'id')->where('user_id', Auth::id())],
-            'cover_image' => ['required', 'image', 'max:2048'],
+            'cover_image' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'extensions:jpg,jpeg,png,webp', 'max:2048'],
         ]);
 
         $duaList = DuaList::query()

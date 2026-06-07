@@ -59,7 +59,7 @@ test('free users see locked cards after the first twenty five submissions', func
 
     $this->actingAs($owner)
         ->patch(route('dashboard.submissions.complete', [$duaList, $locked]))
-        ->assertStatus(402);
+        ->assertForbidden();
 });
 
 test('premium users can view and manage all submissions', function () {

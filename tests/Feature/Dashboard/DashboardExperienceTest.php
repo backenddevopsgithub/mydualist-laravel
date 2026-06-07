@@ -33,6 +33,7 @@ test('authenticated user can view upgraded dashboard experience', function () {
         ->assertSee('Completed Duas')
         ->assertSee('Hajj 2027')
         ->assertSee('Copy')
+        ->assertSee(route('dashboard.lists.show', DuaList::query()->where('slug', 'arsalan-hajj-1001')->first()), false)
         ->assertSee('Dashboard')
         ->assertSee('Profile');
 });
@@ -249,6 +250,8 @@ test('public dua list renders from root slug and old list route redirects', func
         ->assertSee('Hajj 2027')
         ->assertSee('Arsalan Test is collecting dua requests')
         ->assertSee('Submit a Dua Request')
+        ->assertSee(route('dua-lists.submissions.store', $duaList), false)
+        ->assertSee('+ Add Another Dua')
         ->assertSee('Copy Share Link');
 
     $this->get('/lists/'.$duaList->slug)

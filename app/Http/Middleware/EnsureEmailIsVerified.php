@@ -19,6 +19,12 @@ class EnsureEmailIsVerified
             || ($request->user() instanceof MustVerifyEmail
                 && ! $request->user()->hasVerifiedEmail())
         ) {
+            if (! $request->expectsJson() && ! $request->is('api/*')) {
+                return redirect()
+                    ->route('onboarding.start')
+                    ->withErrors(['email' => 'Please verify your email before accessing your dashboard.']);
+            }
+
             return response()->json([
                 'message' => 'Your email address is not verified.',
                 'error_code' => 'email_not_verified',

@@ -37,6 +37,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->middleware([
                 'web',
+                'throttle:admin-login',
                 AuthenticateSession::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,

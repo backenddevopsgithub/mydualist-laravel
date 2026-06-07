@@ -6,6 +6,8 @@ use App\Domains\Auth\Notifications\ResetPasswordNotification;
 use App\Domains\Auth\Notifications\VerifyEmailNotification;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -13,7 +15,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-class User extends Authenticatable implements MustVerifyEmail
+class User extends Authenticatable implements FilamentUser, MustVerifyEmail
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
@@ -66,6 +68,13 @@ class User extends Authenticatable implements MustVerifyEmail
     public function isActive(): bool
     {
         return $this->status === UserStatus::Active;
+    }
+
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return $panel->getId() === 'admin'
+            && $this->isAdmin()
+            && $this->isActive();
     }
 
     /**

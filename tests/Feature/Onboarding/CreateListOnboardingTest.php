@@ -154,6 +154,47 @@ test('onboarding completes end to end and creates first list', function () {
         ->assertSee('Hajj 2027');
 });
 
+test('verified logged in user creates another list without otp', function () {
+    Notification::fake();
+    Storage::fake('public');
+
+    $user = User::factory()->create([
+        'first_name' => 'Arsalan',
+        'last_name' => 'Creator',
+    ]);
+
+    DuaList::factory()->create(['user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->get('/create-list')
+        ->assertRedirect(route('onboarding.show', 'list'));
+
+    Notification::assertNothingSent();
+
+    $this->post('/create-list/list', [
+        'title' => 'Umrah 2028',
+    ])->assertRedirect(route('onboarding.show', 'category'));
+
+    $this->post('/create-list/category', [
+        'occasion' => 'umrah',
+    ])->assertRedirect(route('onboarding.show', 'dates'));
+
+    $this->post('/create-list/dates', [
+        'start_date' => '2028-01-01',
+        'end_date' => '2028-01-15',
+    ])->assertRedirect(route('onboarding.show', 'image'));
+
+    $this->post('/create-list/image', [
+        'cover_image' => UploadedFile::fake()->image('cover.jpg', 1200, 800),
+    ])->assertRedirect(route('dashboard'));
+
+    expect(DuaList::query()->where('user_id', $user->id)->count())->toBe(2);
+
+    $createdList = DuaList::query()->where('title', 'Umrah 2028')->firstOrFail();
+
+    expect($createdList->slug)->toBe("arsalan-umrah-{$createdList->id}");
+});
+
 test('onboarding rejects incorrect verification code', function () {
     $user = User::factory()->create();
 

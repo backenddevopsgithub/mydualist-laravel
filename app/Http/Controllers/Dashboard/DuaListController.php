@@ -11,6 +11,7 @@ use App\Models\DuaList;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -18,7 +19,7 @@ class DuaListController extends Controller
 {
     public function edit(DuaList $duaList): View
     {
-        $this->authorizeOwner($duaList);
+        Gate::authorize('update', $duaList);
 
         return view('dashboard.lists.edit', [
             'user' => Auth::user(),
@@ -29,7 +30,7 @@ class DuaListController extends Controller
 
     public function update(Request $request, DuaList $duaList, UpdateDuaListAction $action): RedirectResponse
     {
-        $this->authorizeOwner($duaList);
+        Gate::authorize('update', $duaList);
 
         $data = $request->validate([
             'title' => ['required', 'string', 'max:120'],
@@ -47,7 +48,7 @@ class DuaListController extends Controller
 
     public function archive(DuaList $duaList, ArchiveDuaListAction $action): RedirectResponse
     {
-        $this->authorizeOwner($duaList);
+        Gate::authorize('archive', $duaList);
         $action($duaList);
 
         return redirect()->route('dashboard.archived')->with('status', 'List archived successfully.');
@@ -55,7 +56,7 @@ class DuaListController extends Controller
 
     public function restore(DuaList $duaList, RestoreDuaListAction $action): RedirectResponse
     {
-        $this->authorizeOwner($duaList);
+        Gate::authorize('restore', $duaList);
         $action($duaList);
 
         return redirect()->route('dashboard')->with('status', 'List restored successfully.');
@@ -63,15 +64,10 @@ class DuaListController extends Controller
 
     public function destroy(DuaList $duaList, DeleteDuaListAction $action): RedirectResponse
     {
-        $this->authorizeOwner($duaList);
+        Gate::authorize('delete', $duaList);
         $action($duaList);
 
         return redirect()->route('dashboard')->with('status', 'List deleted successfully.');
-    }
-
-    private function authorizeOwner(DuaList $duaList): void
-    {
-        abort_unless($duaList->user_id === Auth::id(), 403);
     }
 
     /**

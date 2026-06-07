@@ -28,7 +28,7 @@ class SupportController extends Controller
             'first_name' => ['required', 'string', 'max:60'],
             'surname' => ['required', 'string', 'max:60'],
             'comments' => ['required', 'string', 'min:5', 'max:3000'],
-            'image' => ['nullable', 'image', 'max:4096'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'extensions:jpg,jpeg,png,webp', 'max:4096'],
         ]);
 
         $imagePath = $request->hasFile('image')

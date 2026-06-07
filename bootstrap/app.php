@@ -13,6 +13,7 @@ if (PHP_VERSION_ID >= 80500) {
 }
 
 use App\Exceptions\ApiException;
+use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -29,9 +30,14 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->trustProxies(at: '*');
 
-        $middleware->web(replace: [
-            \Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class => VerifyCsrfToken::class,
-        ]);
+        $middleware->web(
+            append: [
+                SecurityHeaders::class,
+            ],
+            replace: [
+                \Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class => VerifyCsrfToken::class,
+            ],
+        );
 
         // Sanctum stateful middleware applies to API routes only — not Filament/web.
         $middleware->statefulApi();

@@ -9,12 +9,15 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use RuntimeException;
 
 class BillingController extends Controller
 {
     public function checkout(StripeCheckoutService $stripe): RedirectResponse
     {
+        Gate::authorize('start-billing-checkout');
+
         try {
             $session = $stripe->createPremiumCheckout(Auth::user());
         } catch (RuntimeException $exception) {

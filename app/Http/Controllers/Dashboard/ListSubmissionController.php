@@ -11,6 +11,7 @@ use App\Models\DuaSubmission;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
 class ListSubmissionController extends Controller
@@ -22,7 +23,7 @@ class ListSubmissionController extends Controller
 
     public function index(Request $request, DuaList $duaList): View
     {
-        $this->authorizeOwner($duaList);
+        Gate::authorize('viewAny', [DuaSubmission::class, $duaList]);
         $user = Auth::user();
 
         $status = $request->string('status')->toString() ?: DuaSubmissionStatus::Pending->value;
@@ -129,13 +130,8 @@ class ListSubmissionController extends Controller
 
     private function authorizeSubmission(DuaList $duaList, DuaSubmission $submission): void
     {
-        $this->authorizeOwner($duaList);
+        Gate::authorize('view', $duaList);
         abort_unless($submission->dua_list_id === $duaList->id, 404);
-        abort_unless($this->entitlements->canViewSubmission(Auth::user(), $submission), 402);
-    }
-
-    private function authorizeOwner(DuaList $duaList): void
-    {
-        abort_unless($duaList->user_id === Auth::id(), 403);
+        Gate::authorize('manage', $submission);
     }
 }

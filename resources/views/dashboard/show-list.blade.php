@@ -126,6 +126,10 @@
                                 }"
                             >
                                 @csrf
+                                <div class="hidden" aria-hidden="true">
+                                    <label for="website">Website</label>
+                                    <input id="website" name="website" tabindex="-1" autocomplete="off">
+                                </div>
 
                                 <label class="flex cursor-pointer items-start gap-3 rounded-2xl bg-emerald-50/70 p-4 text-sm font-semibold text-emerald-950 ring-1 ring-emerald-900/10">
                                     <input type="checkbox" name="is_anonymous" value="1" @checked(old('is_anonymous')) class="mt-1 h-5 w-5 rounded border-emerald-200 text-emerald-800 focus:ring-emerald-700">
