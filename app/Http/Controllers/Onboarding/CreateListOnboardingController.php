@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Onboarding;
 use App\Domains\Auth\Actions\RegisterUserAction;
 use App\Domains\Billing\Services\UserEntitlementService;
 use App\Domains\Lists\Actions\CreateDuaListAction;
-use App\Domains\Onboarding\Notifications\OnboardingVerificationCodeNotification;
 use App\Domains\Onboarding\Services\OnboardingState;
+use App\Domains\Onboarding\Services\OnboardingVerificationService;
 use App\Http\Controllers\Controller;
 use App\Models\DuaList;
 use App\Models\User;
@@ -16,12 +16,16 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class CreateListOnboardingController extends Controller
 {
-    public function start(OnboardingState $state, UserEntitlementService $entitlements): RedirectResponse
-    {
+    public function start(
+        OnboardingState $state,
+        UserEntitlementService $entitlements,
+        OnboardingVerificationService $verification,
+    ): RedirectResponse {
         $state->reset();
 
         if (Auth::check()) {
@@ -38,8 +42,7 @@ class CreateListOnboardingController extends Controller
             ];
 
             if ($data['requires_verification']) {
-                $code = (string) random_int(1000, 9999);
-                Auth::user()->notify(new OnboardingVerificationCodeNotification($code));
+                $code = $verification->send(Auth::user());
                 $data['verification_code'] = $code;
             }
 
@@ -85,6 +88,7 @@ class CreateListOnboardingController extends Controller
         OnboardingState $state,
         RegisterUserAction $registerUser,
         CreateDuaListAction $createDuaList,
+        OnboardingVerificationService $verification,
     ): RedirectResponse {
         if (! in_array($step, OnboardingState::STEPS, true)) {
             return redirect()->route('onboarding.start');
@@ -95,18 +99,22 @@ class CreateListOnboardingController extends Controller
         }
 
         return match ($step) {
-            'account' => $this->storeAccount($request, $state, $registerUser),
+            'account' => $this->storeAccount($request, $state, $registerUser, $verification),
             'list' => $this->storeList($request, $state),
             'category' => $this->storeCategory($request, $state),
             'dates' => $this->storeDates($request, $state),
             'image' => $this->storeImage($request, $state, $createDuaList),
-            'verify' => $this->storeVerification($request, $state, $createDuaList),
+            'verify' => $this->storeVerification($request, $state, $createDuaList, $verification),
             default => redirect()->route('onboarding.show', $state->currentStep()),
         };
     }
 
-    private function storeAccount(Request $request, OnboardingState $state, RegisterUserAction $registerUser): RedirectResponse
-    {
+    private function storeAccount(
+        Request $request,
+        OnboardingState $state,
+        RegisterUserAction $registerUser,
+        OnboardingVerificationService $verification,
+    ): RedirectResponse {
         $data = $request->validate([
             'first_name' => ['required', 'string', 'max:60'],
             'last_name' => ['required', 'string', 'max:60'],
@@ -128,8 +136,7 @@ class CreateListOnboardingController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
-        $code = (string) random_int(1000, 9999);
-        $user->notify(new OnboardingVerificationCodeNotification($code));
+        $code = $verification->send($user);
 
         $state->merge([
             'user_id' => $user->id,
@@ -219,8 +226,12 @@ class CreateListOnboardingController extends Controller
         return redirect()->route('onboarding.show', 'verify');
     }
 
-    private function storeVerification(Request $request, OnboardingState $state, CreateDuaListAction $createDuaList): RedirectResponse
-    {
+    private function storeVerification(
+        Request $request,
+        OnboardingState $state,
+        CreateDuaListAction $createDuaList,
+        OnboardingVerificationService $verification,
+    ): RedirectResponse {
         $data = $request->validate([
             'code' => ['required', 'array', 'size:4'],
             'code.*' => ['required', 'digits:1'],
@@ -228,14 +239,16 @@ class CreateListOnboardingController extends Controller
 
         $code = implode('', $data['code']);
 
-        if (! hash_equals((string) $state->get('verification_code'), $code)) {
+        $user = User::query()->findOrFail($state->get('user_id'));
+
+        try {
+            $verification->verify($user, $code);
+        } catch (ValidationException) {
             return back()
                 ->withErrors(['code' => 'The verification code is incorrect.'])
                 ->withInput();
         }
 
-        $user = User::query()->findOrFail($state->get('user_id'));
-        $user->forceFill(['email_verified_at' => now()])->save();
         Auth::login($user);
 
         $duaList = $this->createListFromState($state, $createDuaList);

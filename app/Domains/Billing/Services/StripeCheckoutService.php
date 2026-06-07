@@ -14,11 +14,19 @@ class StripeCheckoutService extends Service
     /**
      * @return array{id: string, url: string, amount_total: int|null, currency: string|null}
      */
-    public function createPremiumCheckout(User $user): array
-    {
+    public function createPremiumCheckout(
+        User $user,
+        ?string $successUrl = null,
+        ?string $cancelUrl = null,
+    ): array {
         $client = $this->client();
         $amount = (int) round(((float) config('mydualist.billing.premium_price', '11.99')) * 100);
         $currency = (string) config('mydualist.billing.premium_currency', 'usd');
+
+        $successUrl ??= config('mydualist.billing.checkout_success_url')
+            ?? route('billing.success').'?session_id={CHECKOUT_SESSION_ID}';
+        $cancelUrl ??= config('mydualist.billing.checkout_cancel_url')
+            ?? route('dashboard.upgrade');
 
         $session = $client->checkout->sessions->create([
             'mode' => 'payment',
@@ -40,8 +48,8 @@ class StripeCheckoutService extends Service
                     ],
                 ],
             ]],
-            'success_url' => route('billing.success').'?session_id={CHECKOUT_SESSION_ID}',
-            'cancel_url' => route('dashboard.upgrade'),
+            'success_url' => $successUrl,
+            'cancel_url' => $cancelUrl,
         ]);
 
         return [

@@ -5,6 +5,7 @@ use App\Domains\Onboarding\Services\OnboardingState;
 use App\Models\DuaList;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 
@@ -197,6 +198,8 @@ test('verified logged in user creates another list without otp', function () {
 
 test('onboarding rejects incorrect verification code', function () {
     $user = User::factory()->create();
+
+    Cache::put('onboarding-verify:'.$user->id, '1234');
 
     $this->actingAs($user)
         ->withSession([

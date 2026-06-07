@@ -5,6 +5,7 @@ namespace App\Domains\Auth\Services;
 use App\Domains\Auth\DTOs\AuthTokenData;
 use App\Models\User;
 use App\Services\Service;
+use Illuminate\Database\Eloquent\Collection;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthTokenService extends Service
@@ -37,5 +38,21 @@ class AuthTokenService extends Service
     public function revokeAll(User $user): void
     {
         $user->tokens()->delete();
+    }
+
+    /**
+     * @return Collection<int, PersonalAccessToken>
+     */
+    public function listForUser(User $user): Collection
+    {
+        return $user->tokens()
+            ->latest('last_used_at')
+            ->latest('created_at')
+            ->get();
+    }
+
+    public function revokeById(User $user, int $tokenId): void
+    {
+        $user->tokens()->whereKey($tokenId)->firstOrFail()->delete();
     }
 }

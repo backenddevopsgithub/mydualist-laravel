@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Pagination\AbstractPaginator;
 
 abstract class ApiController extends Controller
 {
@@ -16,6 +18,21 @@ abstract class ApiController extends Controller
             'message' => $message,
             'data' => $data,
         ], $status);
+    }
+
+    /**
+     * @param  class-string<JsonResource>  $resourceClass
+     */
+    protected function paginated(AbstractPaginator $paginator, string $resourceClass, string $message = 'Success'): JsonResponse
+    {
+        $resolved = $resourceClass::collection($paginator)->response()->getData(true);
+
+        return response()->json([
+            'message' => $message,
+            'data' => $resolved['data'] ?? [],
+            'meta' => $resolved['meta'] ?? null,
+            'links' => $resolved['links'] ?? null,
+        ]);
     }
 
     /**

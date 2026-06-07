@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources;
 
+use App\Domains\Lists\Actions\ArchiveDuaListAction;
+use App\Domains\Lists\Actions\RestoreDuaListAction;
 use App\Filament\Resources\DuaListResource\Pages;
 use App\Models\DuaList;
 use App\Models\User;
@@ -107,12 +109,12 @@ class DuaListResource extends Resource
                     ->visible(fn (DuaList $record): bool => $record->isActive())
                     ->color('warning')
                     ->requiresConfirmation()
-                    ->action(fn (DuaList $record) => $record->forceFill(['status' => DuaList::STATUS_ARCHIVED])->save()),
+                    ->action(fn (DuaList $record) => app(ArchiveDuaListAction::class)($record)),
                 Action::make('restore')
                     ->visible(fn (DuaList $record): bool => $record->isArchived())
                     ->color('success')
                     ->requiresConfirmation()
-                    ->action(fn (DuaList $record) => $record->forceFill(['status' => DuaList::STATUS_ACTIVE])->save()),
+                    ->action(fn (DuaList $record) => app(RestoreDuaListAction::class)($record)),
             ]);
     }
 

@@ -3,9 +3,13 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Domains\Billing\Services\UserEntitlementService;
+use App\Domains\Lists\Services\DuaListQueryService;
+use App\Domains\Submissions\Actions\ReportDuaSubmissionAction;
 use App\Domains\Submissions\Actions\TransitionDuaSubmissionStatusAction;
+use App\Domains\Submissions\Services\DuaSubmissionQueryService;
 use App\Enums\DuaSubmissionStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Submissions\ReportSubmissionRequest;
 use App\Models\DuaList;
 use App\Models\DuaSubmission;
 use Illuminate\Http\RedirectResponse;
@@ -18,39 +22,29 @@ class ListSubmissionController extends Controller
 {
     public function __construct(
         private readonly UserEntitlementService $entitlements,
-    ) {
-    }
+    ) {}
 
-    public function index(Request $request, DuaList $duaList): View
-    {
+    public function index(
+        Request $request,
+        DuaList $duaList,
+        DuaListQueryService $lists,
+        DuaSubmissionQueryService $submissions,
+    ): View {
         Gate::authorize('viewAny', [DuaSubmission::class, $duaList]);
         $user = Auth::user();
+        $duaList = $lists->findOwnedForUser($user, $duaList->id);
 
         $status = $request->string('status')->toString() ?: DuaSubmissionStatus::Pending->value;
         $search = trim($request->string('search')->toString());
-
-        $query = $duaList->submissions()
-            ->latest()
-            ->when(in_array($status, DuaSubmissionStatus::values(), true), fn ($query) => $query->where('status', $status))
-            ->when($search !== '', function ($query) use ($search): void {
-                $query->where(function ($query) use ($search): void {
-                    $query
-                        ->where('first_name', 'like', "%{$search}%")
-                        ->orWhere('last_name', 'like', "%{$search}%")
-                        ->orWhere('email', 'like', "%{$search}%")
-                        ->orWhere('content', 'like', "%{$search}%");
-                });
-            });
-
-        $paginatedSubmissions = $query->paginate(15)->withQueryString();
+        $paginatedSubmissions = $submissions->paginateForList($duaList, [
+            'status' => $status,
+            'search' => $search,
+        ], 15);
         $hasPremium = $this->entitlements->hasPremium($user);
 
         return view('dashboard.lists.submissions', [
             'user' => $user,
-            'duaList' => $duaList->loadCount([
-                'submissions as submissions_count',
-                'submissions as completed_submissions_count' => fn ($query) => $query->where('status', DuaSubmissionStatus::Completed->value),
-            ]),
+            'duaList' => $duaList,
             'submissions' => $paginatedSubmissions,
             'currentStatus' => $status,
             'search' => $search,
@@ -60,13 +54,7 @@ class ListSubmissionController extends Controller
             'visibleSubmissionIds' => $hasPremium
                 ? $paginatedSubmissions->getCollection()->pluck('id')->all()
                 : $this->entitlements->visibleSubmissionIds($user, $duaList),
-            'statusCounts' => [
-                DuaSubmissionStatus::Pending->value => $duaList->submissions()->status(DuaSubmissionStatus::Pending)->count(),
-                DuaSubmissionStatus::Completed->value => $duaList->submissions()->status(DuaSubmissionStatus::Completed)->count(),
-                DuaSubmissionStatus::Hidden->value => $duaList->submissions()->status(DuaSubmissionStatus::Hidden)->count(),
-                DuaSubmissionStatus::Archived->value => $duaList->submissions()->status(DuaSubmissionStatus::Archived)->count(),
-                DuaSubmissionStatus::Reported->value => $duaList->submissions()->status(DuaSubmissionStatus::Reported)->count(),
-            ],
+            'statusCounts' => $submissions->statusCounts($duaList),
         ]);
     }
 
@@ -110,20 +98,15 @@ class ListSubmissionController extends Controller
         return back()->with('status', 'Dua archived.');
     }
 
-    public function report(DuaList $duaList, DuaSubmission $submission, TransitionDuaSubmissionStatusAction $action): RedirectResponse
-    {
+    public function report(
+        ReportSubmissionRequest $request,
+        DuaList $duaList,
+        DuaSubmission $submission,
+        ReportDuaSubmissionAction $action,
+    ): RedirectResponse {
         $this->authorizeSubmission($duaList, $submission);
 
-        $data = request()->validate([
-            'report_reason' => ['required', 'string', 'in:spam,offensive,duplicate,irrelevant,other'],
-            'report_note' => ['nullable', 'required_if:report_reason,other', 'string', 'max:1000'],
-        ]);
-
-        $action($submission, DuaSubmissionStatus::Reported);
-        $submission->forceFill([
-            'report_reason' => $data['report_reason'],
-            'report_note' => $data['report_note'] ?? null,
-        ])->save();
+        $action($submission, $request->validated());
 
         return back()->with('status', 'Dua marked as reported.');
     }

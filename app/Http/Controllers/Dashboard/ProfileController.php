@@ -3,148 +3,76 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Domains\Billing\Services\UserEntitlementService;
+use App\Domains\Lists\Services\DuaListQueryService;
+use App\Domains\Profile\Actions\ChangeUserPasswordAction;
+use App\Domains\Profile\Actions\ExportDuaSubmissionsAction;
+use App\Domains\Profile\Actions\UpdateListSettingsAction;
+use App\Domains\Profile\Actions\UpdateUserProfileAction;
+use App\Domains\Profile\Actions\UploadListImageAction;
 use App\Http\Controllers\Controller;
-use App\Models\DuaList;
+use App\Http\Requests\Profile\DownloadSubmissionsRequest;
+use App\Http\Requests\Profile\UpdateListSettingsRequest;
+use App\Http\Requests\Profile\UpdatePasswordRequest;
+use App\Http\Requests\Profile\UpdateProfileRequest;
+use App\Http\Requests\Profile\UploadListImageRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ProfileController extends Controller
 {
-    public function edit(UserEntitlementService $entitlements): View
+    public function edit(UserEntitlementService $entitlements, DuaListQueryService $lists): View
     {
         $user = Auth::user();
 
         return view('dashboard.profile', [
             'user' => $user,
             'currentPlan' => $entitlements->planName($user),
-            'duaLists' => $user->duaLists()->latest()->get(),
+            'duaLists' => $lists->listsForProfile($user),
         ]);
     }
 
-    public function update(Request $request): RedirectResponse
+    public function update(UpdateProfileRequest $request, UpdateUserProfileAction $action): RedirectResponse
     {
-        $user = Auth::user();
-
-        $data = $request->validate([
-            'first_name' => ['required', 'string', 'max:60'],
-            'last_name' => ['required', 'string', 'max:60'],
-            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
-        ]);
-
-        $user->forceFill([
-            'first_name' => $data['first_name'],
-            'last_name' => $data['last_name'],
-            'name' => trim($data['first_name'].' '.$data['last_name']),
-            'email' => $data['email'],
-        ])->save();
+        ($action)($request->user(), $request->validated());
 
         return redirect()->route('dashboard.profile')->with('status', 'Profile updated successfully.');
     }
 
-    public function password(Request $request): RedirectResponse
+    public function password(UpdatePasswordRequest $request, ChangeUserPasswordAction $action): RedirectResponse
     {
-        $data = $request->validate([
-            'current_password' => ['required', 'current_password'],
-            'password' => ['required', 'confirmed', Password::defaults()],
-        ]);
-
-        Auth::user()->forceFill([
-            'password' => Hash::make($data['password']),
-            'wp_password_hash' => null,
-        ])->save();
+        ($action)($request->user(), $request->validated());
 
         return redirect()->route('dashboard.profile')->with('status', 'Password changed successfully.');
     }
 
-    public function listSettings(Request $request): RedirectResponse
+    public function listSettings(UpdateListSettingsRequest $request, UpdateListSettingsAction $action): RedirectResponse
     {
-        $data = $request->validate([
-            'dua_list_id' => ['required', Rule::exists('dua_lists', 'id')->where('user_id', Auth::id())],
-            'dua_limit_per_person' => ['nullable', 'integer', 'between:1,5'],
-            'display_order' => ['required', Rule::in(['date', 'gender', 'person'])],
-            'email_frequency' => ['required', Rule::in(['every_submission', 'daily_summary'])],
-        ]);
-
-        DuaList::query()
-            ->whereKey($data['dua_list_id'])
-            ->where('user_id', Auth::id())
-            ->firstOrFail()
-            ->forceFill([
-                'dua_limit_per_person' => $data['dua_limit_per_person'] ?? null,
-                'display_order' => $data['display_order'],
-                'email_frequency' => $data['email_frequency'],
-            ])
-            ->save();
+        ($action)($request->user(), $request->validated());
 
         return redirect()
             ->route('dashboard.profile', ['tab' => 'list-settings'])
             ->with('status', 'List settings updated successfully.');
     }
 
-    public function listImage(Request $request): RedirectResponse
+    public function listImage(UploadListImageRequest $request, UploadListImageAction $action): RedirectResponse
     {
-        $data = $request->validate([
-            'dua_list_id' => ['required', Rule::exists('dua_lists', 'id')->where('user_id', Auth::id())],
-            'cover_image' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'extensions:jpg,jpeg,png,webp', 'max:2048'],
-        ]);
-
-        $duaList = DuaList::query()
-            ->whereKey($data['dua_list_id'])
-            ->where('user_id', Auth::id())
-            ->firstOrFail();
-
-        if ($duaList->cover_image_path) {
-            Storage::disk('public')->delete($duaList->cover_image_path);
-        }
-
-        $duaList->forceFill([
-            'cover_image_path' => $request->file('cover_image')->store('list-covers', 'public'),
-        ])->save();
+        ($action)($request->user(), $request->validated(), $request->file('cover_image'));
 
         return redirect()
             ->route('dashboard.profile', ['tab' => 'list-settings'])
             ->with('status', 'List image updated successfully.');
     }
 
-    public function downloadSubmissions(Request $request): StreamedResponse
-    {
-        $data = $request->validate([
-            'dua_list_id' => ['required', Rule::exists('dua_lists', 'id')->where('user_id', Auth::id())],
-        ]);
+    public function downloadSubmissions(
+        DownloadSubmissionsRequest $request,
+        ExportDuaSubmissionsAction $action,
+    ): StreamedResponse {
+        $export = ($action)($request->user(), (int) $request->validated('dua_list_id'));
 
-        $duaList = DuaList::query()
-            ->whereKey($data['dua_list_id'])
-            ->where('user_id', Auth::id())
-            ->firstOrFail();
-
-        return response()->streamDownload(function () use ($duaList): void {
-            $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['Name', 'Email', 'Status', 'Dua', 'Note', 'Submitted At']);
-
-            $duaList->submissions()
-                ->oldest()
-                ->chunk(200, function ($submissions) use ($handle): void {
-                    foreach ($submissions as $submission) {
-                        fputcsv($handle, [
-                            $submission->displayName(),
-                            $submission->email,
-                            $submission->status->value,
-                            $submission->content,
-                            $submission->note,
-                            optional($submission->created_at)->toDateTimeString(),
-                        ]);
-                    }
-                });
-
-            fclose($handle);
-        }, 'dua-submissions-'.$duaList->id.'.csv', [
+        return response()->streamDownload($export['callback'], $export['filename'], [
             'Content-Type' => 'text/csv',
         ]);
     }

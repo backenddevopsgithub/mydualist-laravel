@@ -4,39 +4,28 @@ namespace App\Http\Controllers;
 
 use App\Domains\Security\Services\PublicSubmissionSpamGuard;
 use App\Domains\Submissions\Actions\CreateDuaSubmissionAction;
+use App\Http\Requests\Submissions\StorePublicSubmissionRequest;
 use App\Models\DuaList;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
 class PublicDuaSubmissionController extends Controller
 {
     public function store(
-        Request $request,
+        StorePublicSubmissionRequest $request,
         DuaList $duaList,
         CreateDuaSubmissionAction $action,
         PublicSubmissionSpamGuard $spamGuard,
-    ): RedirectResponse
-    {
+    ): RedirectResponse {
         if (! $duaList->acceptsSubmissions()) {
             throw ValidationException::withMessages([
                 'content' => $duaList->closedReason() ?? 'This list is not accepting submissions.',
             ]);
         }
 
-        $data = $request->validate([
-            'first_name' => ['nullable', 'string', 'max:60'],
-            'last_name' => ['nullable', 'string', 'max:60'],
-            'email' => ['nullable', 'email', 'max:255'],
-            'is_anonymous' => ['nullable', 'boolean'],
-            'content' => ['nullable', 'required_without:duas', 'string', 'min:3', 'max:1500'],
-            'duas' => ['nullable', 'array', 'min:1', 'max:35'],
-            'duas.*' => ['required', 'string', 'min:3', 'max:1500'],
-            'note' => ['nullable', 'string', 'max:500'],
-            'website' => ['nullable', 'string', 'max:0'],
-        ]);
+        $data = $request->validated();
 
-        $spamGuard->inspect($request, $duaList, $data);
+        $spamGuard->inspect($duaList, $data, $request->ip());
 
         $submissions = $action($duaList, $data, $request->user());
         $count = $submissions->count();

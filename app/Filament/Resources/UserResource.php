@@ -2,6 +2,10 @@
 
 namespace App\Filament\Resources;
 
+use App\Domains\Auth\Actions\ActivateUserAction;
+use App\Domains\Auth\Actions\ResetEmailVerificationAction;
+use App\Domains\Auth\Actions\SuspendUserAction;
+use App\Domains\Billing\Services\UserEntitlementService;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Filament\Resources\UserResource\Pages;
@@ -87,25 +91,26 @@ class UserResource extends Resource
                 Action::make('activate')
                     ->visible(fn (User $record): bool => $record->status !== UserStatus::Active)
                     ->requiresConfirmation()
-                    ->action(fn (User $record) => $record->forceFill(['status' => UserStatus::Active])->save()),
+                    ->action(fn (User $record) => app(ActivateUserAction::class)($record)),
                 Action::make('suspend')
                     ->visible(fn (User $record): bool => $record->status === UserStatus::Active)
                     ->color('warning')
                     ->requiresConfirmation()
-                    ->action(fn (User $record) => $record->forceFill(['status' => UserStatus::Suspended])->save()),
+                    ->action(fn (User $record) => app(SuspendUserAction::class)($record)),
                 Action::make('grantPremium')
                     ->label('Grant Premium')
                     ->color('success')
                     ->requiresConfirmation()
-                    ->action(fn (User $record) => $record->entitlements()->updateOrCreate(
-                        ['key' => UserEntitlement::KEY_PREMIUM, 'reference' => 'admin-'.$record->id],
-                        ['active' => true, 'source' => 'admin', 'unlocked_at' => now(), 'expires_at' => null],
+                    ->action(fn (User $record) => app(UserEntitlementService::class)->grantPremium(
+                        $record,
+                        'admin',
+                        'admin-'.$record->id,
                     )),
                 Action::make('resetVerification')
                     ->label('Reset Verification')
                     ->color('gray')
                     ->requiresConfirmation()
-                    ->action(fn (User $record) => $record->forceFill(['email_verified_at' => null])->save()),
+                    ->action(fn (User $record) => app(ResetEmailVerificationAction::class)($record)),
             ]);
     }
 

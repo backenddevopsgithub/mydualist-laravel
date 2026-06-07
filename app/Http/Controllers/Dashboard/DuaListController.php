@@ -7,12 +7,12 @@ use App\Domains\Lists\Actions\DeleteDuaListAction;
 use App\Domains\Lists\Actions\RestoreDuaListAction;
 use App\Domains\Lists\Actions\UpdateDuaListAction;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Lists\UpdateListRequest;
 use App\Models\DuaList;
+use App\Support\DuaListOccasions;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class DuaListController extends Controller
@@ -24,22 +24,15 @@ class DuaListController extends Controller
         return view('dashboard.lists.edit', [
             'user' => Auth::user(),
             'duaList' => $duaList,
-            'occasions' => $this->occasions(),
+            'occasions' => DuaListOccasions::labels(),
         ]);
     }
 
-    public function update(Request $request, DuaList $duaList, UpdateDuaListAction $action): RedirectResponse
+    public function update(UpdateListRequest $request, DuaList $duaList, UpdateDuaListAction $action): RedirectResponse
     {
         Gate::authorize('update', $duaList);
 
-        $data = $request->validate([
-            'title' => ['required', 'string', 'max:120'],
-            'occasion' => ['required', 'string', Rule::in(array_keys($this->occasions()))],
-            'start_date' => ['required', 'date'],
-            'end_date' => ['required', 'date', 'after_or_equal:start_date'],
-        ]);
-
-        $action($duaList, $data);
+        $action($duaList, $request->validated());
 
         return redirect()
             ->route($duaList->isArchived() ? 'dashboard.archived' : 'dashboard')
@@ -68,23 +61,5 @@ class DuaListController extends Controller
         $action($duaList);
 
         return redirect()->route('dashboard')->with('status', 'List deleted successfully.');
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    private function occasions(): array
-    {
-        return [
-            'umrah' => 'Umrah',
-            'hajj' => 'Hajj',
-            'ramadan' => 'Ramadan',
-            'safar-travel' => 'Safar / Travel',
-            'wedding' => 'Wedding',
-            'aqiqah' => 'Aqiqah',
-            'tahajjud' => 'Tahajjud',
-            'quran-khatam' => 'Quran Khatam',
-            'other' => 'Other',
-        ];
     }
 }

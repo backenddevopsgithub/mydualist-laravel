@@ -57,4 +57,11 @@ test('auth token service issues and revokes tokens', function () {
     $service->revokeCurrent($user);
 
     expect($user->tokens()->count())->toBe(0);
+
+    $otherDevice = $user->createToken('other-device');
+    expect($user->tokens()->count())->toBe(1);
+
+    $service->revokeById($user, $otherDevice->accessToken->id);
+
+    expect($user->tokens()->count())->toBe(0);
 });

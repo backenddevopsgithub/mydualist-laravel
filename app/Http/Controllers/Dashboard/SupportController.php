@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Dashboard;
 
+use App\Domains\Support\Actions\CreateSupportTicketAction;
 use App\Http\Controllers\Controller;
-use App\Models\SupportTicket;
+use App\Http\Requests\Support\StoreSupportTicketRequest;
+use App\Support\SupportTicketReasons;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class SupportController extends Controller
@@ -16,52 +16,20 @@ class SupportController extends Controller
     {
         return view('dashboard.support', [
             'user' => Auth::user(),
-            'reasons' => $this->reasons(),
+            'reasons' => SupportTicketReasons::labels(),
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreSupportTicketRequest $request, CreateSupportTicketAction $action): RedirectResponse
     {
-        $data = $request->validate([
-            'reason' => ['required', Rule::in(array_keys($this->reasons()))],
-            'email' => ['required', 'email', 'max:255'],
-            'first_name' => ['required', 'string', 'max:60'],
-            'surname' => ['required', 'string', 'max:60'],
-            'comments' => ['required', 'string', 'min:5', 'max:3000'],
-            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'extensions:jpg,jpeg,png,webp', 'max:4096'],
-        ]);
-
-        $imagePath = $request->hasFile('image')
-            ? $request->file('image')->store('support-uploads', 'public')
-            : null;
-
-        SupportTicket::query()->create([
-            'user_id' => Auth::id(),
-            'reason' => $data['reason'],
-            'email' => $data['email'],
-            'first_name' => $data['first_name'],
-            'surname' => $data['surname'],
-            'comments' => $data['comments'],
-            'image_path' => $imagePath,
-        ]);
+        ($action)(
+            $request->user(),
+            $request->safe()->except('image'),
+            $request->file('image'),
+        );
 
         return redirect()
             ->route('dashboard.support')
             ->with('status', 'Thanks. Your support request has been sent.');
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    private function reasons(): array
-    {
-        return [
-            'general' => 'General Feedback and Connect',
-            'bug' => 'Reporting a Bug',
-            'upgrade' => 'Upgrade Not Working',
-            'page' => 'Page Not Loading',
-            'account' => 'Account Settings',
-            'other' => 'Other',
-        ];
     }
 }

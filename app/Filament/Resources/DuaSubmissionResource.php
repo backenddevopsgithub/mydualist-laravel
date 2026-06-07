@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Domains\Submissions\Actions\TransitionDuaSubmissionStatusAction;
 use App\Enums\DuaSubmissionStatus;
 use App\Filament\Resources\DuaSubmissionResource\Pages;
 use App\Models\DuaList;
@@ -91,17 +92,17 @@ class DuaSubmissionResource extends Resource
                     ->label('Complete')
                     ->visible(fn (DuaSubmission $record): bool => $record->status !== DuaSubmissionStatus::Completed)
                     ->color('success')
-                    ->action(fn (DuaSubmission $record) => $record->forceFill(['status' => DuaSubmissionStatus::Completed, 'completed_at' => now()])->save()),
+                    ->action(fn (DuaSubmission $record) => app(TransitionDuaSubmissionStatusAction::class)($record, DuaSubmissionStatus::Completed)),
                 Action::make('hide')
                     ->visible(fn (DuaSubmission $record): bool => $record->status !== DuaSubmissionStatus::Hidden)
                     ->color('warning')
                     ->requiresConfirmation()
-                    ->action(fn (DuaSubmission $record) => $record->forceFill(['status' => DuaSubmissionStatus::Hidden, 'hidden_at' => now()])->save()),
+                    ->action(fn (DuaSubmission $record) => app(TransitionDuaSubmissionStatusAction::class)($record, DuaSubmissionStatus::Hidden)),
                 Action::make('restore')
                     ->visible(fn (DuaSubmission $record): bool => in_array($record->status, [DuaSubmissionStatus::Hidden, DuaSubmissionStatus::Archived, DuaSubmissionStatus::Reported], true))
                     ->color('gray')
                     ->requiresConfirmation()
-                    ->action(fn (DuaSubmission $record) => $record->forceFill(['status' => DuaSubmissionStatus::Pending, 'hidden_at' => null, 'archived_at' => null, 'reported_at' => null])->save()),
+                    ->action(fn (DuaSubmission $record) => app(TransitionDuaSubmissionStatusAction::class)($record, DuaSubmissionStatus::Pending)),
             ])
             ->bulkActions([
                 BulkAction::make('exportCsv')

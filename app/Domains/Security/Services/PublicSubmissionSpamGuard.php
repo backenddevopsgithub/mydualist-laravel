@@ -4,7 +4,6 @@ namespace App\Domains\Security\Services;
 
 use App\Models\DuaList;
 use App\Services\Service;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -16,8 +15,10 @@ class PublicSubmissionSpamGuard extends Service
     /**
      * @param  array{content?: string|null, duas?: array<int, string>|null, website?: string|null}  $data
      */
-    public function inspect(Request $request, DuaList $duaList, array $data): void
+    public function inspect(DuaList $duaList, array $data, ?string $ipAddress = null): void
     {
+        $ipAddress ??= 'unknown';
+
         if (filled($data['website'] ?? null)) {
             throw ValidationException::withMessages([
                 'content' => 'Your dua request could not be submitted. Please try again.',
@@ -41,7 +42,7 @@ class PublicSubmissionSpamGuard extends Service
                 ]);
             }
 
-            $cacheKey = 'public-submission:duplicate:'.sha1($duaList->id.'|'.$request->ip().'|'.$this->normalize($content));
+            $cacheKey = 'public-submission:duplicate:'.sha1($duaList->id.'|'.$ipAddress.'|'.$this->normalize($content));
 
             if (! Cache::add($cacheKey, true, self::DUPLICATE_WINDOW_SECONDS)) {
                 throw ValidationException::withMessages([

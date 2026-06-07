@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\Auth\Login;
 use App\Filament\Widgets\CategoryTrendsChart;
 use App\Filament\Widgets\PlatformStatsOverview;
 use App\Filament\Widgets\RecentSubmissionsTable;
@@ -24,7 +25,7 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            ->login()
+            ->login(Login::class)
             ->authGuard('web')
             ->brandName(config('mydualist.name'))
             ->colors([

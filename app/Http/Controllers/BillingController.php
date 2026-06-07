@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Domains\Billing\Actions\FulfillPremiumCheckoutAction;
+use App\Domains\Billing\Actions\StartPremiumCheckoutAction;
 use App\Domains\Billing\Services\StripeCheckoutService;
-use App\Models\StripePayment;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -14,30 +14,19 @@ use RuntimeException;
 
 class BillingController extends Controller
 {
-    public function checkout(StripeCheckoutService $stripe): RedirectResponse
+    public function checkout(StartPremiumCheckoutAction $action): RedirectResponse
     {
         Gate::authorize('start-billing-checkout');
 
         try {
-            $session = $stripe->createPremiumCheckout(Auth::user());
+            $checkout = $action(Auth::user());
         } catch (RuntimeException $exception) {
             return redirect()
                 ->route('dashboard.upgrade')
                 ->withErrors(['billing' => $exception->getMessage()]);
         }
 
-        StripePayment::query()->updateOrCreate(
-            ['stripe_checkout_session_id' => $session['id']],
-            [
-                'user_id' => Auth::id(),
-                'amount_total' => $session['amount_total'],
-                'currency' => $session['currency'],
-                'status' => StripePayment::STATUS_PENDING,
-                'metadata' => ['entitlement' => 'premium'],
-            ],
-        );
-
-        return redirect()->away($session['url']);
+        return redirect()->away($checkout['session']['url']);
     }
 
     public function success(

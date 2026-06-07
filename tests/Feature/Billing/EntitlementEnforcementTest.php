@@ -98,7 +98,7 @@ test('checkout creates a pending Stripe payment and redirects to Stripe', functi
 
     app()->instance(StripeCheckoutService::class, new class extends StripeCheckoutService
     {
-        public function createPremiumCheckout(User $user): array
+        public function createPremiumCheckout(User $user, ?string $successUrl = null, ?string $cancelUrl = null): array
         {
             return [
                 'id' => 'cs_test_pending',
@@ -157,9 +157,7 @@ test('stripe webhook verifies event and unlocks premium idempotently', function 
 
     app()->instance(StripeCheckoutService::class, new class($user) extends StripeCheckoutService
     {
-        public function __construct(private readonly User $user)
-        {
-        }
+        public function __construct(private readonly User $user) {}
 
         public function constructWebhookEvent(string $payload, string $signature): Event
         {

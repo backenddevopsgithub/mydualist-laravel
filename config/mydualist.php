@@ -21,6 +21,8 @@ return [
         'free_visible_submissions_per_list' => 25,
         'premium_price' => env('MYDUALIST_PREMIUM_PRICE', '11.99'),
         'premium_currency' => env('MYDUALIST_PREMIUM_CURRENCY', 'usd'),
+        'checkout_success_url' => env('MYDUALIST_STRIPE_SUCCESS_URL'),
+        'checkout_cancel_url' => env('MYDUALIST_STRIPE_CANCEL_URL'),
     ],
 
 ];
