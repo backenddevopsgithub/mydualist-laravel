@@ -61,7 +61,7 @@
         </div>
 
         <div class="space-y-3">
-            <a href="{{ route('dashboard.submissions') }}" class="flex w-full items-center justify-center rounded-2xl bg-emerald-50 px-5 py-4 text-sm font-extrabold text-emerald-950 transition hover:bg-emerald-100">
+            <a href="{{ route('dashboard.lists.show', $duaList) }}" class="flex w-full items-center justify-center rounded-2xl bg-emerald-50 px-5 py-4 text-sm font-extrabold text-emerald-950 transition hover:bg-emerald-100">
                 View Submissions
             </a>
 

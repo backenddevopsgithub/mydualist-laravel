@@ -2,18 +2,27 @@
 
 namespace App\Models;
 
+use App\Enums\DuaSubmissionStatus;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class DuaSubmission extends Model
 {
     /** @use HasFactory<\Database\Factories\DuaSubmissionFactory> */
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
-    public const STATUS_PENDING = 'pending';
+    public const STATUS_PENDING = DuaSubmissionStatus::Pending->value;
 
-    public const STATUS_COMPLETED = 'completed';
+    public const STATUS_COMPLETED = DuaSubmissionStatus::Completed->value;
+
+    public const STATUS_HIDDEN = DuaSubmissionStatus::Hidden->value;
+
+    public const STATUS_ARCHIVED = DuaSubmissionStatus::Archived->value;
+
+    public const STATUS_REPORTED = DuaSubmissionStatus::Reported->value;
 
     /**
      * @var list<string>
@@ -24,9 +33,14 @@ class DuaSubmission extends Model
         'first_name',
         'last_name',
         'email',
+        'is_anonymous',
         'content',
+        'note',
         'status',
         'completed_at',
+        'hidden_at',
+        'archived_at',
+        'reported_at',
     ];
 
     /**
@@ -35,7 +49,12 @@ class DuaSubmission extends Model
     protected function casts(): array
     {
         return [
+            'status' => DuaSubmissionStatus::class,
+            'is_anonymous' => 'boolean',
             'completed_at' => 'datetime',
+            'hidden_at' => 'datetime',
+            'archived_at' => 'datetime',
+            'reported_at' => 'datetime',
         ];
     }
 
@@ -53,5 +72,49 @@ class DuaSubmission extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
+    public function scopeVisible(Builder $query): Builder
+    {
+        return $query->whereIn('status', [
+            DuaSubmissionStatus::Pending->value,
+            DuaSubmissionStatus::Completed->value,
+        ]);
+    }
+
+    /**
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
+    public function scopeStatus(Builder $query, DuaSubmissionStatus|string $status): Builder
+    {
+        $value = $status instanceof DuaSubmissionStatus ? $status->value : $status;
+
+        return $query->where('status', $value);
+    }
+
+    public function displayName(): string
+    {
+        if ($this->is_anonymous) {
+            return 'Anonymous';
+        }
+
+        $name = trim((string) $this->first_name.' '.(string) $this->last_name);
+
+        return $name !== '' ? $name : 'Anonymous';
+    }
+
+    public function isCompleted(): bool
+    {
+        return $this->status === DuaSubmissionStatus::Completed;
+    }
+
+    public function isHidden(): bool
+    {
+        return $this->status === DuaSubmissionStatus::Hidden;
     }
 }

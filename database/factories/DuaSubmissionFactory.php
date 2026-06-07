@@ -23,9 +23,14 @@ class DuaSubmissionFactory extends Factory
             'first_name' => fake()->firstName(),
             'last_name' => fake()->lastName(),
             'email' => fake()->safeEmail(),
+            'is_anonymous' => false,
             'content' => fake()->sentence(12),
+            'note' => null,
             'status' => DuaSubmission::STATUS_PENDING,
             'completed_at' => null,
+            'hidden_at' => null,
+            'archived_at' => null,
+            'reported_at' => null,
         ];
     }
 }

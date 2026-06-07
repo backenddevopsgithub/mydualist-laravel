@@ -11,7 +11,7 @@
                             <p class="text-sm font-bold uppercase tracking-[0.14em] text-emerald-700">{{ $submission->duaList->title }}</p>
                             <p class="mt-3 text-base leading-7 text-stone-700">{{ $submission->content }}</p>
                         </div>
-                        <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-extrabold text-emerald-800">{{ Illuminate\Support\Str::headline($submission->status) }}</span>
+                        <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-extrabold text-emerald-800">{{ Illuminate\Support\Str::headline($submission->status->value) }}</span>
                     </div>
                     <p class="mt-4 text-xs font-semibold text-stone-500">Submitted {{ $submission->created_at->diffForHumans() }}</p>
                 </article>

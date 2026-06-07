@@ -69,9 +69,15 @@
                             </div>
 
                             <div class="mt-9 grid gap-3 sm:grid-cols-2">
-                                <a href="#submit-dua" class="inline-flex items-center justify-center rounded-2xl bg-emerald-900 px-6 py-4 text-sm font-extrabold text-white shadow-sm shadow-emerald-950/20 transition hover:bg-emerald-800">
-                                    Submit a Dua Request
-                                </a>
+                                @if ($acceptsSubmissions)
+                                    <a href="#submit-dua" class="inline-flex items-center justify-center rounded-2xl bg-emerald-900 px-6 py-4 text-sm font-extrabold text-white shadow-sm shadow-emerald-950/20 transition hover:bg-emerald-800">
+                                        Submit a Dua Request
+                                    </a>
+                                @else
+                                    <div class="inline-flex items-center justify-center rounded-2xl bg-stone-100 px-6 py-4 text-sm font-extrabold text-stone-600">
+                                        Submissions Closed
+                                    </div>
+                                @endif
                                 <button
                                     type="button"
                                     class="inline-flex items-center justify-center rounded-2xl border border-emerald-950/10 bg-emerald-50 px-6 py-4 text-sm font-extrabold text-emerald-950 transition hover:bg-emerald-100"
@@ -86,10 +92,68 @@
                     </article>
 
                     <section id="submit-dua" class="mx-auto mt-8 max-w-3xl rounded-[2rem] border border-emerald-950/10 bg-white p-6 shadow-[0_22px_70px_rgba(15,23,42,0.06)] sm:p-8">
+                        @if (session('submission_status'))
+                            <div class="mb-6 rounded-2xl bg-emerald-50 px-5 py-4 text-sm font-bold text-emerald-900 ring-1 ring-emerald-900/10">
+                                {{ session('submission_status') }}
+                            </div>
+                        @endif
+
                         <h2 class="text-2xl font-extrabold tracking-tight text-stone-950">Submit a dua request</h2>
-                        <p class="mt-3 text-sm leading-6 text-stone-600">
-                            Request submission will be connected in the next product phase. This page is ready for the public sharing flow.
-                        </p>
+
+                        @if ($acceptsSubmissions)
+                            <p class="mt-3 text-sm leading-6 text-stone-600">
+                                Write the dua you would like {{ $creatorName }} to remember. Your name is optional, and you can submit anonymously.
+                            </p>
+
+                            <form method="POST" action="{{ route('dua-lists.submissions.store', $duaList) }}" class="mt-7 space-y-5">
+                                @csrf
+
+                                <label class="flex cursor-pointer items-start gap-3 rounded-2xl bg-emerald-50/70 p-4 text-sm font-semibold text-emerald-950 ring-1 ring-emerald-900/10">
+                                    <input type="checkbox" name="is_anonymous" value="1" @checked(old('is_anonymous')) class="mt-1 h-5 w-5 rounded border-emerald-200 text-emerald-800 focus:ring-emerald-700">
+                                    Submit anonymously
+                                </label>
+
+                                <div class="grid gap-4 sm:grid-cols-2">
+                                    <div>
+                                        <label for="first_name" class="block text-sm font-bold text-stone-900">First Name <span class="font-medium text-stone-400">(optional)</span></label>
+                                        <input id="first_name" name="first_name" value="{{ old('first_name') }}" placeholder="Your first name" class="mt-2 block w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm outline-none transition placeholder:text-stone-400 focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100">
+                                        @error('first_name') <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p> @enderror
+                                    </div>
+                                    <div>
+                                        <label for="last_name" class="block text-sm font-bold text-stone-900">Last Name <span class="font-medium text-stone-400">(optional)</span></label>
+                                        <input id="last_name" name="last_name" value="{{ old('last_name') }}" placeholder="Your last name" class="mt-2 block w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm outline-none transition placeholder:text-stone-400 focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100">
+                                        @error('last_name') <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p> @enderror
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label for="email" class="block text-sm font-bold text-stone-900">Email <span class="font-medium text-stone-400">(optional, used for your submission limit)</span></label>
+                                    <input id="email" name="email" type="email" value="{{ old('email') }}" placeholder="you@example.com" class="mt-2 block w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm outline-none transition placeholder:text-stone-400 focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100">
+                                    @error('email') <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p> @enderror
+                                </div>
+
+                                <div>
+                                    <label for="content" class="block text-sm font-bold text-stone-900">Your dua request</label>
+                                    <textarea id="content" name="content" rows="6" placeholder="Write your dua here..." class="mt-2 block w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm leading-7 outline-none transition placeholder:text-stone-400 focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100" required>{{ old('content') }}</textarea>
+                                    @error('content') <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p> @enderror
+                                </div>
+
+                                <div>
+                                    <label for="note" class="block text-sm font-bold text-stone-900">Note <span class="font-medium text-stone-400">(optional)</span></label>
+                                    <textarea id="note" name="note" rows="3" placeholder="Anything else you would like to share?" class="mt-2 block w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm leading-7 outline-none transition placeholder:text-stone-400 focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100">{{ old('note') }}</textarea>
+                                    @error('note') <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p> @enderror
+                                </div>
+
+                                <button type="submit" class="w-full rounded-2xl bg-emerald-900 px-6 py-4 text-sm font-extrabold text-white shadow-sm shadow-emerald-950/20 transition hover:bg-emerald-800">
+                                    Submit Dua Request
+                                </button>
+                            </form>
+                        @else
+                            <div class="mt-6 rounded-2xl bg-stone-50 p-5 text-sm leading-7 text-stone-700 ring-1 ring-stone-200">
+                                {{ $closedReason ?? 'This list is not accepting submissions right now.' }}
+                            </div>
+                            <a href="{{ route('onboarding.start') }}" class="mt-6 inline-flex rounded-2xl bg-emerald-900 px-5 py-3 text-sm font-extrabold text-white">Create Your Own List</a>
+                        @endif
                     </section>
                 </div>
             </section>

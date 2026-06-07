@@ -86,6 +86,41 @@ class DuaList extends Model
         return $this->status === self::STATUS_ARCHIVED;
     }
 
+    public function isActive(): bool
+    {
+        return $this->status === self::STATUS_ACTIVE;
+    }
+
+    public function isExpired(): bool
+    {
+        return $this->end_date?->isPast() ?? false;
+    }
+
+    public function acceptsSubmissions(): bool
+    {
+        return $this->isActive()
+            && ! $this->isExpired()
+            && $this->published_at !== null
+            && $this->published_at->lte(now());
+    }
+
+    public function closedReason(): ?string
+    {
+        if ($this->isArchived()) {
+            return 'This list is paused and is not accepting new dua requests right now.';
+        }
+
+        if ($this->isExpired()) {
+            return 'This list has closed and is no longer accepting new dua requests.';
+        }
+
+        if (! $this->published_at || $this->published_at->isFuture()) {
+            return 'This list is not open for submissions yet.';
+        }
+
+        return null;
+    }
+
     public function getRouteKeyName(): string
     {
         return 'slug';
