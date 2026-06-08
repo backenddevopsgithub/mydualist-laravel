@@ -56,8 +56,6 @@
 
                     <nav class="hidden items-center gap-8 text-sm font-bold text-stone-700 lg:flex" aria-label="Main navigation">
                         <a href="#home" class="border-b-2 border-emerald-800 pb-1 text-emerald-900">Home</a>
-                        <a href="#how-it-works" class="transition hover:text-emerald-800">How It Works</a>
-                        <a href="#features" class="transition hover:text-emerald-800">Features</a>
                         <a href="#resources" class="transition hover:text-emerald-800">Dua Resources</a>
                         <a href="#blog" class="transition hover:text-emerald-800">Blog</a>
                         <a href="#pricing" class="transition hover:text-emerald-800">Pricing</a>
@@ -92,8 +90,6 @@
 
                 <div class="border-t border-emerald-950/10 bg-white px-5 py-4 shadow-xl shadow-emerald-950/5 lg:hidden" x-cloak x-show="open">
                     <div class="mx-auto grid max-w-7xl gap-2 text-sm font-bold text-stone-700">
-                        <a href="#how-it-works" class="rounded-xl px-3 py-2 hover:bg-emerald-50">How It Works</a>
-                        <a href="#features" class="rounded-xl px-3 py-2 hover:bg-emerald-50">Features</a>
                         <a href="#blog" class="rounded-xl px-3 py-2 hover:bg-emerald-50">Blog</a>
                         <a href="#pricing" class="rounded-xl px-3 py-2 hover:bg-emerald-50">Pricing</a>
                         @auth
