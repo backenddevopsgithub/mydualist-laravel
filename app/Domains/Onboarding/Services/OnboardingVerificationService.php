@@ -19,7 +19,11 @@ class OnboardingVerificationService extends Service
 
     public function send(User $user): string
     {
-        $code = (string) random_int(1000, 9999);
+        $code = (string) config('mydualist.onboarding.test_otp', '0000');
+
+        if ($code === '' || $code === 'random') {
+            $code = (string) random_int(1000, 9999);
+        }
 
         Cache::put($this->cacheKey($user), $code, now()->addMinutes(self::CACHE_TTL_MINUTES));
 

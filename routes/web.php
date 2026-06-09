@@ -1,19 +1,23 @@
 <?php
 
 use App\Http\Controllers\Auth\LoginController;
-use App\Http\Controllers\BillingController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
-use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\BillingController;
+use App\Http\Controllers\BlogController;
 use App\Http\Controllers\Dashboard\DuaListController;
 use App\Http\Controllers\Dashboard\ListSubmissionController;
 use App\Http\Controllers\Dashboard\MySubmissionsController;
 use App\Http\Controllers\Dashboard\ProfileController;
 use App\Http\Controllers\Dashboard\SupportController;
 use App\Http\Controllers\Dashboard\UpgradeController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\Onboarding\CreateListOnboardingController;
 use App\Http\Controllers\PublicDuaListController;
 use App\Http\Controllers\PublicDuaSubmissionController;
+use App\Models\BlogCategory;
+use App\Models\BlogPost;
 use App\Models\DuaList;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -23,8 +27,17 @@ Route::get('/', function () {
         return redirect()->route('dashboard');
     }
 
-    return view('welcome');
+    return view('welcome', [
+        'blogCategories' => BlogCategory::query()->ordered()->get(),
+        'homepagePosts' => BlogPost::query()->published()->with('category')->latest('published_at')->take(12)->get(),
+    ]);
 })->name('home');
+
+Route::get('/blogs', [BlogController::class, 'index'])->name('blogs.index');
+Route::get('/blogs/{slug}', [BlogController::class, 'show'])->name('blogs.show');
+Route::post('/newsletter/subscribe', [NewsletterController::class, 'store'])
+    ->middleware('throttle:newsletter')
+    ->name('newsletter.subscribe');
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [LoginController::class, 'create'])->name('login');

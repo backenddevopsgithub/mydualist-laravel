@@ -26,6 +26,8 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login(Login::class)
+            ->brandLogo(config('mydualist.brand.logo_url'))
+            ->brandLogoHeight('2.75rem')
             ->authGuard('web')
             ->brandName(config('mydualist.name'))
             ->colors([
