@@ -18,14 +18,12 @@
                 const value = event.target.value.replace(/\D/g, '').slice(-1)
                 this.digits[index] = value
                 event.target.value = value
-
                 if (value && index < 3) {
                     this.focus(index + 1)
                 }
             },
             backspace(index, event) {
                 if (event.key !== 'Backspace') return
-
                 if (this.digits[index] === '' && index > 0) {
                     this.focus(index - 1)
                 }
@@ -33,7 +31,6 @@
             paste(event) {
                 const pasted = (event.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 4)
                 if (! pasted) return
-
                 event.preventDefault()
                 pasted.split('').forEach((digit, index) => {
                     this.digits[index] = digit
@@ -71,10 +68,18 @@
             @enderror
 
             <p class="mt-6 text-center text-sm text-stone-600">
-                Didn’t receive the code? Please check your inbox and spam folder.
+                Didn't receive the code? Check your spam folder or resend below.
             </p>
+            @if (session('resend_status'))
+                <p class="mt-2 text-center text-sm font-semibold text-emerald-800">{{ session('resend_status') }}</p>
+            @endif
         </div>
 
-        <x-onboarding.actions back="image" />
+        <x-onboarding.actions back="image" submit="Next" />
+    </form>
+
+    <form method="POST" action="{{ route('onboarding.resend') }}" class="mt-4 text-center">
+        @csrf
+        <button type="submit" class="text-sm font-bold text-emerald-800 hover:text-emerald-700">Resend verification code</button>
     </form>
 </x-onboarding.layout>

@@ -35,7 +35,7 @@ class DuaListController extends Controller
         $action($duaList, $request->validated());
 
         return redirect()
-            ->route($duaList->isArchived() ? 'dashboard.archived' : 'dashboard')
+            ->route('dashboard', $duaList->isArchived() ? ['tab' => 'archived'] : [])
             ->with('status', 'List updated successfully.');
     }
 

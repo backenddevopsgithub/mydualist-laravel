@@ -13,7 +13,9 @@ class DashboardController extends Controller
     public function __invoke(Request $request, DuaListQueryService $lists): View
     {
         $user = Auth::user();
-        $status = $request->routeIs('dashboard.archived') ? DuaList::STATUS_ARCHIVED : DuaList::STATUS_ACTIVE;
+        $status = $request->routeIs('dashboard.archived') || $request->query('tab') === 'archived'
+            ? DuaList::STATUS_ARCHIVED
+            : DuaList::STATUS_ACTIVE;
         $summary = $lists->dashboardSummary($user);
 
         return view('dashboard.index', [

@@ -12,7 +12,6 @@ class OnboardingState extends Service
     public const STEPS = [
         'account',
         'list',
-        'category',
         'dates',
         'image',
         'verify',
@@ -70,5 +69,10 @@ class OnboardingState extends Service
     public function currentStep(): string
     {
         return (string) $this->get('current_step', 'account');
+    }
+
+    public function displayStepCount(): int
+    {
+        return count(self::STEPS) - 1;
     }
 }

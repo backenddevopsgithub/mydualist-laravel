@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Support\DuaListOccasions;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -111,11 +112,11 @@ class DuaList extends Model
     public function closedReason(): ?string
     {
         if ($this->isArchived()) {
-            return "{$this->title} is not accepting any more duas.";
+            return $this->publicClosedMessage();
         }
 
         if ($this->isExpired()) {
-            return 'This list has closed and is no longer accepting new dua requests.';
+            return $this->publicClosedMessage();
         }
 
         if (! $this->published_at || $this->published_at->isFuture()) {
@@ -123,6 +124,28 @@ class DuaList extends Model
         }
 
         return null;
+    }
+
+    public function publicClosedMessage(): string
+    {
+        $owner = $this->user;
+        $firstName = trim((string) ($owner?->first_name ?: Str::before((string) $owner?->name, ' '))) ?: 'The list owner';
+        $possessive = $owner?->gender === 'female' ? 'her' : 'his';
+        $occasion = $this->occasionLabel();
+        $date = $this->start_date?->format('jS F Y') ?? 'upcoming date';
+
+        return "{$firstName} is no longer accepting dua requests for {$possessive} {$occasion} trip on the {$date}. They may have received too many requests or had a change of plans.";
+    }
+
+    public function publicInviteMessage(): string
+    {
+        $owner = $this->user;
+        $firstName = trim((string) ($owner?->first_name ?: Str::before((string) $owner?->name, ' '))) ?: 'Someone';
+        $possessive = $owner?->gender === 'female' ? 'her' : 'his';
+        $occasion = $this->occasionLabel();
+        $date = $this->start_date?->format('jS F Y') ?? 'upcoming date';
+
+        return "{$firstName} invited you to share a dua request for {$possessive} {$occasion} trip on the {$date}.";
     }
 
     public function getRouteKeyName(): string
@@ -142,7 +165,7 @@ class DuaList extends Model
 
     public function occasionLabel(): string
     {
-        return Str::headline(str_replace('-', ' ', $this->occasion));
+        return DuaListOccasions::label($this->occasion);
     }
 
     public function daysRemainingLabel(): ?string

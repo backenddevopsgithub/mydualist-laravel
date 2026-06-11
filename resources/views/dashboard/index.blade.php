@@ -17,9 +17,9 @@
                 <h1 class="font-serif text-5xl font-bold tracking-tight text-emerald-950">{{ $currentStatus === App\Models\DuaList::STATUS_ARCHIVED ? 'Archived Lists' : 'My Lists' }}</h1>
                 <p class="mt-3 text-sm font-medium text-stone-600">Manage and track your dua lists.</p>
             </div>
-            <a href="{{ route('onboarding.start') }}" class="inline-flex items-center justify-center rounded-2xl bg-emerald-900 px-6 py-4 text-sm font-extrabold text-white shadow-sm shadow-emerald-950/20 transition hover:bg-emerald-800">
-                + Create New List
-            </a>
+            <x-ui.button :href="route('onboarding.start')" variant="primary" size="lg">
+                Create new list
+            </x-ui.button>
         </section>
 
         <section class="-mx-5 mt-6 flex gap-3 overflow-x-auto px-5 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:px-0 lg:grid-cols-4" aria-label="Dashboard stats">
@@ -33,28 +33,22 @@
             <div class="flex items-center justify-between gap-4">
                 <div>
                     <h2 class="text-2xl font-extrabold tracking-tight text-emerald-950 lg:hidden">{{ $currentStatus === App\Models\DuaList::STATUS_ARCHIVED ? 'Archived Lists' : 'My Lists' }}</h2>
-                    <div class="hidden items-center gap-8 border-b border-emerald-950/10 text-sm font-bold text-stone-500 lg:flex">
-                        <a href="{{ route('dashboard') }}" @class([
-                            'pb-4 transition hover:text-emerald-900',
-                            'border-b-2 border-emerald-800 text-emerald-900' => $currentStatus === App\Models\DuaList::STATUS_ACTIVE,
-                        ])>Active Lists</a>
-                        <a href="{{ route('dashboard.archived') }}" @class([
-                            'pb-4 transition hover:text-emerald-900',
-                            'border-b-2 border-emerald-800 text-emerald-900' => $currentStatus === App\Models\DuaList::STATUS_ARCHIVED,
-                        ])>Archived Lists</a>
-                    </div>
+                    <x-ui.tabs class="lg:max-w-xl">
+                        <x-ui.tab :href="route('dashboard')" :active="$currentStatus === App\Models\DuaList::STATUS_ACTIVE">Active lists</x-ui.tab>
+                        <x-ui.tab :href="route('dashboard', ['tab' => 'archived'])" :active="$currentStatus === App\Models\DuaList::STATUS_ARCHIVED">Archived lists</x-ui.tab>
+                    </x-ui.tabs>
                 </div>
 
-                <a href="{{ route('onboarding.start') }}" class="inline-flex items-center justify-center rounded-2xl bg-emerald-900 px-4 py-3 text-sm font-extrabold text-white shadow-sm shadow-emerald-950/20 transition hover:bg-emerald-800 lg:hidden">
-                    + Create New List
-                </a>
+                <x-ui.button :href="route('onboarding.start')" variant="primary" size="md" class="lg:hidden">
+                    Create list
+                </x-ui.button>
             </div>
 
             <div class="mt-5 space-y-5 lg:mt-7">
                 @forelse ($duaLists as $duaList)
                     <x-dashboard.list-card :dua-list="$duaList" />
                 @empty
-                    <div class="rounded-[2rem] border border-dashed border-emerald-950/15 bg-white p-10 text-center shadow-sm">
+                    <x-ui.card class="border-dashed text-center">
                         <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-900">
                             <svg class="h-8 w-8" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                                 <path d="M7 5.5h10M7 10h10M7 14.5h6M5.5 3.5h13A1.5 1.5 0 0 1 20 5v14l-3-2-3 2-3-2-3 2-3-2V5a1.5 1.5 0 0 1 1.5-1.5Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
@@ -63,13 +57,13 @@
                         @if ($currentStatus === App\Models\DuaList::STATUS_ARCHIVED)
                             <h2 class="mt-5 text-2xl font-extrabold">No archived lists yet</h2>
                             <p class="mx-auto mt-2 max-w-md text-sm leading-6 text-stone-600">Archived lists will appear here when you pause or close an active list.</p>
-                            <a href="{{ route('dashboard') }}" class="mt-6 inline-flex rounded-2xl bg-emerald-900 px-5 py-3 text-sm font-extrabold text-white">View Active Lists</a>
+                            <x-ui.button :href="route('dashboard')" variant="primary" class="mt-6">View active lists</x-ui.button>
                         @else
                             <h2 class="mt-5 text-2xl font-extrabold">Create your first dua list</h2>
                             <p class="mx-auto mt-2 max-w-md text-sm leading-6 text-stone-600">Start a new list and invite others to share in the blessings.</p>
-                            <a href="{{ route('onboarding.start') }}" class="mt-6 inline-flex rounded-2xl bg-emerald-900 px-5 py-3 text-sm font-extrabold text-white">+ Create New List</a>
+                            <x-ui.button :href="route('onboarding.start')" variant="primary" class="mt-6">Create new list</x-ui.button>
                         @endif
-                    </div>
+                    </x-ui.card>
                 @endforelse
             </div>
 

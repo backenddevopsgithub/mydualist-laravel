@@ -9,158 +9,131 @@
             </div>
         @endif
 
-        <div class="mt-8 flex gap-2 overflow-x-auto rounded-[1.5rem] border border-emerald-950/10 bg-white p-2 shadow-sm">
-            <button type="button" x-on:click="tab = 'list-settings'" x-bind:class="tab === 'list-settings' ? 'bg-emerald-900 text-white' : 'text-stone-700 hover:bg-emerald-50'" class="shrink-0 rounded-2xl px-5 py-3 text-sm font-extrabold transition">List Settings</button>
-            <button type="button" x-on:click="tab = 'profile-settings'" x-bind:class="tab === 'profile-settings' ? 'bg-emerald-900 text-white' : 'text-stone-700 hover:bg-emerald-50'" class="shrink-0 rounded-2xl px-5 py-3 text-sm font-extrabold transition">Profile Settings</button>
-        </div>
+        <x-ui.tabs class="mt-8">
+            <x-ui.tab name="list-settings">List settings</x-ui.tab>
+            <x-ui.tab name="profile-settings">Profile settings</x-ui.tab>
+        </x-ui.tabs>
 
         <section x-show="tab === 'list-settings'" class="mt-8 space-y-6">
-            <form method="POST" action="{{ route('dashboard.profile.list-settings') }}" class="rounded-[2rem] border border-emerald-950/10 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.07)] sm:p-8">
-                @csrf
-                @method('PATCH')
+            <x-ui.card>
+                <form method="POST" action="{{ route('dashboard.profile.list-settings') }}">
+                    @csrf
+                    @method('PATCH')
 
-                <h2 class="text-xl font-extrabold">List Controls</h2>
-                <p class="mt-2 text-sm leading-6 text-stone-600">Choose a list and configure submission limits, display order, and email frequency.</p>
+                    <h2 class="text-xl font-extrabold">List controls</h2>
+                    <p class="mt-2 text-sm leading-6 text-stone-600">Choose a list and configure submission limits, display order, and email frequency.</p>
 
-                <div class="mt-6 grid gap-5 sm:grid-cols-2">
-                    <div class="sm:col-span-2">
-                        <label for="settings_dua_list_id" class="block text-sm font-bold text-stone-900">List</label>
-                        <select id="settings_dua_list_id" name="dua_list_id" class="mt-2 block w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100" required>
+                    <div class="mt-6 grid gap-5 sm:grid-cols-2">
+                        <x-ui.select name="dua_list_id" label="List" class="sm:col-span-2" required>
                             @foreach ($duaLists as $list)
                                 <option value="{{ $list->id }}">{{ $list->title }}</option>
                             @endforeach
-                        </select>
-                        @error('dua_list_id') <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p> @enderror
-                    </div>
+                        </x-ui.select>
 
-                    <div>
-                        <label for="dua_limit_per_person" class="block text-sm font-bold text-stone-900">Dua Limits</label>
-                        <select id="dua_limit_per_person" name="dua_limit_per_person" class="mt-2 block w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100">
+                        <x-ui.select name="dua_limit_per_person" label="Dua limits">
                             <option value="">Default batch limit</option>
                             @for ($i = 1; $i <= 5; $i++)
                                 <option value="{{ $i }}">{{ $i }} per person</option>
                             @endfor
-                        </select>
-                        @error('dua_limit_per_person') <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p> @enderror
+                        </x-ui.select>
+
+                        <x-ui.select name="display_order" label="Display order" required>
+                            <option value="date">Order by date</option>
+                            <option value="gender">Order by gender</option>
+                            <option value="person">Order by person</option>
+                        </x-ui.select>
+
+                        <x-ui.select name="email_frequency" label="Email frequency" class="sm:col-span-2" required>
+                            <option value="every_submission">Every dua submission</option>
+                            <option value="daily_summary">Daily summary</option>
+                        </x-ui.select>
                     </div>
 
-                    <div>
-                        <label for="display_order" class="block text-sm font-bold text-stone-900">Duas Display Order</label>
-                        <select id="display_order" name="display_order" class="mt-2 block w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100" required>
-                            <option value="date">Order by Date</option>
-                            <option value="gender">Order by Gender</option>
-                            <option value="person">Order by Person</option>
-                        </select>
-                        @error('display_order') <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p> @enderror
-                    </div>
-
-                    <div class="sm:col-span-2">
-                        <label for="email_frequency" class="block text-sm font-bold text-stone-900">Frequency of Emails</label>
-                        <select id="email_frequency" name="email_frequency" class="mt-2 block w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100" required>
-                            <option value="every_submission">Every Dua Submission</option>
-                            <option value="daily_summary">Daily Summary</option>
-                        </select>
-                        @error('email_frequency') <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p> @enderror
-                    </div>
-                </div>
-
-                <button type="submit" class="mt-7 w-full rounded-2xl bg-emerald-900 px-5 py-3 text-sm font-extrabold text-white transition hover:bg-emerald-800 sm:w-auto">Save List Settings</button>
-            </form>
+                    <x-ui.button type="submit" variant="primary" class="mt-7 sm:w-auto">Save list settings</x-ui.button>
+                </form>
+            </x-ui.card>
 
             <div class="grid gap-6 lg:grid-cols-2">
-                <form method="GET" action="{{ route('dashboard.profile.submissions.download') }}" class="rounded-[2rem] border border-emerald-950/10 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.07)] sm:p-8">
-                    <h2 class="text-xl font-extrabold">Download Dua Submissions</h2>
-                    <p class="mt-2 text-sm leading-6 text-stone-600">Export all submissions for one list as CSV.</p>
-                    <select name="dua_list_id" class="mt-5 block w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100" required>
-                        @foreach ($duaLists as $list)
-                            <option value="{{ $list->id }}">{{ $list->title }}</option>
-                        @endforeach
-                    </select>
-                    <button type="submit" class="mt-5 w-full rounded-2xl bg-emerald-900 px-5 py-3 text-sm font-extrabold text-white transition hover:bg-emerald-800">Download CSV</button>
-                </form>
+                <x-ui.card>
+                    <form method="GET" action="{{ route('dashboard.profile.submissions.download') }}">
+                        <h2 class="text-xl font-extrabold">Download submissions</h2>
+                        <p class="mt-2 text-sm leading-6 text-stone-600">Export all submissions for one list as CSV.</p>
+                        <x-ui.select name="dua_list_id" label="List" class="mt-5" required>
+                            @foreach ($duaLists as $list)
+                                <option value="{{ $list->id }}">{{ $list->title }}</option>
+                            @endforeach
+                        </x-ui.select>
+                        <x-ui.button type="submit" variant="primary" full-width class="mt-5">Download CSV</x-ui.button>
+                    </form>
+                </x-ui.card>
 
-                <form method="POST" action="{{ route('dashboard.profile.list-image') }}" enctype="multipart/form-data" class="rounded-[2rem] border border-emerald-950/10 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.07)] sm:p-8">
-                    @csrf
-                    <h2 class="text-xl font-extrabold">List Image</h2>
-                    <p class="mt-2 text-sm leading-6 text-stone-600">Upload or update the cover image for a list.</p>
-                    <select name="dua_list_id" class="mt-5 block w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100" required>
-                        @foreach ($duaLists as $list)
-                            <option value="{{ $list->id }}">{{ $list->title }}</option>
-                        @endforeach
-                    </select>
-                    <input name="cover_image" type="file" accept="image/*" class="mt-4 block w-full rounded-2xl border border-dashed border-emerald-900/20 bg-emerald-50/50 px-4 py-4 text-sm font-semibold text-stone-700" required>
-                    @error('cover_image') <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p> @enderror
-                    <button type="submit" class="mt-5 w-full rounded-2xl bg-emerald-900 px-5 py-3 text-sm font-extrabold text-white transition hover:bg-emerald-800">Upload Image</button>
-                </form>
+                <x-ui.card>
+                    <form method="POST" action="{{ route('dashboard.profile.list-image') }}" enctype="multipart/form-data">
+                        @csrf
+                        <h2 class="text-xl font-extrabold">List image</h2>
+                        <p class="mt-2 text-sm leading-6 text-stone-600">Upload or update the cover image for a list.</p>
+                        <x-ui.select name="dua_list_id" label="List" class="mt-5" required>
+                            @foreach ($duaLists as $list)
+                                <option value="{{ $list->id }}">{{ $list->title }}</option>
+                            @endforeach
+                        </x-ui.select>
+                        <x-ui.field name="cover_image" label="Cover image" class="mt-4">
+                            <input name="cover_image" type="file" accept="image/*" class="ui-input file:mr-4 file:rounded-lg file:border-0 file:bg-emerald-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-emerald-900" required>
+                        </x-ui.field>
+                        <x-ui.button type="submit" variant="primary" full-width class="mt-5">Upload image</x-ui.button>
+                    </form>
+                </x-ui.card>
             </div>
         </section>
 
         <section x-show="tab === 'profile-settings'" class="mt-8 grid gap-6 lg:grid-cols-[1fr_0.9fr]">
-            <form method="POST" action="{{ route('dashboard.profile.update') }}" class="rounded-[2rem] border border-emerald-950/10 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.07)] sm:p-8">
-                @csrf
-                @method('PATCH')
-
-                <div class="mb-6 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-extrabold text-emerald-900 ring-1 ring-emerald-900/10">
-                    Current Plan: {{ $currentPlan }}
-                </div>
-
-                <h2 class="text-xl font-extrabold">Account Details</h2>
-                <div class="mt-6 space-y-5">
-                    <div class="grid gap-5 sm:grid-cols-2">
-                        <div>
-                            <label for="first_name" class="block text-sm font-bold text-stone-900">First Name</label>
-                            <input id="first_name" name="first_name" value="{{ old('first_name', $user->first_name) }}" class="mt-2 block w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100" required>
-                            @error('first_name') <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p> @enderror
-                        </div>
-                        <div>
-                            <label for="last_name" class="block text-sm font-bold text-stone-900">Last Name</label>
-                            <input id="last_name" name="last_name" value="{{ old('last_name', $user->last_name) }}" class="mt-2 block w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100" required>
-                            @error('last_name') <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p> @enderror
-                        </div>
-                    </div>
-
-                    <div>
-                        <label for="email" class="block text-sm font-bold text-stone-900">Email Address</label>
-                        <input id="email" name="email" type="email" value="{{ old('email', $user->email) }}" class="mt-2 block w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100" required>
-                        @error('email') <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p> @enderror
-                    </div>
-                </div>
-
-                <button type="submit" class="mt-7 w-full rounded-2xl bg-emerald-900 px-5 py-3 text-sm font-extrabold text-white transition hover:bg-emerald-800 sm:w-auto">Save Profile</button>
-            </form>
-
-            <div class="space-y-6">
-                <form method="POST" action="{{ route('dashboard.profile.password') }}" class="rounded-[2rem] border border-emerald-950/10 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.07)] sm:p-8">
+            <x-ui.card>
+                <form method="POST" action="{{ route('dashboard.profile.update') }}">
                     @csrf
                     @method('PATCH')
 
-                    <h2 class="text-xl font-extrabold">Change Password</h2>
-                    <div class="mt-6 space-y-5">
-                        <div>
-                            <label for="current_password" class="block text-sm font-bold text-stone-900">Current Password</label>
-                            <input id="current_password" name="current_password" type="password" class="mt-2 block w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100" required>
-                            @error('current_password') <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p> @enderror
-                        </div>
-                        <div>
-                            <label for="password" class="block text-sm font-bold text-stone-900">New Password</label>
-                            <input id="password" name="password" type="password" class="mt-2 block w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100" required>
-                            @error('password') <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p> @enderror
-                        </div>
-                        <div>
-                            <label for="password_confirmation" class="block text-sm font-bold text-stone-900">Confirm Password</label>
-                            <input id="password_confirmation" name="password_confirmation" type="password" class="mt-2 block w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100" required>
-                        </div>
+                    <div class="mb-6 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-900 ring-1 ring-emerald-900/10">
+                        Current plan: {{ $currentPlan }}
                     </div>
 
-                    <button type="submit" class="mt-7 w-full rounded-2xl bg-emerald-900 px-5 py-3 text-sm font-extrabold text-white transition hover:bg-emerald-800">Update Password</button>
-                </form>
+                    <h2 class="text-xl font-extrabold">Account details</h2>
+                    <div class="mt-6 space-y-5">
+                        <div class="grid gap-5 sm:grid-cols-2">
+                            <x-ui.input name="first_name" label="First name" :value="old('first_name', $user->first_name)" required />
+                            <x-ui.input name="last_name" label="Last name" :value="old('last_name', $user->last_name)" required />
+                        </div>
+                        <x-ui.input name="email" label="Email" type="email" :value="old('email', $user->email)" required />
+                    </div>
 
-                <form method="POST" action="{{ route('logout') }}" class="rounded-[2rem] border border-red-100 bg-white p-6 shadow-sm sm:p-8">
-                    @csrf
-                    <h2 class="text-xl font-extrabold">Logout</h2>
-                    <p class="mt-2 text-sm leading-6 text-stone-600">Securely end this browser session.</p>
-                    <button type="submit" class="mt-5 rounded-2xl bg-red-50 px-5 py-3 text-sm font-extrabold text-red-700 transition hover:bg-red-100">Logout</button>
+                    <x-ui.button type="submit" variant="primary" class="mt-7 sm:w-auto">Save profile</x-ui.button>
                 </form>
+            </x-ui.card>
+
+            <div class="space-y-6">
+                <x-ui.card>
+                    <form method="POST" action="{{ route('dashboard.profile.password') }}">
+                        @csrf
+                        @method('PATCH')
+
+                        <h2 class="text-xl font-extrabold">Change password</h2>
+                        <div class="mt-6 space-y-5">
+                            <x-ui.input name="current_password" label="Current password" type="password" required />
+                            <x-ui.input name="password" label="New password" type="password" required />
+                            <x-ui.input name="password_confirmation" label="Confirm password" type="password" required />
+                        </div>
+
+                        <x-ui.button type="submit" variant="primary" full-width class="mt-7">Update password</x-ui.button>
+                    </form>
+                </x-ui.card>
+
+                <x-ui.card class="border-red-100">
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <h2 class="text-xl font-extrabold">Logout</h2>
+                        <p class="mt-2 text-sm leading-6 text-stone-600">Securely end this browser session.</p>
+                        <x-ui.button type="submit" variant="secondary" class="mt-5 !border-red-200 !text-red-700 hover:!bg-red-50">Logout</x-ui.button>
+                    </form>
+                </x-ui.card>
             </div>
         </section>
     </main>

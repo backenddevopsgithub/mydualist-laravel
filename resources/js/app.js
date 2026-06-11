@@ -1,10 +1,13 @@
 import './bootstrap';
 import Alpine from 'alpinejs';
+import 'flatpickr/dist/flatpickr.min.css';
+import { initOnboardingDatePickers } from './onboarding-dates';
 
 window.Alpine = Alpine;
 
 document.addEventListener('DOMContentLoaded', () => {
-    const revealElements = document.querySelectorAll('.reveal-on-scroll');
+    initOnboardingDatePickers();
+    const revealElements = document.querySelectorAll('.reveal-on-scroll, .feature-fade');
 
     if (! revealElements.length) {
         return;
@@ -19,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         },
-        { threshold: 0.15, rootMargin: '0px 0px -40px 0px' },
+        { threshold: 0.12, rootMargin: '0px 0px -60px 0px' },
     );
 
     revealElements.forEach((element) => observer.observe(element));

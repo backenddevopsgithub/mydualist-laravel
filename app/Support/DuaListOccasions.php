@@ -13,12 +13,9 @@ class DuaListOccasions
             'umrah' => 'Umrah',
             'hajj' => 'Hajj',
             'ramadan' => 'Ramadan',
-            'safar-travel' => 'Safar / Travel',
-            'wedding' => 'Wedding',
-            'aqiqah' => 'Aqiqah',
-            'tahajjud' => 'Tahajjud',
-            'quran-khatam' => 'Quran Khatam',
-            'other' => 'Other',
+            'salawat' => 'Salawat',
+            'rawadah' => 'Rawadah',
+            'general' => 'General',
         ];
     }
 
@@ -28,5 +25,10 @@ class DuaListOccasions
     public static function keys(): array
     {
         return array_keys(self::labels());
+    }
+
+    public static function label(string $occasion): string
+    {
+        return self::labels()[$occasion] ?? str($occasion)->headline()->replace('-', ' ')->toString();
     }
 }

@@ -16,27 +16,29 @@
     <main class="mx-auto max-w-6xl px-5 py-8 sm:px-6 lg:px-8 lg:py-10">
         <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
-                <a href="{{ $duaList->isArchived() ? route('dashboard.archived') : route('dashboard') }}" class="text-sm font-bold text-emerald-800 hover:text-emerald-700">Back to dashboard</a>
+                <a href="{{ $duaList->isArchived() ? route('dashboard', ['tab' => 'archived']) : route('dashboard') }}" class="text-sm font-bold text-emerald-800 hover:text-emerald-700">Back to dashboard</a>
                 <h1 class="mt-4 font-serif text-4xl font-bold tracking-tight text-emerald-950">{{ $duaList->title }}</h1>
                 <p class="mt-3 text-sm leading-6 text-stone-600">Review, complete, hide, archive, and manage dua requests for this list.</p>
             </div>
-            <div class="flex flex-col gap-3 sm:flex-row">
-                @if ($duaList->isArchived())
-                    <form method="POST" action="{{ route('dashboard.lists.restore', $duaList) }}">
-                        @csrf
-                        @method('PATCH')
-                        <button class="inline-flex w-full items-center justify-center rounded-2xl bg-emerald-900 px-5 py-3 text-sm font-extrabold text-white transition hover:bg-emerald-800">Status: OFF - Turn ON</button>
-                    </form>
-                @else
-                    <form method="POST" action="{{ route('dashboard.lists.archive', $duaList) }}">
-                        @csrf
-                        @method('PATCH')
-                        <button class="inline-flex w-full items-center justify-center rounded-2xl bg-emerald-50 px-5 py-3 text-sm font-extrabold text-emerald-950 ring-1 ring-emerald-900/10 transition hover:bg-emerald-100">Status: ON - Turn OFF</button>
-                    </form>
-                @endif
-                <a href="{{ $duaList->publicUrl() }}" class="inline-flex items-center justify-center rounded-2xl bg-emerald-900 px-5 py-3 text-sm font-extrabold text-white transition hover:bg-emerald-800">
-                    Open Share Page
-                </a>
+            <div class="flex flex-wrap items-center gap-4">
+                <div class="inline-flex rounded-2xl border border-emerald-950/10 bg-white p-1.5 shadow-sm" role="radiogroup" aria-label="List status">
+                    @if ($duaList->isArchived())
+                        <span class="rounded-xl bg-emerald-800 px-5 py-2.5 text-sm font-extrabold text-white">OFF</span>
+                        <form method="POST" action="{{ route('dashboard.lists.restore', $duaList) }}" class="contents">
+                            @csrf
+                            @method('PATCH')
+                            <button type="submit" class="rounded-xl px-5 py-2.5 text-sm font-extrabold text-stone-500 transition hover:bg-emerald-50">ON</button>
+                        </form>
+                    @else
+                        <span class="rounded-xl bg-emerald-800 px-5 py-2.5 text-sm font-extrabold text-white">ON</span>
+                        <form method="POST" action="{{ route('dashboard.lists.archive', $duaList) }}" class="contents">
+                            @csrf
+                            @method('PATCH')
+                            <button type="submit" class="rounded-xl px-5 py-2.5 text-sm font-extrabold text-stone-500 transition hover:bg-emerald-50">OFF</button>
+                        </form>
+                    @endif
+                </div>
+                <a href="{{ route('dashboard.lists.edit', $duaList) }}" class="inline-flex items-center justify-center rounded-2xl border border-emerald-950/10 bg-white px-5 py-3 text-sm font-extrabold text-emerald-900 transition hover:bg-emerald-50">Edit List</a>
             </div>
         </div>
 
@@ -47,7 +49,18 @@
         @endif
 
         <section class="mt-8 rounded-[2rem] border border-emerald-950/10 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.07)]">
-            <div class="grid gap-5 sm:grid-cols-3">
+            <div
+                class="flex flex-col gap-3 sm:flex-row"
+                x-data="{ copied: false, copyUrl() { navigator.clipboard.writeText(@js($duaList->publicUrl())).then(() => { this.copied = true; setTimeout(() => this.copied = false, 2000) }) } }"
+            >
+                <input value="{{ $duaList->publicUrl() }}" readonly class="min-w-0 flex-1 rounded-2xl border border-emerald-950/10 bg-emerald-50/40 px-4 py-3 text-sm font-semibold text-emerald-950 outline-none">
+                <button type="button" x-on:click="copyUrl" class="rounded-2xl bg-emerald-800 px-5 py-3 text-sm font-extrabold text-white transition hover:bg-emerald-700">
+                    <span x-show="! copied">Copy link</span>
+                    <span x-cloak x-show="copied">Copied</span>
+                </button>
+            </div>
+
+            <div class="mt-6 grid gap-5 sm:grid-cols-3">
                 <div>
                     <p class="text-3xl font-extrabold text-stone-950">{{ $totalSubmissions }}</p>
                     <p class="mt-1 text-sm font-bold text-stone-600">Total requests</p>
@@ -155,7 +168,7 @@
                                 <a href="{{ route('dashboard.upgrade') }}" class="mt-5 inline-flex rounded-2xl bg-emerald-900 px-5 py-3 text-sm font-extrabold text-white">Unlock Premium</a>
                             </div>
                         @else
-                            <p class="mt-7 whitespace-pre-line text-[1.2rem] font-black leading-9 tracking-tight text-stone-950 sm:text-[1.45rem] sm:leading-10">{{ $submission->content }}</p>
+                            <p class="mt-7 text-[1.2rem] leading-9 tracking-tight sm:text-[1.45rem] sm:leading-10">{!! $submission->readableContent() !!}</p>
                         @endif
 
                         @if (! $locked && $submission->note)
@@ -183,7 +196,7 @@
                         @if ($locked)
                             <a href="{{ route('dashboard.upgrade') }}" class="inline-flex items-center justify-center rounded-full bg-lime-300 px-5 py-3 text-sm font-black text-emerald-950 shadow-[0_12px_30px_rgba(132,204,22,0.30)]">Unlock</a>
                         @elseif ($submission->status !== App\Enums\DuaSubmissionStatus::Completed)
-                            <form method="POST" action="{{ route('dashboard.submissions.complete', [$duaList, $submission]) }}" class="sm:absolute sm:-right-1 sm:-top-5">
+                            <form method="POST" action="{{ route('dashboard.submissions.complete', [$duaList, $submission]) }}" class="sm:absolute sm:right-4 sm:-top-5">
                                 @csrf
                                 @method('PATCH')
                                 <button class="flex h-16 w-16 items-center justify-center rounded-full bg-lime-400 text-emerald-950 shadow-[0_18px_45px_rgba(132,204,22,0.45)] ring-4 ring-[#fffdfb] transition hover:scale-105" aria-label="Mark dua complete">
@@ -193,7 +206,7 @@
                                 </button>
                             </form>
                         @else
-                            <form method="POST" action="{{ route('dashboard.submissions.undo', [$duaList, $submission]) }}" class="sm:absolute sm:-right-1 sm:-top-5">
+                            <form method="POST" action="{{ route('dashboard.submissions.undo', [$duaList, $submission]) }}" class="sm:absolute sm:right-4 sm:-top-5">
                                 @csrf
                                 @method('PATCH')
                                 <button class="flex h-16 w-16 items-center justify-center rounded-full bg-amber-300 text-amber-950 shadow-[0_18px_45px_rgba(251,191,36,0.35)] ring-4 ring-[#fffdfb] transition hover:scale-105" aria-label="Undo completion">

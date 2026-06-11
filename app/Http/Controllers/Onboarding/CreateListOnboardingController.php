@@ -10,6 +10,7 @@ use App\Domains\Onboarding\Services\OnboardingVerificationService;
 use App\Http\Controllers\Controller;
 use App\Models\DuaList;
 use App\Models\User;
+use App\Support\DuaListOccasions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -71,11 +72,11 @@ class CreateListOnboardingController extends Controller
         return view("onboarding.{$step}", [
             'step' => $step,
             'stepIndex' => $state->stepIndex($step) + 1,
-            'totalSteps' => count(OnboardingState::STEPS),
+            'totalSteps' => $state->displayStepCount(),
             'previousStep' => $state->previousStep($step),
             'state' => $state->all(),
             'duaList' => $duaList,
-            'shareUrl' => $duaList ? route('dua-lists.public', $duaList) : null,
+            'shareUrl' => $duaList ? $duaList->publicUrl() : null,
             'coverImageUrl' => $state->get('image.cover_image_path')
                 ? Storage::disk('public')->url($state->get('image.cover_image_path'))
                 : null,
@@ -101,12 +102,21 @@ class CreateListOnboardingController extends Controller
         return match ($step) {
             'account' => $this->storeAccount($request, $state, $registerUser, $verification),
             'list' => $this->storeList($request, $state),
-            'category' => $this->storeCategory($request, $state),
             'dates' => $this->storeDates($request, $state),
             'image' => $this->storeImage($request, $state, $createDuaList),
             'verify' => $this->storeVerification($request, $state, $createDuaList, $verification),
             default => redirect()->route('onboarding.show', $state->currentStep()),
         };
+    }
+
+    public function resend(OnboardingState $state, OnboardingVerificationService $verification): RedirectResponse
+    {
+        $user = User::query()->findOrFail($state->get('user_id'));
+        $verification->send($user);
+
+        return redirect()
+            ->route('onboarding.show', 'verify')
+            ->with('resend_status', 'A new verification code has been sent to your email.');
     }
 
     private function storeAccount(
@@ -118,6 +128,7 @@ class CreateListOnboardingController extends Controller
         $data = $request->validate([
             'first_name' => ['required', 'string', 'max:60'],
             'last_name' => ['required', 'string', 'max:60'],
+            'gender' => ['required', 'string', Rule::in(['male', 'female'])],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')],
             'password' => ['required', 'string', 'confirmed', Password::defaults()],
             'terms' => ['accepted'],
@@ -126,6 +137,7 @@ class CreateListOnboardingController extends Controller
         $authToken = $registerUser([
             'first_name' => $data['first_name'],
             'last_name' => $data['last_name'],
+            'gender' => $data['gender'],
             'email' => $data['email'],
             'password' => $data['password'],
             'device_name' => 'onboarding',
@@ -151,24 +163,11 @@ class CreateListOnboardingController extends Controller
     {
         $data = $request->validate([
             'title' => ['required', 'string', 'max:120'],
+            'occasion' => ['required', 'string', Rule::in(DuaListOccasions::keys())],
         ]);
 
         $state->merge([
             'list' => $data,
-            'current_step' => 'category',
-        ]);
-
-        return redirect()->route('onboarding.show', 'category');
-    }
-
-    private function storeCategory(Request $request, OnboardingState $state): RedirectResponse
-    {
-        $data = $request->validate([
-            'occasion' => ['required', 'string', Rule::in($this->occasions())],
-        ]);
-
-        $state->merge([
-            'category' => $data,
             'current_step' => 'dates',
         ]);
 
@@ -194,9 +193,17 @@ class CreateListOnboardingController extends Controller
     {
         $data = $request->validate([
             'cover_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'extensions:jpg,jpeg,png,webp', 'max:2048'],
+            'remove_image' => ['nullable', 'boolean'],
         ]);
 
         $path = $state->get('image.cover_image_path');
+
+        if ($request->boolean('remove_image')) {
+            if ($path) {
+                Storage::disk('public')->delete($path);
+            }
+            $path = null;
+        }
 
         if ($request->hasFile('cover_image')) {
             if ($path) {
@@ -218,9 +225,7 @@ class CreateListOnboardingController extends Controller
                 'dua_list_id' => $duaList->id,
             ]);
 
-            return redirect()
-                ->route('dashboard')
-                ->with('status', 'Your list is ready. Share it to start receiving duas.');
+            return redirect()->route('onboarding.show', 'success');
         }
 
         return redirect()->route('onboarding.show', 'verify');
@@ -259,9 +264,7 @@ class CreateListOnboardingController extends Controller
             'current_step' => 'success',
         ]);
 
-        return redirect()
-            ->route('dashboard')
-            ->with('status', 'Your list is ready. Share it to start receiving duas.');
+        return redirect()->route('onboarding.show', 'success');
     }
 
     private function guardStep(string $step, OnboardingState $state): ?RedirectResponse
@@ -279,8 +282,7 @@ class CreateListOnboardingController extends Controller
         }
 
         $requirements = [
-            'category' => 'list',
-            'dates' => 'category',
+            'dates' => 'list',
             'image' => 'dates',
             'verify' => 'image',
         ];
@@ -292,18 +294,10 @@ class CreateListOnboardingController extends Controller
         }
 
         if ($step === 'verify' && ! $state->get('requires_verification', true)) {
-            return redirect()->route('dashboard');
+            return redirect()->route('onboarding.show', 'success');
         }
 
         return null;
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function occasions(): array
-    {
-        return ['umrah', 'hajj', 'ramadan', 'safar-travel', 'wedding', 'aqiqah', 'tahajjud', 'quran-khatam', 'other'];
     }
 
     private function completedList(OnboardingState $state): ?DuaList
@@ -323,7 +317,7 @@ class CreateListOnboardingController extends Controller
 
         return $createDuaList($user, [
             'title' => $state->get('list.title'),
-            'occasion' => $state->get('category.occasion'),
+            'occasion' => $state->get('list.occasion'),
             'start_date' => $state->get('dates.start_date'),
             'end_date' => $state->get('dates.end_date'),
             'cover_image_path' => $state->get('image.cover_image_path'),

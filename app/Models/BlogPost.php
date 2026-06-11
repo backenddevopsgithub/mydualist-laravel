@@ -58,11 +58,17 @@ class BlogPost extends Model
     public function featuredImageUrl(): string
     {
         if ($this->featured_image) {
-            return str_starts_with($this->featured_image, 'http')
-                ? $this->featured_image
-                : asset('storage/'.$this->featured_image);
+            if (str_starts_with($this->featured_image, 'http')) {
+                return $this->featured_image;
+            }
+
+            if (str_starts_with($this->featured_image, 'images/')) {
+                return asset($this->featured_image);
+            }
+
+            return asset('storage/'.$this->featured_image);
         }
 
-        return 'https://www.mydualist.com/wp-content/uploads/2024/01/Pilgrim-img.png';
+        return asset('images/blog/pilgrim.png');
     }
 }

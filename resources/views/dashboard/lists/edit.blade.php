@@ -1,7 +1,7 @@
 <x-dashboard.layout :user="$user" title="Edit List - My Dua List">
     <main class="mx-auto max-w-3xl px-5 py-8 sm:px-6 lg:px-8 lg:py-10">
         <div>
-            <a href="{{ $duaList->isArchived() ? route('dashboard.archived') : route('dashboard') }}" class="text-sm font-bold text-emerald-800 hover:text-emerald-700">
+            <a href="{{ $duaList->isArchived() ? route('dashboard', ['tab' => 'archived']) : route('dashboard') }}" class="text-sm font-bold text-emerald-800 hover:text-emerald-700">
                 Back to dashboard
             </a>
             <h1 class="mt-5 font-serif text-4xl font-bold tracking-tight text-emerald-950">Edit List</h1>
@@ -21,16 +21,9 @@
                     @enderror
                 </div>
 
-                <div>
-                    <label for="occasion" class="block text-sm font-bold text-stone-900">Category</label>
-                    <select id="occasion" name="occasion" class="mt-2 block w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 shadow-sm outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100" required>
-                        @foreach ($occasions as $value => $label)
-                            <option value="{{ $value }}" @selected(old('occasion', $duaList->occasion) === $value)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                    @error('occasion')
-                        <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p>
-                    @enderror
+                <div class="rounded-2xl bg-stone-50 px-4 py-3 text-sm text-stone-600 ring-1 ring-stone-200">
+                    <span class="font-bold text-stone-900">Occasion:</span> {{ $duaList->occasionLabel() }}
+                    <p class="mt-1 text-xs text-stone-500">Occasion cannot be changed because your share link is based on it.</p>
                 </div>
 
                 <div class="grid gap-5 sm:grid-cols-2">

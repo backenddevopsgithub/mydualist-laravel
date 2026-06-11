@@ -31,7 +31,7 @@ class PublicDuaSubmissionController extends Controller
         $count = $submissions->count();
 
         return redirect()
-            ->route('dua-lists.public', $duaList)
+            ->to(route('dua-lists.public', $duaList).'#submit-dua')
             ->with('submission_status', $count === 1
                 ? 'Your dua request has been submitted.'
                 : "Your {$count} dua requests have been submitted.");

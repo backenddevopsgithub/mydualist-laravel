@@ -56,12 +56,12 @@ class CreateDuaSubmissionAction extends Action
                 ->map(fn (string $content): DuaSubmission => DuaSubmission::query()->create([
                     'dua_list_id' => $lockedList->id,
                     'user_id' => $user?->id,
-                    'first_name' => $data['is_anonymous'] ?? false ? null : ($data['first_name'] ?? null),
-                    'last_name' => $data['is_anonymous'] ?? false ? null : ($data['last_name'] ?? null),
+                    'first_name' => $data['first_name'] ?? null,
+                    'last_name' => $data['last_name'] ?? null,
                     'email' => $email,
-                    'is_anonymous' => (bool) ($data['is_anonymous'] ?? false),
+                    'is_anonymous' => false,
                     'content' => $content,
-                    'note' => $data['note'] ?? null,
+                    'note' => null,
                     'status' => DuaSubmissionStatus::Pending,
                 ]));
         });

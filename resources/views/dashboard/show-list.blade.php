@@ -1,9 +1,11 @@
 @php
     $coverImageUrl = $duaList->coverImageUrl();
-    $creatorName = trim(($duaList->user->first_name ?? '').' '.($duaList->user->last_name ?? '')) ?: $duaList->user->name;
     $completedCount = (int) ($duaList->completed_submissions_count ?? 0);
     $totalSubmissions = (int) ($duaList->submissions_count ?? 0);
     $progress = $totalSubmissions > 0 ? round(($completedCount / $totalSubmissions) * 100) : 0;
+    $duaErrors = collect($errors->getMessages())->filter(fn ($_, $key) => str_starts_with($key, 'duas.'));
+    $firstErrorIndex = $duaErrors->keys()->map(fn ($k) => (int) str_replace('duas.', '', $k))->sort()->first();
+    $duaErrorIndexes = $duaErrors->keys()->map(fn ($k) => (int) str_replace('duas.', '', $k))->values()->all();
 @endphp
 
 <!DOCTYPE html>
@@ -18,211 +20,239 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="bg-[#fbfaf7] font-sans text-stone-950 antialiased">
-        <main class="min-h-screen overflow-hidden">
-            <section class="relative">
-                <div class="absolute inset-x-0 top-0 h-80 bg-[radial-gradient(circle_at_20%_20%,rgba(16,185,129,0.16),transparent_30%),linear-gradient(135deg,#f7f2e7,#eef7ef)]"></div>
+        <main class="min-h-screen">
+            <div class="relative mx-auto max-w-3xl px-5 py-6 sm:px-6 lg:px-8">
+                <header class="flex items-center justify-between">
+                    <x-home.logo />
+                    <a href="{{ route('home') }}" class="rounded-2xl bg-white/80 px-4 py-2 text-sm font-bold text-emerald-950 shadow-sm ring-1 ring-emerald-950/10">Home</a>
+                </header>
 
-                <div class="relative mx-auto max-w-5xl px-5 py-6 sm:px-6 lg:px-8">
-                    <header class="flex items-center justify-between">
-                        <x-home.logo />
-                        <a href="{{ route('home') }}" class="rounded-2xl bg-white/80 px-4 py-2 text-sm font-bold text-emerald-950 shadow-sm ring-1 ring-emerald-950/10">Home</a>
-                    </header>
+                <article class="mx-auto mt-8 overflow-hidden rounded-[2.25rem] border border-emerald-950/10 bg-white shadow-[0_30px_100px_rgba(15,23,42,0.10)]">
+                    @if ($coverImageUrl)
+                        <div class="h-56 sm:h-64">
+                            <img src="{{ $coverImageUrl }}" alt="{{ $duaList->title }} cover image" class="h-full w-full object-cover">
+                        </div>
+                    @endif
 
-                    <article class="mx-auto mt-10 max-w-3xl overflow-hidden rounded-[2.25rem] border border-emerald-950/10 bg-white shadow-[0_30px_100px_rgba(15,23,42,0.10)]">
-                        <div class="h-64 bg-emerald-50 sm:h-80">
-                            @if ($coverImageUrl)
-                                <img src="{{ $coverImageUrl }}" alt="{{ $duaList->title }} cover image" class="h-full w-full object-cover">
-                            @else
-                                <div class="flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_35%_20%,rgba(245,158,11,0.28),transparent_28%),linear-gradient(135deg,#064e3b,#f7f0dc)] text-white">
-                                    <div class="text-center">
-                                        <svg class="mx-auto h-16 w-16 opacity-90" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                            <path d="M7 5.5h10M7 10h10M7 14.5h6M5.5 3.5h13A1.5 1.5 0 0 1 20 5v14l-3-2-3 2-3-2-3 2-3-2V5a1.5 1.5 0 0 1 1.5-1.5Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-                                        </svg>
-                                        <p class="mt-4 text-sm font-bold uppercase tracking-[0.18em] text-white/80">My Dua List</p>
-                                    </div>
-                                </div>
+                    <div class="p-6 text-center sm:p-10">
+                        <div class="flex flex-wrap justify-center gap-2">
+                            <span class="rounded-full bg-emerald-50 px-4 py-2 text-xs font-extrabold uppercase tracking-[0.12em] text-emerald-800">{{ $duaList->occasionLabel() }}</span>
+                            @if ($duaList->daysRemainingLabel())
+                                <span class="rounded-full bg-amber-50 px-4 py-2 text-xs font-extrabold text-amber-800">{{ $duaList->daysRemainingLabel() }}</span>
                             @endif
                         </div>
 
-                        <div class="p-6 text-center sm:p-10">
-                            <div class="flex flex-wrap justify-center gap-2">
-                                <span class="rounded-full bg-emerald-50 px-4 py-2 text-xs font-extrabold uppercase tracking-[0.12em] text-emerald-800">{{ $duaList->occasionLabel() }}</span>
-                                @if ($duaList->daysRemainingLabel())
-                                    <span class="rounded-full bg-amber-50 px-4 py-2 text-xs font-extrabold text-amber-800">{{ $duaList->daysRemainingLabel() }}</span>
-                                @endif
-                            </div>
-
-                            <h1 class="mt-6 font-serif text-4xl font-bold tracking-tight text-stone-950 sm:text-6xl">{{ $duaList->title }}</h1>
-                            <p class="mx-auto mt-4 max-w-xl text-base leading-8 text-stone-600">
-                                {{ $creatorName }} is collecting dua requests for {{ $duaList->occasionLabel() }}. Add your request and be part of something meaningful.
-                            </p>
-
-                            <div class="mx-auto mt-8 max-w-md">
-                                <div class="flex items-center justify-between text-sm font-bold text-stone-600">
-                                    <span>{{ $completedCount }} completed</span>
-                                    <span>{{ $progress }}%</span>
-                                    <span>{{ $totalSubmissions }} total</span>
-                                </div>
-                                <div class="mt-3 h-3 rounded-full bg-stone-100">
-                                    <div class="h-3 rounded-full bg-emerald-700" style="width: {{ $progress }}%"></div>
-                                </div>
-                            </div>
-
-                            <div class="mt-9 grid gap-3 sm:grid-cols-2">
-                                @if ($acceptsSubmissions)
-                                    <a href="#submit-dua" class="inline-flex items-center justify-center rounded-2xl bg-emerald-900 px-6 py-4 text-sm font-extrabold text-white shadow-sm shadow-emerald-950/20 transition hover:bg-emerald-800">
-                                        Submit a Dua Request
-                                    </a>
-                                @else
-                                    <div class="inline-flex items-center justify-center rounded-2xl bg-stone-100 px-6 py-4 text-sm font-extrabold text-stone-600">
-                                        Submissions Closed
-                                    </div>
-                                @endif
-                                <button
-                                    type="button"
-                                    class="inline-flex items-center justify-center rounded-2xl border border-emerald-950/10 bg-emerald-50 px-6 py-4 text-sm font-extrabold text-emerald-950 transition hover:bg-emerald-100"
-                                    x-data="{ copied: false }"
-                                    x-on:click="navigator.clipboard?.writeText(@js($duaList->publicUrl())); copied = true; setTimeout(() => copied = false, 1800)"
-                                >
-                                    <span x-show="! copied">Copy Share Link</span>
-                                    <span x-cloak x-show="copied">Copied</span>
-                                </button>
-                            </div>
-                        </div>
-                    </article>
-
-                    <section id="submit-dua" class="mx-auto mt-8 max-w-3xl rounded-[2rem] border border-emerald-950/10 bg-white p-6 shadow-[0_22px_70px_rgba(15,23,42,0.06)] sm:p-8">
-                        @if (session('submission_status'))
-                            <div class="mb-6 rounded-2xl bg-emerald-50 px-5 py-4 text-sm font-bold text-emerald-900 ring-1 ring-emerald-900/10">
-                                {{ session('submission_status') }}
-                            </div>
-                        @endif
-
-                        <h2 class="text-2xl font-extrabold tracking-tight text-stone-950">Submit a dua request</h2>
+                        <h1 class="mt-6 font-serif text-4xl font-bold tracking-tight text-stone-950 sm:text-5xl">{{ $duaList->title }}</h1>
 
                         @if ($acceptsSubmissions)
-                            <p class="mt-3 text-sm leading-6 text-stone-600">
-                                Write the dua you would like {{ $creatorName }} to remember. Your name is optional, and you can submit anonymously.
+                            <p class="mx-auto mt-4 max-w-xl text-base leading-8 text-stone-600">
+                                {{ $duaList->publicInviteMessage() }}
                             </p>
+                        @else
+                            <p class="mx-auto mt-4 max-w-xl text-base leading-8 text-stone-600">
+                                {{ $closedReason ?? $duaList->publicClosedMessage() }}
+                            </p>
+                        @endif
 
-                            <form
-                                method="POST"
-                                action="{{ route('dua-lists.submissions.store', $duaList) }}"
-                                class="mt-7 space-y-5"
-                                x-data="{
-                                    maxDuas: 35,
-                                    duas: @js(old('duas', old('content') ? [old('content')] : [''])),
-                                    addDua() {
-                                        if (this.duas.length < this.maxDuas) {
-                                            this.duas.push('');
-                                            this.$nextTick(() => this.$refs.duaBoxes?.querySelector('textarea:last-of-type')?.focus());
-                                        }
-                                    },
-                                    removeDua(index) {
-                                        if (this.duas.length > 1) {
-                                            this.duas.splice(index, 1);
-                                        }
-                                    },
-                                }"
-                            >
+                        <div class="mx-auto mt-8 max-w-md">
+                            <div class="flex items-center justify-between text-sm font-bold text-stone-600">
+                                <span>{{ $completedCount }} completed</span>
+                                <span>{{ $progress }}%</span>
+                                <span>{{ $totalSubmissions }} total</span>
+                            </div>
+                            <div class="mt-3 h-3 rounded-full bg-stone-100">
+                                <div class="h-3 rounded-full bg-emerald-700" style="width: {{ $progress }}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <section id="submit-dua" class="mx-auto mt-8 rounded-[2rem] border border-emerald-950/10 bg-white p-6 shadow-[0_22px_70px_rgba(15,23,42,0.06)] sm:p-8">
+                    @if (session('submission_status'))
+                        <div class="mb-6 rounded-2xl bg-emerald-50 px-5 py-4 text-sm font-bold text-emerald-900 ring-1 ring-emerald-900/10">
+                            {{ session('submission_status') }}
+                        </div>
+                    @endif
+
+                    @if ($acceptsSubmissions)
+                        <div
+                            x-data="{
+                                step: @js($errors->any() && $duaErrors->isNotEmpty() ? 'duas' : 'info'),
+                                showGuide: false,
+                                maxDuas: 35,
+                                duas: @js(old('duas', [''])),
+                                gender: @js(old('gender', '')),
+                                whatsapp: @js((bool) old('whatsapp_notifications')),
+                                whatsappVerified: @js((bool) old('whatsapp_verified')),
+                                terms: @js((bool) old('terms')),
+                                firstName: @js(old('first_name', '')),
+                                lastName: @js(old('last_name', '')),
+                                email: @js(old('email', '')),
+                                get canContinue() {
+                                    return this.firstName.trim() !== ''
+                                        && this.lastName.trim() !== ''
+                                        && this.email.trim() !== ''
+                                        && this.gender !== ''
+                                        && this.terms
+                                        && (!this.whatsapp || this.whatsappVerified);
+                                },
+                                addDua() {
+                                    if (this.duas.length < this.maxDuas) {
+                                        const index = this.duas.length;
+                                        this.duas.push('');
+                                        this.$nextTick(() => document.getElementById('dua-field-' + index)?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+                                    }
+                                },
+                                removeDua(index) {
+                                    if (this.duas.length > 1) this.duas.splice(index, 1);
+                                },
+                                openDuas() {
+                                    this.showGuide = true;
+                                },
+                                acceptGuide() {
+                                    this.showGuide = false;
+                                    this.step = 'duas';
+                                    this.$nextTick(() => document.getElementById('dua-field-0')?.focus());
+                                },
+                            }"
+                            x-init="@if($firstErrorIndex !== null) $nextTick(() => document.getElementById('dua-field-{{ $firstErrorIndex }}')?.scrollIntoView({ behavior: 'smooth', block: 'center' })) @endif"
+                        >
+                            <form method="POST" action="{{ route('dua-lists.submissions.store', $duaList) }}" class="space-y-5">
                                 @csrf
                                 <div class="hidden" aria-hidden="true">
-                                    <label for="website">Website</label>
-                                    <input id="website" name="website" tabindex="-1" autocomplete="off">
+                                    <input name="website" tabindex="-1" autocomplete="off">
                                 </div>
 
-                                <label class="flex cursor-pointer items-start gap-3 rounded-2xl bg-emerald-50/70 p-4 text-sm font-semibold text-emerald-950 ring-1 ring-emerald-900/10">
-                                    <input type="checkbox" name="is_anonymous" value="1" @checked(old('is_anonymous')) class="mt-1 h-5 w-5 rounded border-emerald-200 text-emerald-800 focus:ring-emerald-700">
-                                    Submit anonymously
-                                </label>
+                                <div x-show="step === 'info'" x-cloak>
+                                    <h2 class="text-2xl font-extrabold tracking-tight text-stone-950">Your details</h2>
+                                    <p class="mt-2 text-sm text-stone-600">Tell us who is submitting these dua requests.</p>
 
-                                <div class="grid gap-4 sm:grid-cols-2">
-                                    <div>
-                                        <label for="first_name" class="block text-sm font-bold text-stone-900">First Name <span class="font-medium text-stone-400">(optional)</span></label>
-                                        <input id="first_name" name="first_name" value="{{ old('first_name') }}" placeholder="Your first name" class="mt-2 block w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm outline-none transition placeholder:text-stone-400 focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100">
-                                        @error('first_name') <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p> @enderror
-                                    </div>
-                                    <div>
-                                        <label for="last_name" class="block text-sm font-bold text-stone-900">Last Name <span class="font-medium text-stone-400">(optional)</span></label>
-                                        <input id="last_name" name="last_name" value="{{ old('last_name') }}" placeholder="Your last name" class="mt-2 block w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm outline-none transition placeholder:text-stone-400 focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100">
-                                        @error('last_name') <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p> @enderror
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label for="email" class="block text-sm font-bold text-stone-900">Email <span class="font-medium text-stone-400">(optional, used for your submission limit)</span></label>
-                                    <input id="email" name="email" type="email" value="{{ old('email') }}" placeholder="you@example.com" class="mt-2 block w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm outline-none transition placeholder:text-stone-400 focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100">
-                                    @error('email') <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p> @enderror
-                                </div>
-
-                                <div>
-                                    <div class="flex items-center justify-between gap-3">
+                                    <div class="mt-6 grid gap-4 sm:grid-cols-2">
                                         <div>
-                                            <label class="block text-sm font-bold text-stone-900">Your dua requests</label>
-                                            <p class="mt-1 text-xs font-semibold text-stone-500">Add up to 35 duas before submitting.</p>
+                                            <label for="first_name" class="block text-sm font-bold text-stone-900">First Name</label>
+                                            <input id="first_name" name="first_name" x-model="firstName" required class="mt-2 block w-full rounded-2xl border border-stone-200 px-4 py-3 text-sm outline-none focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100 @error('first_name') border-red-400 @enderror">
+                                            @error('first_name') <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p> @enderror
                                         </div>
-                                        <span class="shrink-0 rounded-full bg-emerald-50 px-3 py-1 text-xs font-extrabold text-emerald-800" x-text="`${duas.length}/${maxDuas}`"></span>
+                                        <div>
+                                            <label for="last_name" class="block text-sm font-bold text-stone-900">Last Name</label>
+                                            <input id="last_name" name="last_name" x-model="lastName" required class="mt-2 block w-full rounded-2xl border border-stone-200 px-4 py-3 text-sm outline-none focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100 @error('last_name') border-red-400 @enderror">
+                                            @error('last_name') <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p> @enderror
+                                        </div>
                                     </div>
 
-                                    <div x-ref="duaBoxes" class="mt-3 space-y-3">
-                                        <template x-for="(dua, index) in duas" :key="index">
-                                            <div class="rounded-2xl border border-stone-200 bg-white p-3">
+                                    <div class="mt-4">
+                                        <label for="email" class="block text-sm font-bold text-stone-900">Email</label>
+                                        <input id="email" name="email" type="email" x-model="email" required class="mt-2 block w-full rounded-2xl border border-stone-200 px-4 py-3 text-sm outline-none focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100 @error('email') border-red-400 @enderror">
+                                        @error('email') <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p> @enderror
+                                    </div>
+
+                                    <div class="mt-5">
+                                        <p class="block text-sm font-bold text-stone-900">Gender</p>
+                                        <div class="mt-3 grid grid-cols-2 gap-3">
+                                            @foreach (['male' => 'Male', 'female' => 'Female'] as $value => $label)
+                                                <label class="cursor-pointer rounded-2xl border px-4 py-3 text-center text-sm font-bold transition" x-bind:class="gender === '{{ $value }}' ? 'border-emerald-800 bg-emerald-800 text-white' : 'border-stone-200 bg-white text-stone-700'">
+                                                    <input type="radio" name="gender" value="{{ $value }}" class="sr-only" x-model="gender" required>
+                                                    {{ $label }}
+                                                </label>
+                                            @endforeach
+                                        </div>
+                                        @error('gender') <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p> @enderror
+                                    </div>
+
+                                    <label class="mt-5 flex cursor-pointer items-start gap-3 rounded-2xl bg-emerald-50/70 p-4 text-sm font-semibold text-emerald-950 ring-1 ring-emerald-900/10">
+                                        <input type="checkbox" name="whatsapp_notifications" value="1" x-model="whatsapp" class="mt-1 h-5 w-5 rounded border-emerald-200 text-emerald-800">
+                                        <span>Would you like a WhatsApp notification when {{ trim($duaList->user->first_name ?? 'the list owner') }} completes your dua?</span>
+                                    </label>
+
+                                    <div x-show="whatsapp" x-cloak class="mt-4 space-y-3 rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4">
+                                        <div class="grid gap-3 sm:grid-cols-[8rem_1fr]">
+                                            <div>
+                                                <label class="block text-xs font-bold text-stone-700">Country code</label>
+                                                <input name="whatsapp_country_code" value="{{ old('whatsapp_country_code', '+44') }}" class="mt-1 block w-full rounded-xl border border-stone-200 px-3 py-2 text-sm" placeholder="+44">
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs font-bold text-stone-700">Phone number</label>
+                                                <input name="whatsapp_phone" value="{{ old('whatsapp_phone') }}" class="mt-1 block w-full rounded-xl border border-stone-200 px-3 py-2 text-sm" placeholder="7700 900123">
+                                            </div>
+                                        </div>
+                                        <input type="hidden" name="whatsapp_verified" value="0" x-bind:value="whatsappVerified ? 1 : 0">
+                                        <button type="button" x-on:click="whatsappVerified = true" class="rounded-xl bg-emerald-800 px-4 py-2 text-sm font-bold text-white" x-bind:class="whatsappVerified ? 'bg-stone-400' : 'bg-emerald-800'" x-bind:disabled="whatsappVerified">
+                                            <span x-text="whatsappVerified ? 'Verified' : 'Verify via WhatsApp'"></span>
+                                        </button>
+                                        <p class="text-xs text-stone-500">Twilio WhatsApp verification will be sent to this number.</p>
+                                    </div>
+
+                                    <label class="mt-5 flex cursor-pointer items-start gap-3 rounded-2xl border border-stone-200 p-4 text-sm leading-6 text-stone-700">
+                                        <input type="checkbox" name="terms" value="1" x-model="terms" class="mt-1 h-5 w-5 rounded border-stone-300 text-emerald-800" required>
+                                        <span>I agree to the terms and conditions, and I consent to the processing of my personal data in accordance with the Privacy Policy, as required by GDPR.</span>
+                                    </label>
+                                    @error('terms') <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p> @enderror
+
+                                    <button type="button" x-on:click="openDuas()" x-bind:disabled="! canContinue" class="mt-7 w-full rounded-2xl px-6 py-4 text-sm font-extrabold text-white transition disabled:cursor-not-allowed disabled:bg-stone-300" x-bind:class="canContinue ? 'bg-emerald-900 hover:bg-emerald-800' : 'bg-stone-300'">
+                                        Next
+                                    </button>
+                                </div>
+
+                                <div x-show="step === 'duas'" x-cloak>
+                                    <div class="flex items-center justify-between gap-3">
+                                        <h2 class="text-2xl font-extrabold tracking-tight text-stone-950">Your dua requests</h2>
+                                        <button type="button" x-on:click="step = 'info'" class="text-sm font-bold text-emerald-800 hover:text-emerald-700">Go back</button>
+                                    </div>
+                                    <p class="mt-2 text-sm text-stone-600">Write each dua in third person form. Add up to 35 duas.</p>
+
+                                    <div class="mt-5 space-y-3">
+                                        <template x-for="(dua, index) in duas" :key="'dua-' + index + '-' + duas.length">
+                                            <div class="rounded-2xl border p-3" x-bind:class="@js($duaErrorIndexes).includes(index) ? 'border-red-400 bg-red-50' : 'border-stone-200 bg-white'" x-bind:id="'dua-field-' + index">
                                                 <div class="mb-2 flex items-center justify-between gap-3">
-                                                    <p class="text-xs font-extrabold uppercase tracking-[0.14em] text-stone-500" x-text="`Dua ${index + 1}`"></p>
-                                                    <button
-                                                        type="button"
-                                                        x-show="duas.length > 1"
-                                                        x-on:click="removeDua(index)"
-                                                        class="rounded-full bg-red-50 px-3 py-1 text-xs font-extrabold text-red-700"
-                                                    >
-                                                        Remove
-                                                    </button>
+                                                    <p class="text-xs font-extrabold uppercase tracking-[0.14em] text-stone-500" x-text="'Dua ' + (index + 1)"></p>
+                                                    <button type="button" x-show="duas.length > 1" x-on:click="removeDua(index)" class="rounded-full bg-red-50 px-3 py-1 text-xs font-extrabold text-red-700">Remove</button>
                                                 </div>
-                                                <textarea
-                                                    name="duas[]"
-                                                    rows="4"
-                                                    x-model="duas[index]"
-                                                    placeholder="Write your dua here..."
-                                                    class="block w-full rounded-xl border border-stone-100 bg-stone-50 px-4 py-3 text-sm leading-7 outline-none transition placeholder:text-stone-400 focus:border-emerald-700 focus:bg-white focus:ring-4 focus:ring-emerald-100"
-                                                    required
-                                                ></textarea>
+                                                <textarea name="duas[]" rows="4" x-model="duas[index]" maxlength="1500" placeholder="Write your dua here..." class="block w-full rounded-xl border border-stone-100 bg-stone-50 px-4 py-3 text-sm leading-7 outline-none focus:border-emerald-700 focus:bg-white focus:ring-4 focus:ring-emerald-100" required></textarea>
+                                                @foreach ($duaErrors as $field => $messages)
+                                                    @if (preg_match('/^duas\.(\d+)$/', $field, $m))
+                                                        <p x-show="index === {{ $m[1] }}" x-cloak class="mt-2 text-sm font-medium text-red-600">{{ $messages[0] }}</p>
+                                                    @endif
+                                                @endforeach
                                             </div>
                                         </template>
                                     </div>
 
-                                    <button
-                                        type="button"
-                                        x-on:click="addDua"
-                                        x-bind:disabled="duas.length >= maxDuas"
-                                        class="mt-3 flex w-full items-center justify-center rounded-2xl border border-emerald-900/15 bg-emerald-50 px-5 py-3 text-sm font-extrabold text-emerald-950 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
-                                    >
+                                    <button type="button" x-on:click="addDua()" x-bind:disabled="duas.length >= maxDuas" class="mt-3 flex w-full items-center justify-center rounded-2xl border border-emerald-900/15 bg-emerald-50 px-5 py-3 text-sm font-extrabold text-emerald-950 transition hover:bg-emerald-100 disabled:opacity-50">
                                         + Add Another Dua
                                     </button>
 
                                     @error('duas') <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p> @enderror
-                                    @error('duas.*') <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p> @enderror
-                                    @error('content') <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p> @enderror
-                                </div>
 
-                                <div>
-                                    <label for="note" class="block text-sm font-bold text-stone-900">Note <span class="font-medium text-stone-400">(optional)</span></label>
-                                    <textarea id="note" name="note" rows="3" placeholder="Anything else you would like to share?" class="mt-2 block w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm leading-7 outline-none transition placeholder:text-stone-400 focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100">{{ old('note') }}</textarea>
-                                    @error('note') <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p> @enderror
+                                    <button type="submit" class="mt-7 w-full rounded-2xl bg-emerald-900 px-6 py-4 text-sm font-extrabold text-white shadow-sm transition hover:bg-emerald-800">
+                                        Submit Dua Requests
+                                    </button>
                                 </div>
-
-                                <button type="submit" class="w-full rounded-2xl bg-emerald-900 px-6 py-4 text-sm font-extrabold text-white shadow-sm shadow-emerald-950/20 transition hover:bg-emerald-800">
-                                    Submit Dua Requests
-                                </button>
                             </form>
-                        @else
-                            <div class="mt-6 rounded-2xl bg-stone-50 p-5 text-sm leading-7 text-stone-700 ring-1 ring-stone-200">
-                                {{ $closedReason ?? 'This list is not accepting submissions right now.' }}
+
+                            <div x-cloak x-show="showGuide" class="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/50 p-4 backdrop-blur-sm">
+                                <div class="w-full max-w-lg rounded-[2rem] bg-white p-6 shadow-2xl sm:p-8">
+                                    <h3 class="text-xl font-extrabold text-stone-950">Write duas in third person</h3>
+                                    <p class="mt-4 text-sm leading-7 text-stone-600">
+                                        Please write each dua in third person so the list owner can read it naturally when making dua for you.
+                                        For example: "May Allah grant her good health" instead of "Grant me good health".
+                                    </p>
+                                    <button type="button" x-on:click="acceptGuide()" class="mt-6 w-full rounded-2xl bg-emerald-900 px-5 py-3.5 text-sm font-extrabold text-white transition hover:bg-emerald-800">
+                                        I understand
+                                    </button>
+                                </div>
                             </div>
-                            <a href="{{ route('onboarding.start') }}" class="mt-6 inline-flex rounded-2xl bg-emerald-900 px-5 py-3 text-sm font-extrabold text-white">Create Your Own List</a>
-                        @endif
-                    </section>
-                </div>
-            </section>
+                        </div>
+                    @else
+                        <div class="rounded-2xl bg-stone-50 p-5 text-sm leading-7 text-stone-700 ring-1 ring-stone-200">
+                            {{ $closedReason ?? $duaList->publicClosedMessage() }}
+                        </div>
+                        <div class="mt-6 grid gap-3 sm:grid-cols-2">
+                            <a href="{{ route('home') }}#blog" class="inline-flex items-center justify-center rounded-2xl bg-emerald-900 px-5 py-3 text-sm font-extrabold text-white">Submit Community Dua Instead</a>
+                            <a href="{{ route('onboarding.start') }}" class="inline-flex items-center justify-center rounded-2xl border border-emerald-900/15 bg-emerald-50 px-5 py-3 text-sm font-extrabold text-emerald-950">Create your own Dua list</a>
+                        </div>
+                    @endif
+                </section>
+            </div>
         </main>
     </body>
 </html>

@@ -119,4 +119,20 @@ class DuaSubmission extends Model
     {
         return $this->status === DuaSubmissionStatus::Hidden;
     }
+
+    public function readableContent(): string
+    {
+        $words = preg_split('/\s+/u', trim($this->content), -1, PREG_SPLIT_NO_EMPTY);
+
+        return collect($words)->map(function (string $word, int $index): string {
+            $class = match ($index % 5) {
+                0 => 'font-black text-stone-950',
+                2 => 'font-semibold text-stone-800',
+                4 => 'text-stone-500',
+                default => 'text-stone-700',
+            };
+
+            return '<span class="'.$class.'">'.e($word).'</span>';
+        })->implode(' ');
+    }
 }

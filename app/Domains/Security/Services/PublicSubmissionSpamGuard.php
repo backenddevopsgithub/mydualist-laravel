@@ -29,16 +29,26 @@ class PublicSubmissionSpamGuard extends Service
         $normalized = collect($contents)
             ->map(fn (string $content): string => $this->normalize($content));
 
-        if ($normalized->duplicates()->isNotEmpty()) {
-            throw ValidationException::withMessages([
-                'duas' => 'Please remove duplicate dua requests before submitting.',
-            ]);
+        $seen = [];
+        $duplicateMessages = [];
+
+        foreach ($normalized as $index => $value) {
+            if (isset($seen[$value])) {
+                $number = $index + 1;
+                $duplicateMessages['duas.'.$index] = "Dua {$number} looks like a duplicate. Please make each dua unique.";
+            }
+
+            $seen[$value] = true;
         }
 
-        foreach ($contents as $content) {
+        if ($duplicateMessages !== []) {
+            throw ValidationException::withMessages($duplicateMessages);
+        }
+
+        foreach ($contents as $index => $content) {
             if ($this->containsTooManyLinks($content)) {
                 throw ValidationException::withMessages([
-                    'duas' => 'Please remove extra links from your dua request.',
+                    'duas.'.$index => 'Dua '.($index + 1).' contains too many links. Please remove extra links.',
                 ]);
             }
 
@@ -46,7 +56,7 @@ class PublicSubmissionSpamGuard extends Service
 
             if (! Cache::add($cacheKey, true, self::DUPLICATE_WINDOW_SECONDS)) {
                 throw ValidationException::withMessages([
-                    'duas' => 'This dua was already submitted recently. Please wait a moment before trying again.',
+                    'duas.'.$index => 'Dua '.($index + 1).' was already submitted recently. Please wait a moment before trying again.',
                 ]);
             }
         }

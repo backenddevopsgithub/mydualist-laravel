@@ -20,17 +20,6 @@
             </span>
             My Lists
         </a>
-        <a href="{{ route('dashboard.archived') }}" @class([
-            'flex items-center gap-3 rounded-2xl px-4 py-3 transition hover:bg-white hover:text-emerald-950',
-            'bg-emerald-900/10 text-emerald-950' => request()->routeIs('dashboard.archived'),
-        ])>
-            <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-emerald-900">
-                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M5 7.5A2.5 2.5 0 0 1 7.5 5h9A2.5 2.5 0 0 1 19 7.5v9a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 16.5v-9Z" stroke="currentColor" stroke-width="1.6"/>
-                </svg>
-            </span>
-            Archived Lists
-        </a>
     </nav>
 
     <div class="mt-8 border-t border-emerald-950/10 pt-8">

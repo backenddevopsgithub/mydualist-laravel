@@ -26,7 +26,7 @@ return [
     ],
 
     'brand' => [
-        'logo_url' => env('MYDUALIST_LOGO_URL', 'https://mydualist.com/wp-content/uploads/2025/05/logo-mdl.svg'),
+        'logo_url' => env('MYDUALIST_LOGO_URL', 'images/logo-mdl.svg'),
     ],
 
     'onboarding' => [

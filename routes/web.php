@@ -55,6 +55,9 @@ Route::get('/create-list/{step}', [CreateListOnboardingController::class, 'show'
 Route::post('/create-list/verify', [CreateListOnboardingController::class, 'store'])
     ->middleware('throttle:otp')
     ->defaults('step', 'verify');
+Route::post('/create-list/resend-code', [CreateListOnboardingController::class, 'resend'])
+    ->middleware('throttle:otp')
+    ->name('onboarding.resend');
 Route::post('/create-list/{step}', [CreateListOnboardingController::class, 'store'])->middleware('throttle:onboarding')->name('onboarding.store');
 
 Route::middleware(['auth', 'verified'])->group(function (): void {

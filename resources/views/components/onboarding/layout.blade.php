@@ -21,7 +21,7 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="min-h-screen bg-[#eef6f2] font-sans text-stone-950 antialiased">
-        <main class="relative min-h-screen overflow-hidden">
+        <main class="relative min-h-screen">
             <div class="absolute inset-x-0 bottom-0 -z-10 h-64 bg-gradient-to-t from-emerald-100/70 to-transparent"></div>
             <div class="pointer-events-none absolute bottom-0 left-0 -z-10 h-56 w-96 text-emerald-950/10">
                 <svg class="h-full w-full" viewBox="0 0 420 230" preserveAspectRatio="none" fill="currentColor" aria-hidden="true">
@@ -39,7 +39,7 @@
                 </header>
 
                 <section class="flex flex-1 items-center justify-center py-8">
-                    <div class="w-full rounded-[2rem] border border-emerald-950/5 bg-white p-6 shadow-[0_30px_100px_rgba(15,23,42,0.08)] sm:p-9 lg:p-11">
+                    <x-ui.card class="w-full shadow-[0_30px_100px_rgba(15,23,42,0.08)] sm:p-9 lg:p-11">
                         <x-onboarding.stepper :current="$stepIndex" :total="$totalSteps" />
 
                         <div class="mx-auto mt-8 max-w-2xl text-center">
@@ -50,7 +50,7 @@
                         <div class="mx-auto mt-9 max-w-2xl">
                             {{ $slot }}
                         </div>
-                    </div>
+                    </x-ui.card>
                 </section>
             </div>
         </main>

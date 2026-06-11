@@ -12,16 +12,24 @@
         x-data="{
             preview: @js($coverImageUrl),
             fileName: '',
+            hasFile: false,
             previewFile(event) {
-                const file = event.target.files[0]
-                if (! file) return
-
-                this.fileName = file.name
-                this.preview = URL.createObjectURL(file)
+                const file = event.target.files[0];
+                if (! file) return;
+                this.fileName = file.name;
+                this.preview = URL.createObjectURL(file);
+                this.hasFile = true;
+            },
+            removeImage() {
+                this.preview = null;
+                this.fileName = '';
+                this.hasFile = false;
+                this.$refs.fileInput.value = '';
             },
         }"
     >
         @csrf
+        <input type="hidden" name="remove_image" value="0" x-ref="removeFlag">
 
         <div class="space-y-6">
             <label class="group relative flex min-h-72 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-3xl border-2 border-dashed border-stone-300 bg-stone-50 px-6 py-10 text-center transition hover:border-emerald-400 hover:bg-emerald-50/50">
@@ -39,16 +47,21 @@
                     <span class="mt-2 block text-sm text-stone-600" x-text="fileName || 'Click to choose or drag and drop'"></span>
                     <span class="mt-2 block text-xs font-semibold text-stone-500">JPG, PNG, WEBP up to 2MB</span>
                 </div>
-                <input type="file" name="cover_image" accept="image/*" class="sr-only" x-on:change="previewFile">
+                <input type="file" name="cover_image" accept="image/*" class="sr-only" x-ref="fileInput" x-on:change="previewFile">
             </label>
+
+            <button
+                type="button"
+                x-show="preview"
+                x-on:click="removeImage(); $refs.removeFlag.value = '1'"
+                class="w-full rounded-2xl border border-red-200 bg-red-50 px-5 py-3 text-sm font-bold text-red-700 transition hover:bg-red-100"
+            >
+                Remove image
+            </button>
 
             @error('cover_image')
                 <p class="text-sm font-medium text-red-600">{{ $message }}</p>
             @enderror
-
-            <p x-show="preview" class="rounded-xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
-                Image selected. Continue to save it with your list.
-            </p>
 
             <div class="rounded-2xl bg-emerald-50 p-4 text-sm leading-6 text-emerald-900 ring-1 ring-emerald-900/5">
                 <span class="font-bold">Pro Tip:</span>
@@ -56,6 +69,18 @@
             </div>
         </div>
 
-        <x-onboarding.actions back="dates" />
+        <div class="mt-10 flex items-center justify-between gap-4">
+            <a href="{{ route('onboarding.show', 'dates') }}" class="inline-flex items-center gap-2 text-sm font-bold text-emerald-900 hover:text-emerald-700">
+                <span aria-hidden="true">←</span>
+                Back
+            </a>
+            <button
+                type="submit"
+                class="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-800 px-6 py-3 text-sm font-bold text-white shadow-sm shadow-emerald-950/10 transition hover:bg-emerald-700"
+                x-text="hasFile || preview ? 'Next' : 'Remind me later'"
+            >
+                Remind me later
+            </button>
+        </div>
     </form>
 </x-onboarding.layout>
