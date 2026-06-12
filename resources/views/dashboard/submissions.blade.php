@@ -1,6 +1,6 @@
 <x-dashboard.layout :user="$user" title="My Submissions - My Dua List">
     <main class="mx-auto max-w-6xl px-5 py-8 sm:px-6 lg:px-8 lg:py-10">
-        <h1 class="font-serif text-4xl font-bold tracking-tight text-emerald-950">My Submissions</h1>
+        <h1 class="dashboard-page-title">My Submissions</h1>
         <p class="mt-3 max-w-2xl text-sm leading-6 text-stone-600">Dua requests you submit to other lists will appear here with status and list references.</p>
 
         <section class="mt-8 space-y-4">

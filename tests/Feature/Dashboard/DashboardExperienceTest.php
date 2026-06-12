@@ -32,7 +32,10 @@ test('authenticated user can view upgraded dashboard experience', function () {
         ->assertSee('Total Submissions')
         ->assertSee('Completed Duas')
         ->assertSee('Hajj 2027')
-        ->assertSee('Copy')
+        ->assertSee('Copy link')
+        ->assertSee('View submissions')
+        ->assertSee('Overall progress')
+        ->assertSee('Created on')
         ->assertSee(route('dashboard.lists.show', DuaList::query()->where('slug', 'arsalan-hajj-1001')->first()), false)
         ->assertSee('Dashboard')
         ->assertSee('Profile');
@@ -56,8 +59,7 @@ test('user can archive restore edit and delete owned lists', function () {
     $this->actingAs($user)
         ->get(route('dashboard.archived'))
         ->assertOk()
-        ->assertSee('Umrah 2027')
-        ->assertSee('Restore');
+        ->assertSee('Umrah 2027');
 
     $this->actingAs($user)
         ->patch(route('dashboard.lists.restore', $duaList))

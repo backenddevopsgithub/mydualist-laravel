@@ -22,6 +22,7 @@ class UpdateListRequest extends FormRequest
             'title' => ['required', 'string', 'max:120'],
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],
+            'redirect_to' => ['nullable', 'string', 'max:2048'],
         ];
     }
 }

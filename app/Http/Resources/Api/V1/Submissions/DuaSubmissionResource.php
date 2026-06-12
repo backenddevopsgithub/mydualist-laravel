@@ -21,6 +21,7 @@ class DuaSubmissionResource extends ApiResource
             return [
                 'id' => $this->id,
                 'status' => $this->status->value,
+                'is_personal_dua' => $this->is_personal_dua,
                 'locked' => true,
             ];
         }
@@ -38,6 +39,7 @@ class DuaSubmissionResource extends ApiResource
             'display_name' => $this->displayName(),
             'email' => $this->email,
             'is_anonymous' => $this->is_anonymous,
+            'is_personal_dua' => $this->is_personal_dua,
             'content' => $this->content,
             'note' => $this->note,
             'status' => $this->status->value,

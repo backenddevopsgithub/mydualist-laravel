@@ -82,6 +82,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::patch('/dashboard/lists/{duaList}/archive', [DuaListController::class, 'archive'])->name('dashboard.lists.archive');
     Route::patch('/dashboard/lists/{duaList}/restore', [DuaListController::class, 'restore'])->name('dashboard.lists.restore');
     Route::delete('/dashboard/lists/{duaList}', [DuaListController::class, 'destroy'])->name('dashboard.lists.destroy');
+    Route::post('/dashboard/lists/{duaList}/personal-duas', [ListSubmissionController::class, 'storePersonalDua'])->name('dashboard.lists.personal-duas.store');
     Route::patch('/dashboard/lists/{duaList}/submissions/{submission}/complete', [ListSubmissionController::class, 'complete'])->name('dashboard.submissions.complete');
     Route::patch('/dashboard/lists/{duaList}/submissions/{submission}/undo', [ListSubmissionController::class, 'undo'])->name('dashboard.submissions.undo');
     Route::patch('/dashboard/lists/{duaList}/submissions/{submission}/hide', [ListSubmissionController::class, 'hide'])->name('dashboard.submissions.hide');

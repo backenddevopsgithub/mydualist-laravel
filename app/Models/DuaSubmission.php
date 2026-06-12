@@ -34,6 +34,7 @@ class DuaSubmission extends Model
         'last_name',
         'email',
         'is_anonymous',
+        'is_personal_dua',
         'content',
         'note',
         'status',
@@ -53,6 +54,7 @@ class DuaSubmission extends Model
         return [
             'status' => DuaSubmissionStatus::class,
             'is_anonymous' => 'boolean',
+            'is_personal_dua' => 'boolean',
             'completed_at' => 'datetime',
             'hidden_at' => 'datetime',
             'archived_at' => 'datetime',
@@ -118,6 +120,11 @@ class DuaSubmission extends Model
     public function isHidden(): bool
     {
         return $this->status === DuaSubmissionStatus::Hidden;
+    }
+
+    public function isPersonalDua(): bool
+    {
+        return (bool) $this->is_personal_dua;
     }
 
     public function readableContent(): string

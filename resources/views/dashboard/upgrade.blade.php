@@ -2,7 +2,7 @@
     <main class="mx-auto max-w-6xl px-5 py-8 sm:px-6 lg:px-8 lg:py-10">
         <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
-                <h1 class="font-serif text-4xl font-bold tracking-tight text-emerald-950">Upgrade Plan</h1>
+                <h1 class="dashboard-page-title">Upgrade Plan</h1>
                 <p class="mt-3 max-w-2xl text-sm leading-6 text-stone-600">Unlock more lists and unlimited dua requests.</p>
             </div>
             <div class="rounded-2xl bg-emerald-50 px-5 py-4 text-sm font-bold text-emerald-900 ring-1 ring-emerald-900/10">

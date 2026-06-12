@@ -18,7 +18,8 @@
         type="submit"
         variant="primary"
         size="md"
-        x-bind:disabled="typeof canSubmit !== 'undefined' ? !canSubmit : {{ $disabled ? 'true' : 'false' }}"
+        disabled
+        x-bind:disabled="typeof canSubmit !== 'undefined' ? ! canSubmit : {{ $disabled ? 'true' : 'false' }}"
         {{ $attributes }}
     >
         {{ $submit }}

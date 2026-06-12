@@ -15,7 +15,7 @@
         action="{{ route('onboarding.store', 'list') }}"
         x-data="{
             title: @js(old('title', data_get($state, 'list.title', ''))),
-            occasion: @js($selected),
+            occasion: @js($selected ?? ''),
             get canSubmit() {
                 return this.title.trim() !== '' && this.occasion !== '';
             },
@@ -59,6 +59,6 @@
             </div>
         </div>
 
-        <x-onboarding.actions back="account" submit="Next" x-bind:disabled="! canSubmit" />
+        <x-onboarding.actions back="account" submit="Next" />
     </form>
 </x-onboarding.layout>

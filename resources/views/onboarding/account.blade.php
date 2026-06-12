@@ -79,6 +79,7 @@
             variant="primary"
             size="lg"
             full-width
+            disabled
             x-bind:disabled="! canSubmit"
         >
             Get started

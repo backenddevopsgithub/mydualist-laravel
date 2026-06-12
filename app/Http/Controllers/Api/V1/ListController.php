@@ -26,7 +26,15 @@ class ListController extends ApiController
             $request->perPage(),
         );
 
-        return $this->paginated($paginator, DuaListResource::class, 'Lists retrieved.');
+        $response = $this->paginated($paginator, DuaListResource::class, 'Lists retrieved.');
+        $payload = $response->getData(true);
+
+        $payload['meta'] = [
+            ...($payload['meta'] ?? []),
+            'dashboard_summary' => $lists->dashboardSummary($request->user()),
+        ];
+
+        return response()->json($payload);
     }
 
     public function store(StoreListRequest $request, CreateDuaListAction $action, DuaListQueryService $lists): JsonResponse

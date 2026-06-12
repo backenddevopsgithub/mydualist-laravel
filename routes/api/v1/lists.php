@@ -14,6 +14,7 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function (): void {
     Route::delete('/lists/{duaList:id}', [ListController::class, 'destroy'])->name('lists.destroy');
 
     Route::get('/lists/{duaList:id}/submissions', [ListSubmissionController::class, 'index'])->name('lists.submissions.index');
+    Route::post('/lists/{duaList:id}/personal-duas', [ListSubmissionController::class, 'storePersonalDua'])->name('lists.personal-duas.store');
     Route::patch('/lists/{duaList:id}/submissions/{submission}/complete', [ListSubmissionController::class, 'complete'])->name('lists.submissions.complete');
     Route::patch('/lists/{duaList:id}/submissions/{submission}/undo', [ListSubmissionController::class, 'undo'])->name('lists.submissions.undo');
     Route::patch('/lists/{duaList:id}/submissions/{submission}/hide', [ListSubmissionController::class, 'hide'])->name('lists.submissions.hide');

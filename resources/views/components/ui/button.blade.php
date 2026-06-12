@@ -8,10 +8,20 @@
 
 @php
     $tag = $href ? 'a' : 'button';
+    $variantClass = match ($variant) {
+        'secondary' => 'ui-btn--secondary',
+        'neutral' => 'ui-btn--neutral',
+        default => 'ui-btn--primary',
+    };
+    $sizeClass = match ($size) {
+        'sm' => 'ui-btn--sm',
+        'lg' => 'ui-btn--lg',
+        default => 'ui-btn--md',
+    };
     $classes = collect([
         'ui-btn',
-        'ui-btn--' . $variant,
-        'ui-btn--' . $size,
+        $variantClass,
+        $sizeClass,
         $fullWidth ? 'ui-btn--full' : null,
     ])->filter()->implode(' ');
 @endphp

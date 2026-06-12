@@ -24,6 +24,7 @@ class DuaSubmissionFactory extends Factory
             'last_name' => fake()->lastName(),
             'email' => fake()->safeEmail(),
             'is_anonymous' => false,
+            'is_personal_dua' => false,
             'content' => fake()->sentence(12),
             'note' => null,
             'status' => DuaSubmission::STATUS_PENDING,
@@ -32,5 +33,12 @@ class DuaSubmissionFactory extends Factory
             'archived_at' => null,
             'reported_at' => null,
         ];
+    }
+
+    public function personal(): static
+    {
+        return $this->state(fn (): array => [
+            'is_personal_dua' => true,
+        ]);
     }
 }

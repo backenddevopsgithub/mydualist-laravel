@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Domains\Billing\Services\UserEntitlementService;
+use App\Domains\Submissions\Actions\CreatePersonalDuaAction;
 use App\Domains\Submissions\Actions\ReportDuaSubmissionAction;
 use App\Domains\Submissions\Actions\TransitionDuaSubmissionStatusAction;
 use App\Domains\Submissions\Services\DuaSubmissionQueryService;
 use App\Enums\DuaSubmissionStatus;
 use App\Http\Requests\Api\V1\Submissions\IndexSubmissionRequest;
 use App\Http\Requests\Submissions\ReportSubmissionRequest;
+use App\Http\Requests\Submissions\StorePersonalDuaRequest;
 use App\Http\Resources\Api\V1\Submissions\DuaSubmissionResource;
 use App\Models\DuaList;
 use App\Models\DuaSubmission;
@@ -47,6 +49,24 @@ class ListSubmissionController extends ApiController
         ];
 
         return response()->json($payload);
+    }
+
+    public function storePersonalDua(
+        StorePersonalDuaRequest $request,
+        DuaList $duaList,
+        CreatePersonalDuaAction $action,
+    ): JsonResponse {
+        abort_unless($duaList->user_id === $request->user()->id || $request->user()->isAdmin(), 404);
+
+        Gate::authorize('view', $duaList);
+
+        $submission = $action($duaList, $request->user(), $request->validated('content'));
+
+        return $this->success(
+            (new DuaSubmissionResource($submission))->resolve(),
+            'Personal dua added.',
+            201,
+        );
     }
 
     public function complete(Request $request, DuaList $duaList, int $submission, TransitionDuaSubmissionStatusAction $action): JsonResponse

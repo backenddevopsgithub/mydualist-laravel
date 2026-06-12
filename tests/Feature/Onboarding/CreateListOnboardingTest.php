@@ -24,7 +24,7 @@ test('onboarding validates account step', function () {
     $this->from('/create-list/account')
         ->post('/create-list/account', [])
         ->assertRedirect('/create-list/account')
-        ->assertSessionHasErrors(['first_name', 'last_name', 'email', 'password', 'terms']);
+        ->assertSessionHasErrors(['first_name', 'last_name', 'gender', 'email', 'password', 'terms']);
 });
 
 test('onboarding creates account and persists state between steps', function () {
@@ -33,6 +33,7 @@ test('onboarding creates account and persists state between steps', function () 
     $this->post('/create-list/account', [
         'first_name' => 'Onboarding',
         'last_name' => 'User',
+        'gender' => 'male',
         'email' => 'onboarding@example.com',
         'password' => 'Password123!',
         'password_confirmation' => 'Password123!',
@@ -44,6 +45,7 @@ test('onboarding creates account and persists state between steps', function () 
         'email' => 'onboarding@example.com',
         'first_name' => 'Onboarding',
         'last_name' => 'User',
+        'gender' => 'male',
     ]);
 
     $user = User::query()->where('email', 'onboarding@example.com')->firstOrFail();
@@ -53,7 +55,7 @@ test('onboarding creates account and persists state between steps', function () 
         ->and(session(OnboardingState::SESSION_KEY.'.verification_code'))->toHaveLength(4);
 });
 
-test('onboarding validates list category and date steps', function () {
+test('onboarding validates list and date steps', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)
@@ -66,27 +68,13 @@ test('onboarding validates list category and date steps', function () {
         ->from('/create-list/list')
         ->post('/create-list/list', [])
         ->assertRedirect('/create-list/list')
-        ->assertSessionHasErrors(['title']);
+        ->assertSessionHasErrors(['title', 'occasion']);
 
     $this->actingAs($user)
         ->withSession([
             OnboardingState::SESSION_KEY => [
                 'user_id' => $user->id,
-                'list' => ['title' => 'Hajj 2027'],
-                'current_step' => 'category',
-            ],
-        ])
-        ->from('/create-list/category')
-        ->post('/create-list/category', [])
-        ->assertRedirect('/create-list/category')
-        ->assertSessionHasErrors('occasion');
-
-    $this->actingAs($user)
-        ->withSession([
-            OnboardingState::SESSION_KEY => [
-                'user_id' => $user->id,
-                'list' => ['title' => 'Hajj 2027'],
-                'category' => ['occasion' => 'hajj'],
+                'list' => ['title' => 'Hajj 2027', 'occasion' => 'hajj'],
                 'current_step' => 'dates',
             ],
         ])
@@ -106,6 +94,7 @@ test('onboarding completes end to end and creates first list', function () {
     $this->post('/create-list/account', [
         'first_name' => 'Arsalan',
         'last_name' => 'Creator',
+        'gender' => 'male',
         'email' => 'creator@example.com',
         'password' => 'Password123!',
         'password_confirmation' => 'Password123!',
@@ -116,13 +105,11 @@ test('onboarding completes end to end and creates first list', function () {
 
     $this->post('/create-list/list', [
         'title' => 'Hajj 2027',
-    ])->assertRedirect(route('onboarding.show', 'category'));
-
-    expect(session(OnboardingState::SESSION_KEY.'.list.title'))->toBe('Hajj 2027');
-
-    $this->post('/create-list/category', [
         'occasion' => 'hajj',
     ])->assertRedirect(route('onboarding.show', 'dates'));
+
+    expect(session(OnboardingState::SESSION_KEY.'.list.title'))->toBe('Hajj 2027')
+        ->and(session(OnboardingState::SESSION_KEY.'.list.occasion'))->toBe('hajj');
 
     $this->post('/create-list/dates', [
         'start_date' => '2027-06-06',
@@ -140,7 +127,7 @@ test('onboarding completes end to end and creates first list', function () {
 
     $this->post('/create-list/verify', [
         'code' => str_split($code),
-    ])->assertRedirect(route('dashboard'));
+    ])->assertRedirect(route('onboarding.show', 'success'));
 
     $duaList = DuaList::query()->firstOrFail();
 
@@ -174,9 +161,6 @@ test('verified logged in user creates another list without otp', function () {
 
     $this->post('/create-list/list', [
         'title' => 'Umrah 2028',
-    ])->assertRedirect(route('onboarding.show', 'category'));
-
-    $this->post('/create-list/category', [
         'occasion' => 'umrah',
     ])->assertRedirect(route('onboarding.show', 'dates'));
 
@@ -187,7 +171,7 @@ test('verified logged in user creates another list without otp', function () {
 
     $this->post('/create-list/image', [
         'cover_image' => UploadedFile::fake()->image('cover.jpg', 1200, 800),
-    ])->assertRedirect(route('dashboard'));
+    ])->assertRedirect(route('onboarding.show', 'success'));
 
     expect(DuaList::query()->where('user_id', $user->id)->count())->toBe(2);
 
@@ -206,8 +190,7 @@ test('onboarding rejects incorrect verification code', function () {
             OnboardingState::SESSION_KEY => [
                 'user_id' => $user->id,
                 'verification_code' => '1234',
-                'list' => ['title' => 'Umrah Trip'],
-                'category' => ['occasion' => 'umrah'],
+                'list' => ['title' => 'Umrah Trip', 'occasion' => 'umrah'],
                 'dates' => ['start_date' => '2027-01-01', 'end_date' => '2027-01-10'],
                 'image' => ['cover_image_path' => null],
                 'current_step' => 'verify',
@@ -221,20 +204,43 @@ test('onboarding rejects incorrect verification code', function () {
         ->assertSessionHasErrors('code');
 });
 
-test('category step has no forced default selection', function () {
+test('list step has no forced default occasion selection', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)
         ->withSession([
             OnboardingState::SESSION_KEY => [
                 'user_id' => $user->id,
-                'list' => ['title' => 'Ramadan Duas'],
-                'current_step' => 'category',
+                'current_step' => 'list',
             ],
         ])
-        ->get('/create-list/category')
+        ->get('/create-list/list')
         ->assertOk()
-        ->assertDontSee('checked', false);
+        ->assertSee('x-model="occasion"', false)
+        ->assertSee("occasion: '',", false)
+        ->assertSee('! canSubmit', false);
+});
+
+test('dates step includes bundled date picker initializers', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->withSession([
+            OnboardingState::SESSION_KEY => [
+                'user_id' => $user->id,
+                'list' => ['title' => 'Hajj 2027', 'occasion' => 'hajj'],
+                'current_step' => 'dates',
+            ],
+        ])
+        ->get('/create-list/dates')
+        ->assertOk()
+        ->assertSee('id="start_date"', false)
+        ->assertSee('id="end_date"', false)
+        ->assertSee('x-model="startDate"', false)
+        ->assertSee('x-model="endDate"', false)
+        ->assertSee('! canSubmit', false)
+        ->assertSee('ui-date-input', false)
+        ->assertDontSee('cdn.jsdelivr.net/npm/flatpickr', false);
 });
 
 test('logged in homepage header shows dashboard without create list cta', function () {

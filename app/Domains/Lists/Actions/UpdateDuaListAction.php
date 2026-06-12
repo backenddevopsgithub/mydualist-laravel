@@ -8,7 +8,7 @@ use App\Models\DuaList;
 class UpdateDuaListAction extends Action
 {
     /**
-     * @param  array{title: string, occasion: string, start_date?: string|null, end_date?: string|null}  $data
+     * @param  array{title: string, start_date?: string|null, end_date?: string|null}  $data
      */
     public function handle(mixed ...$args): mixed
     {
@@ -18,7 +18,6 @@ class UpdateDuaListAction extends Action
 
         $duaList->update([
             'title' => $data['title'],
-            'occasion' => $data['occasion'],
             'start_date' => $data['start_date'] ?? null,
             'end_date' => $data['end_date'] ?? null,
         ]);

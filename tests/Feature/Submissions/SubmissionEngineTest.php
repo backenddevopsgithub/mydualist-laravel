@@ -18,23 +18,24 @@ test('public visitor can submit a dua request to an open list', function () {
 
     $this->get(route('dua-lists.public', $duaList))
         ->assertOk()
-        ->assertSee('Submit a dua request')
-        ->assertSee('Submit anonymously');
+        ->assertSee('Your details')
+        ->assertSee('Submit Dua Requests');
 
     $this->post(route('dua-lists.submissions.store', $duaList), [
         'first_name' => 'Amina',
         'last_name' => 'Khan',
         'email' => 'amina@example.com',
+        'gender' => 'female',
+        'terms' => '1',
         'content' => 'Please make dua for my family.',
-        'note' => 'This means a lot.',
-    ])->assertRedirect(route('dua-lists.public', $duaList));
+    ])->assertRedirect(route('dua-lists.public', $duaList).'#submit-dua');
 
     $submission = DuaSubmission::query()->firstOrFail();
 
     expect($submission->dua_list_id)->toBe($duaList->id)
         ->and($submission->displayName())->toBe('Amina Khan')
         ->and($submission->status)->toBe(DuaSubmissionStatus::Pending)
-        ->and($submission->note)->toBe('This means a lot.');
+        ->and($submission->content)->toBe('Please make dua for my family.');
 });
 
 test('public submission supports anonymous requests and validates content', function () {
@@ -79,12 +80,14 @@ test('public visitor can submit multiple dua requests in one form', function () 
         'first_name' => 'Amina',
         'last_name' => 'Khan',
         'email' => 'amina@example.com',
+        'gender' => 'female',
+        'terms' => '1',
         'duas' => [
             'Please make dua for my family.',
             'Please make dua for ease in my exams.',
             'Please make dua for our health.',
         ],
-    ])->assertRedirect(route('dua-lists.public', $duaList));
+    ])->assertRedirect(route('dua-lists.public', $duaList).'#submit-dua');
 
     expect(DuaSubmission::query()->where('dua_list_id', $duaList->id)->count())->toBe(3);
 
@@ -125,21 +128,68 @@ test('closed archived and expired lists reject public submissions gracefully', f
     $this->get(route('dua-lists.public', $archived))
         ->assertOk()
         ->assertSee('Submissions Closed')
-        ->assertSee('is not accepting any more duas');
+        ->assertSee('is no longer accepting dua requests');
 
     $this->from(route('dua-lists.public', $archived))
         ->post(route('dua-lists.submissions.store', $archived), [
-            'content' => 'Please make dua.',
+            'first_name' => 'Amina',
+            'last_name' => 'Khan',
+            'email' => 'amina@example.com',
+            'gender' => 'female',
+            'terms' => '1',
+            'duas' => ['Please make dua.'],
         ])
         ->assertRedirect(route('dua-lists.public', $archived))
         ->assertSessionHasErrors('content');
 
     $this->from(route('dua-lists.public', $expired))
         ->post(route('dua-lists.submissions.store', $expired), [
-            'content' => 'Please make dua.',
+            'first_name' => 'Amina',
+            'last_name' => 'Khan',
+            'email' => 'amina@example.com',
+            'gender' => 'female',
+            'terms' => '1',
+            'duas' => ['Please make dua.'],
         ])
         ->assertRedirect(route('dua-lists.public', $expired))
         ->assertSessionHasErrors('content');
+});
+
+test('turning a list off blocks public submissions with valid form data', function () {
+    $owner = User::factory()->create();
+    $duaList = DuaList::factory()->create([
+        'user_id' => $owner->id,
+        'status' => DuaList::STATUS_ACTIVE,
+        'end_date' => now()->addMonth(),
+        'published_at' => now(),
+    ]);
+
+    $this->actingAs($owner)
+        ->patch(route('dashboard.lists.archive', $duaList))
+        ->assertRedirect(route('dashboard.archived'));
+
+    expect($duaList->refresh()->isArchived())->toBeTrue();
+
+    $response = $this->get(route('dua-lists.public', $duaList))
+        ->assertOk()
+        ->assertSee('Submissions Closed')
+        ->assertDontSee('Submit Dua Requests');
+
+    expect($response->headers->get('Cache-Control'))->toContain('no-store');
+
+    $this->from(route('dua-lists.public', $duaList))
+        ->post(route('dua-lists.submissions.store', $duaList), [
+            'first_name' => 'Amina',
+            'last_name' => 'Khan',
+            'email' => 'amina@example.com',
+            'gender' => 'female',
+            'terms' => '1',
+            'duas' => ['Please make dua for my family.'],
+        ])
+        ->assertRedirect(route('dua-lists.public', $duaList))
+        ->assertSessionHasErrors('content');
+
+    expect(DuaSubmission::query()->where('dua_list_id', $duaList->id)->exists())->toBeFalse();
 });
 
 test('per email submission limit is enforced per list', function () {
@@ -163,9 +213,11 @@ test('per email submission limit is enforced per list', function () {
         ->assertSessionHasErrors('email');
 });
 
-test('owner workspace supports filtering search pagination and status transitions', function () {
+test('owner workspace supports visible tabs pagination and status transitions', function () {
     $owner = User::factory()->create();
     $duaList = DuaList::factory()->create(['user_id' => $owner->id]);
+    DuaSubmission::factory()->count(16)->create(['dua_list_id' => $duaList->id]);
+
     $submission = DuaSubmission::factory()->create([
         'dua_list_id' => $duaList->id,
         'first_name' => 'Amina',
@@ -173,13 +225,21 @@ test('owner workspace supports filtering search pagination and status transition
         'content' => 'Please make dua for my exams.',
     ]);
 
-    DuaSubmission::factory()->count(16)->create(['dua_list_id' => $duaList->id]);
-
     $this->actingAs($owner)
-        ->get(route('dashboard.lists.show', ['duaList' => $duaList, 'search' => 'exams']))
+        ->get(route('dashboard.lists.show', ['duaList' => $duaList]))
         ->assertOk()
+        ->assertSee('Incomplete Duas')
+        ->assertSee('Completed Duas')
+        ->assertDontSee('Hidden')
+        ->assertDontSee('Archived (')
+        ->assertDontSee('Reported')
+        ->assertDontSee('Search')
         ->assertSee('Amina')
-        ->assertSee('Please make dua for my exams.');
+        ->assertSee('exams.')
+        ->assertSee('aria-label="Hide dua"', false)
+        ->assertDontSee('amina@example.com')
+        ->assertDontSee('Personal Dua')
+        ->assertDontSee('>Archive<', false);
 
     $this->actingAs($owner)
         ->patch(route('dashboard.submissions.complete', [$duaList, $submission]))
@@ -203,8 +263,16 @@ test('owner workspace supports filtering search pagination and status transition
         ->and($submission->hidden_at)->not->toBeNull();
 
     $this->actingAs($owner)
+        ->get(route('dashboard.lists.show', ['duaList' => $duaList]))
+        ->assertOk()
+        ->assertSee('Incomplete Duas')
+        ->assertSee('See Hidden Duas (1)');
+
+    $this->actingAs($owner)
         ->get(route('dashboard.lists.show', ['duaList' => $duaList, 'status' => DuaSubmissionStatus::Hidden->value]))
         ->assertOk()
+        ->assertSee('Hidden Duas')
+        ->assertSee('aria-label="Unhide dua"', false)
         ->assertSee('Amina');
 
     $this->actingAs($owner)
@@ -212,13 +280,6 @@ test('owner workspace supports filtering search pagination and status transition
         ->assertRedirect();
 
     expect($submission->refresh()->status)->toBe(DuaSubmissionStatus::Pending);
-
-    $this->actingAs($owner)
-        ->patch(route('dashboard.submissions.archive', [$duaList, $submission]))
-        ->assertRedirect();
-
-    expect($submission->refresh()->status)->toBe(DuaSubmissionStatus::Archived)
-        ->and($submission->archived_at)->not->toBeNull();
 
     $this->actingAs($owner)
         ->patch(route('dashboard.submissions.report', [$duaList, $submission]))

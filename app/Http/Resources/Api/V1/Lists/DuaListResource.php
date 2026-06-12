@@ -24,7 +24,6 @@ class DuaListResource extends ApiResource
             'start_date' => $this->start_date?->toDateString(),
             'end_date' => $this->end_date?->toDateString(),
             'days_remaining_label' => $this->daysRemainingLabel(),
-            'cover_image_url' => $this->coverImageUrl(),
             'public_url' => $this->publicUrl(),
             'accepts_submissions' => $this->acceptsSubmissions(),
             'closed_reason' => $this->closedReason(),

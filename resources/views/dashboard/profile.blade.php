@@ -1,6 +1,6 @@
 <x-dashboard.layout :user="$user" title="Profile - My Dua List">
     <main class="mx-auto max-w-5xl px-5 py-8 sm:px-6 lg:px-8 lg:py-10" x-data="{ tab: @js(request('tab', 'list-settings')) }">
-        <h1 class="font-serif text-4xl font-bold tracking-tight text-emerald-950">Settings</h1>
+        <h1 class="dashboard-page-title">Settings</h1>
         <p class="mt-3 text-sm leading-6 text-stone-600">Manage your lists, account details, plan, and downloads.</p>
 
         @if (session('status'))

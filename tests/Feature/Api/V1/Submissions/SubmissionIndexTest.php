@@ -47,6 +47,9 @@ test('owner can list submissions with pagination and filters', function () {
                 'visible_submission_limit',
                 'locked_submission_count',
             ],
+            'data' => [[
+                'id', 'status', 'is_personal_dua', 'locked',
+            ]],
         ]);
 });
 
@@ -66,6 +69,7 @@ test('free owner sees locked submissions in api payload', function () {
 
     expect($lockedPayload)->not->toBeNull()
         ->and($lockedPayload['locked'])->toBeTrue()
+        ->and($lockedPayload['is_personal_dua'])->toBeFalse()
         ->and($lockedPayload)->not->toHaveKey('content');
 });
 

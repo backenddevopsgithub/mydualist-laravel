@@ -14,7 +14,7 @@
 
         <main class="mx-auto max-w-7xl px-5 py-12 sm:px-6 lg:px-8">
             <div class="reveal-on-scroll">
-                <h1 class="font-serif text-5xl font-bold text-stone-950">Dua Resources</h1>
+                <h1 class="dashboard-page-title text-stone-950">Dua Resources</h1>
                 <p class="mt-4 max-w-2xl text-xl leading-8 text-stone-600">Articles, guides, and reminders to help you stay consistent with your duas.</p>
 
                 <form method="GET" action="{{ route('blogs.index') }}" class="mt-8 flex max-w-xl gap-3">

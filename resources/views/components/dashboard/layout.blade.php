@@ -18,7 +18,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>{{ $title }}</title>
         <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700,800&display=swap" rel="stylesheet" />
+        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700,800|instrument-serif:400,500,600,700&display=swap" rel="stylesheet" />
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="bg-[#fbfaf7] font-sans text-stone-950 antialiased">
@@ -27,7 +27,7 @@
 
             <div class="min-w-0 pb-28 lg:pb-0">
                 <header
-                    class="sticky top-0 z-40 border-b border-emerald-950/10 bg-[#fbfaf7]/90 backdrop-blur-xl"
+                    class="sticky top-0 z-40 border-b border-stone-200 bg-[#fbfaf7]/95 backdrop-blur-xl"
                     x-data="{ open: false }"
                 >
                     <div class="flex h-20 items-center justify-between px-5 sm:px-6 lg:px-8">
@@ -40,23 +40,23 @@
                             <div class="lg:hidden">
                                 <x-home.logo />
                             </div>
-                            <p class="hidden text-sm font-semibold text-stone-600 lg:block">
+                            <p class="hidden text-xs font-medium text-stone-600 lg:block">
                                 Welcome back, <span class="text-emerald-900">{{ $user->first_name ?: Illuminate\Support\Str::before($user->name, ' ') }}</span>
                             </p>
                         </div>
 
-                        <nav class="hidden items-center gap-3 text-sm font-bold text-stone-700 lg:flex" aria-label="Dashboard navigation">
-                            <a href="{{ route('home') }}#resources" class="rounded-xl px-4 py-2 transition hover:bg-emerald-50 hover:text-emerald-900">Dua Resources</a>
+                        <nav class="hidden items-center gap-3 text-xs font-bold text-stone-800 lg:flex" aria-label="Dashboard navigation">
+                            <a href="{{ route('home') }}#resources" class="rounded-lg px-3 py-2 transition hover:bg-emerald-50 hover:text-emerald-900">Dua Resources</a>
                             <a href="{{ route('dashboard') }}" @class([
-                                'rounded-xl px-4 py-2 transition hover:bg-emerald-50 hover:text-emerald-900',
+                                'rounded-lg px-3 py-2 transition hover:bg-emerald-50 hover:text-emerald-900',
                                 'bg-emerald-50 text-emerald-900' => request()->routeIs('dashboard', 'dashboard.archived'),
                             ])>Dashboard</a>
-                            <a href="{{ route('home') }}" class="rounded-xl px-4 py-2 transition hover:bg-emerald-50 hover:text-emerald-900">Home</a>
+                            <a href="{{ route('home') }}" class="rounded-lg px-3 py-2 transition hover:bg-emerald-50 hover:text-emerald-900">Home</a>
                         </nav>
 
                         <div class="flex items-center gap-3">
-                            <a href="{{ route('dashboard.profile') }}" class="hidden text-sm font-bold text-stone-700 transition hover:text-emerald-900 sm:inline">{{ $user->first_name ?: $user->name }}</a>
-                            <span class="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-sm font-extrabold text-emerald-900 ring-1 ring-emerald-900/5">
+                            <a href="{{ route('dashboard.profile') }}" class="hidden text-xs font-bold text-stone-800 transition hover:text-emerald-900 sm:inline">{{ $user->first_name ?: $user->name }}</a>
+                            <span class="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 text-xs font-extrabold text-emerald-900 ring-1 ring-emerald-900/5">
                                 {{ $initials ?: 'U' }}
                             </span>
                         </div>

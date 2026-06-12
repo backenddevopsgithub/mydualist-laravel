@@ -15,7 +15,7 @@
         <main class="mx-auto max-w-4xl px-5 py-12 sm:px-6 lg:px-8">
             <article class="reveal-on-scroll">
                 <a href="{{ route('blogs.index', ['category' => $post->category->slug]) }}" class="inline-flex rounded-full bg-emerald-100 px-4 py-2 text-sm font-bold text-emerald-900">{{ $post->category->name }}</a>
-                <h1 class="mt-6 font-serif text-5xl font-bold leading-tight text-stone-950">{{ $post->title }}</h1>
+                <h1 class="dashboard-page-title mt-6 text-stone-950">{{ $post->title }}</h1>
                 <p class="mt-4 text-base font-semibold text-stone-500">{{ $post->published_at?->format('F j, Y') }} • {{ $post->read_time_minutes }} min read</p>
 
                 <div class="mt-8 overflow-hidden rounded-3xl shadow-xl ring-1 ring-emerald-950/10">

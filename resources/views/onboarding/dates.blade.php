@@ -10,7 +10,18 @@
     title="Set Your Dates"
     subtitle="When is your trip or occasion? This helps people plan and send dua requests on time."
 >
-    <form method="POST" action="{{ route('onboarding.store', 'dates') }}" id="dates-form">
+    <form
+        method="POST"
+        action="{{ route('onboarding.store', 'dates') }}"
+        id="dates-form"
+        x-data="{
+            startDate: @js($startDate ?? ''),
+            endDate: @js($endDate ?? ''),
+            get canSubmit() {
+                return this.startDate !== '' && this.endDate !== '';
+            },
+        }"
+    >
         @csrf
 
         <div class="space-y-6">
@@ -24,6 +35,7 @@
                     required
                     readonly
                     autocomplete="off"
+                    x-model="startDate"
                 >
             </x-ui.field>
 
@@ -37,6 +49,7 @@
                     required
                     readonly
                     autocomplete="off"
+                    x-model="endDate"
                 >
             </x-ui.field>
 

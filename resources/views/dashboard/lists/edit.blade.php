@@ -4,7 +4,7 @@
             <a href="{{ $duaList->isArchived() ? route('dashboard', ['tab' => 'archived']) : route('dashboard') }}" class="text-sm font-bold text-emerald-800 hover:text-emerald-700">
                 Back to dashboard
             </a>
-            <h1 class="mt-5 font-serif text-4xl font-bold tracking-tight text-emerald-950">Edit List</h1>
+            <h1 class="dashboard-page-title mt-5">Edit List</h1>
             <p class="mt-3 text-sm leading-6 text-stone-600">Update the key details people see when they visit your share page.</p>
         </div>
 

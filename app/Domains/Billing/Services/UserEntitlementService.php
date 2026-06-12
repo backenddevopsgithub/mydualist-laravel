@@ -63,11 +63,15 @@ class UserEntitlementService extends Service
             return 0;
         }
 
-        return max(0, $duaList->submissions()->count() - $limit);
+        return max(0, $duaList->submissions()->where('is_personal_dua', false)->count() - $limit);
     }
 
     public function canViewSubmission(User $user, DuaSubmission $submission): bool
     {
+        if ($submission->is_personal_dua && $submission->duaList->user_id === $user->id) {
+            return true;
+        }
+
         $limit = $this->visibleSubmissionLimit($user, $submission->duaList);
 
         if ($limit === null) {
@@ -76,6 +80,7 @@ class UserEntitlementService extends Service
 
         $rank = DuaSubmission::query()
             ->where('dua_list_id', $submission->dua_list_id)
+            ->where('is_personal_dua', false)
             ->where('id', '<=', $submission->id)
             ->count();
 
@@ -93,11 +98,17 @@ class UserEntitlementService extends Service
             return $duaList->submissions()->pluck('id')->all();
         }
 
-        return $duaList->submissions()
+        $personalIds = $duaList->submissions()
+            ->where('is_personal_dua', true)
+            ->pluck('id');
+
+        $regularIds = $duaList->submissions()
+            ->where('is_personal_dua', false)
             ->oldest('id')
             ->limit($limit)
-            ->pluck('id')
-            ->all();
+            ->pluck('id');
+
+        return $personalIds->merge($regularIds)->all();
     }
 
     /**

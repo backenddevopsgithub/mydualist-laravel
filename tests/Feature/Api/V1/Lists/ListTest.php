@@ -31,7 +31,15 @@ test('authenticated user can list active dua lists', function () {
             'data' => [[
                 'id', 'title', 'slug', 'occasion', 'status', 'submissions_count', 'accepts_submissions',
             ]],
-            'meta' => ['current_page', 'last_page', 'per_page', 'total'],
+            'meta' => [
+                'current_page', 'last_page', 'per_page', 'total',
+                'dashboard_summary' => [
+                    'active_lists_count',
+                    'archived_lists_count',
+                    'total_submissions_count',
+                    'completed_duas_count',
+                ],
+            ],
             'links',
         ]);
 });

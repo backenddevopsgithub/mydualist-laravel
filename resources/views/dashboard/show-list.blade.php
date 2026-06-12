@@ -1,5 +1,4 @@
 @php
-    $coverImageUrl = $duaList->coverImageUrl();
     $completedCount = (int) ($duaList->completed_submissions_count ?? 0);
     $totalSubmissions = (int) ($duaList->submissions_count ?? 0);
     $progress = $totalSubmissions > 0 ? round(($completedCount / $totalSubmissions) * 100) : 0;
@@ -14,6 +13,9 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="description" content="Submit a dua request for {{ $duaList->title }} on My Dua List.">
+        <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+        <meta http-equiv="Pragma" content="no-cache">
+        <meta http-equiv="Expires" content="0">
         <title>{{ $duaList->title }} - My Dua List</title>
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700,800&display=swap" rel="stylesheet" />
@@ -28,12 +30,6 @@
                 </header>
 
                 <article class="mx-auto mt-8 overflow-hidden rounded-[2.25rem] border border-emerald-950/10 bg-white shadow-[0_30px_100px_rgba(15,23,42,0.10)]">
-                    @if ($coverImageUrl)
-                        <div class="h-56 sm:h-64">
-                            <img src="{{ $coverImageUrl }}" alt="{{ $duaList->title }} cover image" class="h-full w-full object-cover">
-                        </div>
-                    @endif
-
                     <div class="p-6 text-center sm:p-10">
                         <div class="flex flex-wrap justify-center gap-2">
                             <span class="rounded-full bg-emerald-50 px-4 py-2 text-xs font-extrabold uppercase tracking-[0.12em] text-emerald-800">{{ $duaList->occasionLabel() }}</span>
@@ -42,7 +38,7 @@
                             @endif
                         </div>
 
-                        <h1 class="mt-6 font-serif text-4xl font-bold tracking-tight text-stone-950 sm:text-5xl">{{ $duaList->title }}</h1>
+                        <h1 class="dashboard-page-title mt-6 text-stone-950">{{ $duaList->title }}</h1>
 
                         @if ($acceptsSubmissions)
                             <p class="mx-auto mt-4 max-w-xl text-base leading-8 text-stone-600">
@@ -244,7 +240,10 @@
                         </div>
                     @else
                         <div class="rounded-2xl bg-stone-50 p-5 text-sm leading-7 text-stone-700 ring-1 ring-stone-200">
-                            {{ $closedReason ?? $duaList->publicClosedMessage() }}
+                            <h2 class="text-xl font-extrabold text-stone-950">Submissions Closed</h2>
+                            <p class="mt-2">
+                                {{ $closedReason ?? $duaList->publicClosedMessage() }}
+                            </p>
                         </div>
                         <div class="mt-6 grid gap-3 sm:grid-cols-2">
                             <a href="{{ route('home') }}#blog" class="inline-flex items-center justify-center rounded-2xl bg-emerald-900 px-5 py-3 text-sm font-extrabold text-white">Submit Community Dua Instead</a>

@@ -9,6 +9,10 @@ export function initOnboardingDatePickers() {
     }
 
     let endPicker;
+    const syncInput = (input) => {
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+    };
 
     flatpickr(startInput, {
         dateFormat: 'Y-m-d',
@@ -19,6 +23,8 @@ export function initOnboardingDatePickers() {
             if (selectedDates[0] && endPicker) {
                 endPicker.set('minDate', selectedDates[0]);
             }
+
+            syncInput(startInput);
         },
     });
 
@@ -27,5 +33,8 @@ export function initOnboardingDatePickers() {
         minDate: startInput.value || 'today',
         disableMobile: true,
         appendTo: document.body,
+        onChange() {
+            syncInput(endInput);
+        },
     });
 }

@@ -34,6 +34,10 @@ class DuaListController extends Controller
 
         $action($duaList, $request->validated());
 
+        if ($redirect = $this->safeRedirectTo($request->validated('redirect_to'), $duaList)) {
+            return redirect($redirect)->with('status', 'List updated successfully.');
+        }
+
         return redirect()
             ->route('dashboard', $duaList->isArchived() ? ['tab' => 'archived'] : [])
             ->with('status', 'List updated successfully.');
@@ -44,6 +48,10 @@ class DuaListController extends Controller
         Gate::authorize('archive', $duaList);
         $action($duaList);
 
+        if ($redirect = $this->safeRedirectTo(request('redirect_to'), $duaList)) {
+            return redirect($redirect)->with('status', 'List switched off successfully.');
+        }
+
         return redirect()->route('dashboard.archived')->with('status', 'List archived successfully.');
     }
 
@@ -51,6 +59,10 @@ class DuaListController extends Controller
     {
         Gate::authorize('restore', $duaList);
         $action($duaList);
+
+        if ($redirect = $this->safeRedirectTo(request('redirect_to'), $duaList)) {
+            return redirect($redirect)->with('status', 'List switched on successfully.');
+        }
 
         return redirect()->route('dashboard')->with('status', 'List restored successfully.');
     }
@@ -61,5 +73,16 @@ class DuaListController extends Controller
         $action($duaList);
 
         return redirect()->route('dashboard')->with('status', 'List deleted successfully.');
+    }
+
+    private function safeRedirectTo(?string $redirectTo, DuaList $duaList): ?string
+    {
+        if (! $redirectTo) {
+            return null;
+        }
+
+        $allowedPrefix = url('/dashboard/lists/'.$duaList->getRouteKey());
+
+        return str_starts_with($redirectTo, $allowedPrefix) ? $redirectTo : null;
     }
 }

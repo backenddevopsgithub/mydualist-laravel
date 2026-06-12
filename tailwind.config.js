@@ -15,8 +15,17 @@ export default {
         extend: {
             fontFamily: {
                 sans: ['Figtree', ...defaultTheme.fontFamily.sans],
+                serif: ['Instrument Serif', ...defaultTheme.fontFamily.serif],
             },
         },
     },
+    safelist: [
+        'ui-btn--primary',
+        'ui-btn--secondary',
+        'ui-btn--neutral',
+        'ui-btn--sm',
+        'ui-btn--md',
+        'ui-btn--lg',
+    ],
     plugins: [],
 };

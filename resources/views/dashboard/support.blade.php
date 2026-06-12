@@ -1,7 +1,7 @@
 <x-dashboard.layout :user="$user" title="Help & Support - My Dua List">
     <main class="mx-auto max-w-3xl px-5 py-8 sm:px-6 lg:px-8 lg:py-10">
         <div>
-            <h1 class="font-serif text-4xl font-bold tracking-tight text-emerald-950">Help & Support</h1>
+            <h1 class="dashboard-page-title">Help & Support</h1>
             <p class="mt-3 text-sm leading-6 text-stone-600">Tell us what happened and we'll review it carefully.</p>
         </div>
 

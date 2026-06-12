@@ -4,12 +4,14 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Domains\Billing\Services\UserEntitlementService;
 use App\Domains\Lists\Services\DuaListQueryService;
+use App\Domains\Submissions\Actions\CreatePersonalDuaAction;
 use App\Domains\Submissions\Actions\ReportDuaSubmissionAction;
 use App\Domains\Submissions\Actions\TransitionDuaSubmissionStatusAction;
 use App\Domains\Submissions\Services\DuaSubmissionQueryService;
 use App\Enums\DuaSubmissionStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Submissions\ReportSubmissionRequest;
+use App\Http\Requests\Submissions\StorePersonalDuaRequest;
 use App\Models\DuaList;
 use App\Models\DuaSubmission;
 use Illuminate\Http\RedirectResponse;
@@ -34,11 +36,16 @@ class ListSubmissionController extends Controller
         $user = Auth::user();
         $duaList = $lists->findOwnedForUser($user, $duaList->id);
 
+        $allowedStatuses = [
+            DuaSubmissionStatus::Pending->value,
+            DuaSubmissionStatus::Completed->value,
+            DuaSubmissionStatus::Hidden->value,
+        ];
         $status = $request->string('status')->toString() ?: DuaSubmissionStatus::Pending->value;
-        $search = trim($request->string('search')->toString());
+        $status = in_array($status, $allowedStatuses, true) ? $status : DuaSubmissionStatus::Pending->value;
         $paginatedSubmissions = $submissions->paginateForList($duaList, [
             'status' => $status,
-            'search' => $search,
+            'search' => '',
         ], 15);
         $hasPremium = $this->entitlements->hasPremium($user);
 
@@ -47,7 +54,7 @@ class ListSubmissionController extends Controller
             'duaList' => $duaList,
             'submissions' => $paginatedSubmissions,
             'currentStatus' => $status,
-            'search' => $search,
+            'search' => '',
             'hasPremium' => $hasPremium,
             'lockedSubmissionCount' => $this->entitlements->lockedSubmissionCount($user, $duaList),
             'visibleSubmissionLimit' => $this->entitlements->visibleSubmissionLimit($user, $duaList),
@@ -56,6 +63,19 @@ class ListSubmissionController extends Controller
                 : $this->entitlements->visibleSubmissionIds($user, $duaList),
             'statusCounts' => $submissions->statusCounts($duaList),
         ]);
+    }
+
+    public function storePersonalDua(
+        StorePersonalDuaRequest $request,
+        DuaList $duaList,
+        CreatePersonalDuaAction $action,
+    ): RedirectResponse {
+        Gate::authorize('view', $duaList);
+        $user = Auth::user();
+
+        $action($duaList, $user, $request->validated('content'));
+
+        return back()->with('status', 'Personal dua added.');
     }
 
     public function complete(DuaList $duaList, DuaSubmission $submission, TransitionDuaSubmissionStatusAction $action): RedirectResponse

@@ -25,12 +25,17 @@
 
         <div
             class="mt-8 flex overflow-hidden rounded-2xl border border-stone-200 bg-stone-50 text-left"
-            x-data="{ copied: false, copyUrl() { navigator.clipboard.writeText(@js($shareUrl)).then(() => { this.copied = true; setTimeout(() => this.copied = false, 2000) }) } }"
+            x-data="{ copied: false, async copyUrl() { if (await window.copyToClipboard(@js($shareUrl))) { this.copied = true; setTimeout(() => this.copied = false, 1800) } } }"
         >
             <input value="{{ $shareUrl }}" readonly class="min-w-0 flex-1 bg-transparent px-4 py-3.5 text-sm font-semibold text-stone-600 outline-none">
-            <button type="button" x-on:click="copyUrl" class="flex min-w-[5.5rem] items-center justify-center bg-emerald-800 px-4 text-sm font-bold text-white transition hover:bg-emerald-700">
-                <span x-show="! copied">Copy</span>
-                <span x-cloak x-show="copied">Copied</span>
+            <button type="button" x-on:click="copyUrl" class="relative flex min-w-[5.5rem] items-center justify-center bg-emerald-800 px-4 text-sm font-bold text-white transition hover:bg-emerald-700">
+                <span
+                    aria-live="polite"
+                    x-bind:class="copied ? 'opacity-100' : 'pointer-events-none opacity-0'"
+                    class="absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-stone-950 px-3 py-1.5 text-xs font-bold text-white shadow-lg transition-opacity duration-150"
+                    role="status"
+                >Link copied</span>
+                <span>Copy</span>
             </button>
         </div>
 
