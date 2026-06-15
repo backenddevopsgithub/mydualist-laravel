@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Domains\Cms\Services\CmsPageQueryService;
 use App\Domains\Auth\Policies\UserPolicy;
 use App\Models\DuaList;
 use App\Models\DuaSubmission;
@@ -14,6 +15,7 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 
@@ -32,6 +34,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('start-billing-checkout', fn (User $user): bool => $user->isActive() && $user->hasVerifiedEmail());
 
         $this->configureRateLimiting();
+        $this->configureViewComposers();
 
         FilamentView::registerRenderHook(
             PanelsRenderHook::HEAD_END,
@@ -88,5 +91,15 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('newsletter', fn (Request $request) => [
             Limit::perMinute(3)->by($request->ip()),
         ]);
+    }
+
+    private function configureViewComposers(): void
+    {
+        View::composer(
+            ['partials.marketing-footer', 'partials.cms-footer-links', 'partials.public-legal-footer'],
+            function ($view): void {
+                $view->with('cmsFooterPages', app(CmsPageQueryService::class)->publishedFooterPages());
+            },
+        );
     }
 }

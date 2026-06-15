@@ -21,6 +21,7 @@ return [
         'free_visible_submissions_per_list' => 25,
         'premium_price' => env('MYDUALIST_PREMIUM_PRICE', '12.99'),
         'premium_currency' => env('MYDUALIST_PREMIUM_CURRENCY', 'gbp'),
+        'community_dua_price' => env('MYDUALIST_COMMUNITY_DUA_PRICE', '10.00'),
         'checkout_success_url' => env('MYDUALIST_STRIPE_SUCCESS_URL'),
         'checkout_cancel_url' => env('MYDUALIST_STRIPE_CANCEL_URL'),
     ],
@@ -31,6 +32,11 @@ return [
 
     'onboarding' => [
         'test_otp' => env('MYDUALIST_TEST_OTP', '0000'),
+    ],
+
+    'notifications' => [
+        'daily_digest_at' => env('MYDUALIST_DAILY_DIGEST_AT', '23:59'),
+        'daily_digest_list_chunk' => 50,
     ],
 
 ];

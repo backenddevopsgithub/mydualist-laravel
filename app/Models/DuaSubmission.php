@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\DuaSubmissionStatus;
+use Database\Factories\DuaSubmissionFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class DuaSubmission extends Model
 {
-    /** @use HasFactory<\Database\Factories\DuaSubmissionFactory> */
+    /** @use HasFactory<DuaSubmissionFactory> */
     use HasFactory, SoftDeletes;
 
     public const STATUS_PENDING = DuaSubmissionStatus::Pending->value;
@@ -33,12 +34,15 @@ class DuaSubmission extends Model
         'first_name',
         'last_name',
         'email',
+        'gender',
         'is_anonymous',
         'is_personal_dua',
         'content',
         'note',
         'status',
         'completed_at',
+        'completion_notified_at',
+        'digest_sent_at',
         'hidden_at',
         'archived_at',
         'reported_at',
@@ -56,6 +60,8 @@ class DuaSubmission extends Model
             'is_anonymous' => 'boolean',
             'is_personal_dua' => 'boolean',
             'completed_at' => 'datetime',
+            'completion_notified_at' => 'datetime',
+            'digest_sent_at' => 'datetime',
             'hidden_at' => 'datetime',
             'archived_at' => 'datetime',
             'reported_at' => 'datetime',
@@ -99,6 +105,17 @@ class DuaSubmission extends Model
         $value = $status instanceof DuaSubmissionStatus ? $status->value : $status;
 
         return $query->where('status', $value);
+    }
+
+    /**
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
+    public function scopePendingDigest(Builder $query): Builder
+    {
+        return $query
+            ->whereNull('digest_sent_at')
+            ->where('is_personal_dua', false);
     }
 
     public function displayName(): string

@@ -6,6 +6,10 @@
     display: none !important;
 }
 
+.infinite-scroll-enabled [data-infinite-scroll-pagination-fallback] {
+    @apply sr-only;
+}
+
 @keyframes fade-in-up {
     from {
         opacity: 0;

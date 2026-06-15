@@ -3,8 +3,8 @@
 namespace App\Domains\Auth\Actions;
 
 use App\Actions\Action;
+use App\Events\UserEmailVerified;
 use App\Exceptions\DomainException;
-use App\Models\User;
 
 class VerifyEmailAction extends Action
 {
@@ -16,6 +16,8 @@ class VerifyEmailAction extends Action
         }
 
         $user->markEmailAsVerified();
+
+        event(new UserEmailVerified($user->fresh()));
 
         return $user->fresh();
     }

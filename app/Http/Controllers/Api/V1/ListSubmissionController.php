@@ -30,13 +30,15 @@ class ListSubmissionController extends ApiController
 
         Gate::authorize('viewAny', [DuaSubmission::class, $duaList]);
 
+        $user = $request->user();
+
         $paginator = $submissions->paginateForList(
             $duaList,
             $request->filters(),
             $request->perPage(),
+            $user,
         );
 
-        $user = $request->user();
         $response = $this->paginated($paginator, DuaSubmissionResource::class, 'Submissions retrieved.');
         $payload = $response->getData(true);
 

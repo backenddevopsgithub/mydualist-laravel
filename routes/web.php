@@ -1,10 +1,13 @@
 <?php
 
+use App\Http\Controllers\CmsPageController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\BlogController;
+use App\Http\Controllers\CommunityDuaController;
+use App\Http\Controllers\Dashboard\CommunityDuaController as DashboardCommunityDuaController;
 use App\Http\Controllers\Dashboard\DuaListController;
 use App\Http\Controllers\Dashboard\ListSubmissionController;
 use App\Http\Controllers\Dashboard\MySubmissionsController;
@@ -38,6 +41,15 @@ Route::get('/blogs/{slug}', [BlogController::class, 'show'])->name('blogs.show')
 Route::post('/newsletter/subscribe', [NewsletterController::class, 'store'])
     ->middleware('throttle:newsletter')
     ->name('newsletter.subscribe');
+
+Route::get('/submit-a-dua', [CommunityDuaController::class, 'create'])->name('community-dua.create');
+Route::post('/submit-a-dua', [CommunityDuaController::class, 'storeFree'])
+    ->middleware('throttle:public-submissions')
+    ->name('community-dua.store');
+Route::post('/submit-a-dua/checkout', [CommunityDuaController::class, 'checkout'])
+    ->middleware('throttle:billing')
+    ->name('community-dua.checkout');
+Route::get('/submit-a-dua/success', [CommunityDuaController::class, 'success'])->name('community-dua.success');
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [LoginController::class, 'create'])->name('login');
@@ -89,17 +101,20 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::patch('/dashboard/lists/{duaList}/submissions/{submission}/unhide', [ListSubmissionController::class, 'unhide'])->name('dashboard.submissions.unhide');
     Route::patch('/dashboard/lists/{duaList}/submissions/{submission}/archive', [ListSubmissionController::class, 'archive'])->name('dashboard.submissions.archive');
     Route::patch('/dashboard/lists/{duaList}/submissions/{submission}/report', [ListSubmissionController::class, 'report'])->name('dashboard.submissions.report');
+    Route::patch('/dashboard/lists/{duaList}/community-duas/{communityDua}/complete', [DashboardCommunityDuaController::class, 'complete'])->name('dashboard.community-duas.complete');
+    Route::patch('/dashboard/lists/{duaList}/community-duas/{communityDua}/skip', [DashboardCommunityDuaController::class, 'skip'])->name('dashboard.community-duas.skip');
+    Route::patch('/dashboard/lists/{duaList}/community-duas/{communityDua}/report', [DashboardCommunityDuaController::class, 'report'])->name('dashboard.community-duas.report');
 });
 
 Route::post('/stripe/webhook', [BillingController::class, 'webhook'])->name('stripe.webhook');
 
 Route::get('/lists/{duaList}', function (DuaList $duaList) {
-    return redirect()->route('dua-lists.public', $duaList);
+    return redirect()->route('cms.show', $duaList);
 })->name('dua-lists.show');
 
 Route::post('/{duaList}/submissions', [PublicDuaSubmissionController::class, 'store'])
     ->middleware('throttle:public-submissions')
     ->name('dua-lists.submissions.store');
 
-Route::get('/{duaList}', [PublicDuaListController::class, 'show'])
-    ->name('dua-lists.public');
+Route::get('/{slug}', [CmsPageController::class, 'resolve'])
+    ->name('cms.show');

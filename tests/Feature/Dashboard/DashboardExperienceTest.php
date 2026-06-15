@@ -257,5 +257,5 @@ test('public dua list renders from root slug and old list route redirects', func
         ->assertSee('Copy Share Link');
 
     $this->get('/lists/'.$duaList->slug)
-        ->assertRedirect(route('dua-lists.public', $duaList));
+        ->assertRedirect(route('cms.show', $duaList));
 });

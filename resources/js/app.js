@@ -1,6 +1,7 @@
 import './bootstrap';
 import Alpine from 'alpinejs';
 import 'flatpickr/dist/flatpickr.min.css';
+import { initInfiniteScroll } from './infinite-scroll';
 import { initOnboardingDatePickers } from './onboarding-dates';
 
 window.Alpine = Alpine;
@@ -49,6 +50,7 @@ window.copyToClipboard = async (text) => {
 
 document.addEventListener('DOMContentLoaded', () => {
     initOnboardingDatePickers();
+    initInfiniteScroll();
     const revealElements = document.querySelectorAll('.reveal-on-scroll, .feature-fade');
 
     if (! revealElements.length) {

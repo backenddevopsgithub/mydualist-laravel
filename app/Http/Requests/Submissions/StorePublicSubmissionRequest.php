@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Submissions;
 
+use App\Support\SubmissionGenders;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -10,6 +11,15 @@ class StorePublicSubmissionRequest extends FormRequest
     public function authorize(): bool
     {
         return true;
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('gender')) {
+            $this->merge([
+                'gender' => SubmissionGenders::normalize($this->input('gender')),
+            ]);
+        }
     }
 
     /**
@@ -21,7 +31,7 @@ class StorePublicSubmissionRequest extends FormRequest
             'first_name' => ['required', 'string', 'max:60'],
             'last_name' => ['required', 'string', 'max:60'],
             'email' => ['required', 'email', 'max:255'],
-            'gender' => ['required', 'string', Rule::in(['male', 'female'])],
+            'gender' => ['required', 'string', Rule::in(SubmissionGenders::values())],
             'whatsapp_notifications' => ['nullable', 'boolean'],
             'whatsapp_country_code' => ['nullable', 'required_if:whatsapp_notifications,1', 'string', 'max:6'],
             'whatsapp_phone' => ['nullable', 'required_if:whatsapp_notifications,1', 'string', 'max:20'],

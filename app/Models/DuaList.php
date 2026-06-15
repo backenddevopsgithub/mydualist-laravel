@@ -2,19 +2,20 @@
 
 namespace App\Models;
 
+use App\Support\DuaListOccasions;
+use Database\Factories\DuaListFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Support\DuaListOccasions;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class DuaList extends Model
 {
-    /** @use HasFactory<\Database\Factories\DuaListFactory> */
+    /** @use HasFactory<DuaListFactory> */
     use HasFactory, SoftDeletes;
 
     public const STATUS_ACTIVE = 'active';
@@ -37,6 +38,8 @@ class DuaList extends Model
         'email_frequency',
         'status',
         'published_at',
+        'list_created_email_sent_at',
+        'submission_quota_warning_sent_at',
     ];
 
     /**
@@ -49,6 +52,8 @@ class DuaList extends Model
             'end_date' => 'date',
             'dua_limit_per_person' => 'integer',
             'published_at' => 'datetime',
+            'list_created_email_sent_at' => 'datetime',
+            'submission_quota_warning_sent_at' => 'datetime',
         ];
     }
 
@@ -155,7 +160,7 @@ class DuaList extends Model
 
     public function publicUrl(): string
     {
-        return route('dua-lists.public', $this);
+        return route('cms.show', $this);
     }
 
     public function coverImageUrl(): ?string

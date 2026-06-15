@@ -91,9 +91,9 @@ test('free owner can view and moderate personal duas beyond submission limit via
         'content' => 'Personal dua beyond the free limit.',
     ]);
 
-    $payload = collect(
-        $this->getJson('/api/v1/lists/'.$list->id.'/submissions')->assertOk()->json('data')
-    )->firstWhere('id', $personal->id);
+    $response = $this->getJson('/api/v1/lists/'.$list->id.'/submissions?per_page=50')->assertOk();
+
+    $payload = collect($response->json('data'))->firstWhere('id', $personal->id);
 
     expect($payload['locked'])->toBeFalse()
         ->and($payload['is_personal_dua'])->toBeTrue()

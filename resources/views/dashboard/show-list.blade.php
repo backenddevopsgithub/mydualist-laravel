@@ -253,5 +253,7 @@
                 </section>
             </div>
         </main>
+
+        @include('partials.public-legal-footer')
     </body>
 </html>

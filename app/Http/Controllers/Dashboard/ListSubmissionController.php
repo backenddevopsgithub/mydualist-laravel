@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Domains\Billing\Services\UserEntitlementService;
+use App\Domains\Community\Services\CommunityDuaEligibilityService;
+use App\Domains\Community\Services\CommunityDuaQueueService;
 use App\Domains\Lists\Services\DuaListQueryService;
 use App\Domains\Submissions\Actions\CreatePersonalDuaAction;
 use App\Domains\Submissions\Actions\ReportDuaSubmissionAction;
@@ -31,6 +33,8 @@ class ListSubmissionController extends Controller
         DuaList $duaList,
         DuaListQueryService $lists,
         DuaSubmissionQueryService $submissions,
+        CommunityDuaEligibilityService $communityEligibility,
+        CommunityDuaQueueService $communityQueue,
     ): View {
         Gate::authorize('viewAny', [DuaSubmission::class, $duaList]);
         $user = Auth::user();
@@ -46,8 +50,12 @@ class ListSubmissionController extends Controller
         $paginatedSubmissions = $submissions->paginateForList($duaList, [
             'status' => $status,
             'search' => '',
-        ], 15);
+        ], 15, $user);
         $hasPremium = $this->entitlements->hasPremium($user);
+
+        $showCommunityDuas = $communityEligibility->shouldShowForList($user, $duaList)
+            && $status === DuaSubmissionStatus::Pending->value;
+        $communityDua = $showCommunityDuas ? $communityQueue->resolveForUser($user) : null;
 
         return view('dashboard.lists.submissions', [
             'user' => $user,
@@ -62,6 +70,8 @@ class ListSubmissionController extends Controller
                 ? $paginatedSubmissions->getCollection()->pluck('id')->all()
                 : $this->entitlements->visibleSubmissionIds($user, $duaList),
             'statusCounts' => $submissions->statusCounts($duaList),
+            'showCommunityDuas' => $showCommunityDuas,
+            'communityDua' => $communityDua,
         ]);
     }
 

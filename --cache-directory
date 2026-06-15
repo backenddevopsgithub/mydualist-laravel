@@ -1,0 +1,35 @@
+[00:00:00.062326700 / 00:00:00.062326700] [10482352 bytes] PHPUnit Started (PHPUnit 11.5.50 using PHP 8.4.22 (cli) on WINNT)
+[00:00:00.067704600 / 00:00:00.005377900] [10827880 bytes] Test Runner Configured
+[00:00:00.068733800 / 00:00:00.001029200] [10827880 bytes] Bootstrap Finished (E:\Projects\mydualist-laravel\mydualist-laravel\vendor/autoload.php)
+[00:00:00.155463000 / 00:00:00.086729200] [11534944 bytes] Event Facade Sealed
+[00:00:00.178315500 / 00:00:00.022852500] [12965400 bytes] Test Suite Loaded (7 tests)
+[00:00:00.180511600 / 00:00:00.002196100] [13100552 bytes] Test Runner Started
+[00:00:00.180967800 / 00:00:00.000456200] [13100552 bytes] Test Suite Sorted
+[00:00:00.182462900 / 00:00:00.001495100] [13100552 bytes] Test Suite Filtered (1 test)
+[00:00:00.183110600 / 00:00:00.000647700] [13100552 bytes] Test Runner Execution Started (1 test)
+[00:00:00.183416200 / 00:00:00.000305600] [13100552 bytes] Test Suite Started (CLI Arguments, 1 test)
+[00:00:00.183922200 / 00:00:00.000506000] [13134008 bytes] Test Suite Started (P\Tests\Feature\Cms\CmsPageTest, 1 test)
+[00:00:00.189344700 / 00:00:00.005422500] [13494064 bytes] Before First Test Method Called (P\Tests\Feature\Cms\CmsPageTest::setUpBeforeClass)
+[00:00:00.189567200 / 00:00:00.000222500] [13494064 bytes] Before First Test Method Finished:
+                                                           - P\Tests\Feature\Cms\CmsPageTest::setUpBeforeClass
+[00:00:00.191166900 / 00:00:00.001599700] [13597032 bytes] Test Preparation Started (P\Tests\Feature\Cms\CmsPageTest::__pest_evaluable_unpublished_cms_pages_return_404)
+[00:00:01.347381800 / 00:00:01.156214900] [51047984 bytes] Before Test Method Called (P\Tests\Feature\Cms\CmsPageTest::setUp)
+[00:00:01.347607800 / 00:00:00.000226000] [51047984 bytes] Before Test Method Finished:
+                                                           - P\Tests\Feature\Cms\CmsPageTest::setUp
+[00:00:01.347800500 / 00:00:00.000192700] [50998232 bytes] Test Prepared (P\Tests\Feature\Cms\CmsPageTest::__pest_evaluable_unpublished_cms_pages_return_404)
+[00:00:01.388959900 / 00:00:00.041159400] [53699808 bytes] Post Condition Method Called (P\Tests\Feature\Cms\CmsPageTest::__MarkTestIncompleteIfSnapshotHaveChanged)
+[00:00:01.389192800 / 00:00:00.000232900] [53699808 bytes] Post Condition Method Finished:
+                                                           - P\Tests\Feature\Cms\CmsPageTest::__MarkTestIncompleteIfSnapshotHaveChanged
+[00:00:01.400399700 / 00:00:00.011206900] [54149872 bytes] After Test Method Called (P\Tests\Feature\Cms\CmsPageTest::tearDown)
+[00:00:01.400668600 / 00:00:00.000268900] [54149872 bytes] After Test Method Finished:
+                                                           - P\Tests\Feature\Cms\CmsPageTest::tearDown
+[00:00:01.400830900 / 00:00:00.000162300] [54149872 bytes] Test Passed (P\Tests\Feature\Cms\CmsPageTest::__pest_evaluable_unpublished_cms_pages_return_404)
+[00:00:01.405254300 / 00:00:00.004423400] [54149872 bytes] Test Finished (P\Tests\Feature\Cms\CmsPageTest::__pest_evaluable_unpublished_cms_pages_return_404)
+[00:00:01.405867400 / 00:00:00.000613100] [54149872 bytes] After Last Test Method Called (P\Tests\Feature\Cms\CmsPageTest::tearDownAfterClass)
+[00:00:01.406080100 / 00:00:00.000212700] [54149872 bytes] After Last Test Method Finished:
+                                                           - P\Tests\Feature\Cms\CmsPageTest::tearDownAfterClass
+[00:00:01.406384500 / 00:00:00.000304400] [54149872 bytes] Test Suite Finished (P\Tests\Feature\Cms\CmsPageTest, 1 test)
+[00:00:01.406563600 / 00:00:00.000179100] [54149872 bytes] Test Suite Finished (CLI Arguments, 1 test)
+[00:00:01.407274100 / 00:00:00.000710500] [54149872 bytes] Test Runner Execution Finished
+[00:00:01.412813400 / 00:00:00.005539300] [54176848 bytes] Test Runner Finished
+[00:00:01.413752400 / 00:00:00.000939000] [54176848 bytes] PHPUnit Finished (Shell Exit Code: 0)

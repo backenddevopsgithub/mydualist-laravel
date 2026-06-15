@@ -2,6 +2,7 @@
 
 namespace Tests;
 
+use App\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful;
@@ -17,6 +18,7 @@ abstract class TestCase extends BaseTestCase
 
         config(['sanctum.stateful' => []]);
         $this->withoutMiddleware(EnsureFrontendRequestsAreStateful::class);
+        $this->withoutMiddleware(VerifyCsrfToken::class);
     }
     protected function assertApiSuccess(TestResponse $response, int $status = 200): TestResponse
     {

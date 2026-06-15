@@ -4,9 +4,11 @@ namespace App\Domains\Submissions\Actions;
 
 use App\Actions\Action;
 use App\Enums\DuaSubmissionStatus;
+use App\Events\DuaSubmissionsCreated;
 use App\Models\DuaList;
 use App\Models\DuaSubmission;
 use App\Models\User;
+use App\Support\SubmissionGenders;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -16,7 +18,7 @@ class CreateDuaSubmissionAction extends Action
     private const MAX_PER_EMAIL_PER_LIST = 35;
 
     /**
-     * @param  array{first_name?: string|null, last_name?: string|null, email?: string|null, content?: string, duas?: array<int, string>, note?: string|null, is_anonymous?: bool}  $data
+     * @param  array{first_name?: string|null, last_name?: string|null, email?: string|null, gender?: string|null, content?: string, duas?: array<int, string>, note?: string|null}  $data
      */
     public function handle(mixed ...$args): mixed
     {
@@ -52,18 +54,28 @@ class CreateDuaSubmissionAction extends Action
                 }
             }
 
-            return collect($contents)
+            $nonPersonalCountBefore = DuaSubmission::query()
+                ->where('dua_list_id', $lockedList->id)
+                ->where('is_personal_dua', false)
+                ->count();
+
+            $submissions = collect($contents)
                 ->map(fn (string $content): DuaSubmission => DuaSubmission::query()->create([
                     'dua_list_id' => $lockedList->id,
                     'user_id' => $user?->id,
                     'first_name' => $data['first_name'] ?? null,
                     'last_name' => $data['last_name'] ?? null,
                     'email' => $email,
+                    'gender' => SubmissionGenders::normalize($data['gender'] ?? null),
                     'is_anonymous' => false,
                     'content' => $content,
                     'note' => null,
                     'status' => DuaSubmissionStatus::Pending,
                 ]));
+
+            event(new DuaSubmissionsCreated($lockedList, $submissions, $nonPersonalCountBefore));
+
+            return $submissions;
         });
     }
 

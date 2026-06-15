@@ -36,7 +36,7 @@ test('public submissions are throttled by ip', function () {
             ->post(route('dua-lists.submissions.store', $duaList), [
                 'content' => "Please make dua for rate limit test {$i}.",
             ])
-            ->assertRedirect(route('dua-lists.public', $duaList));
+            ->assertRedirect(route('cms.show', $duaList));
     }
 
     $this->withServerVariables(['REMOTE_ADDR' => '10.10.10.20'])
@@ -53,29 +53,29 @@ test('public submission spam guard blocks honeypot duplicate and link abuse', fu
         'published_at' => now(),
     ]);
 
-    $this->from(route('dua-lists.public', $duaList))
+    $this->from(route('cms.show', $duaList))
         ->post(route('dua-lists.submissions.store', $duaList), [
             'content' => 'Please make dua for our family.',
             'website' => 'https://bot.example',
         ])
-        ->assertRedirect(route('dua-lists.public', $duaList))
+        ->assertRedirect(route('cms.show', $duaList))
         ->assertSessionHasErrors('website');
 
-    $this->from(route('dua-lists.public', $duaList))
+    $this->from(route('cms.show', $duaList))
         ->post(route('dua-lists.submissions.store', $duaList), [
             'duas' => [
                 'Please make dua for unique duplicate testing.',
                 'Please make dua for unique duplicate testing.',
             ],
         ])
-        ->assertRedirect(route('dua-lists.public', $duaList))
+        ->assertRedirect(route('cms.show', $duaList))
         ->assertSessionHasErrors('duas');
 
-    $this->from(route('dua-lists.public', $duaList))
+    $this->from(route('cms.show', $duaList))
         ->post(route('dua-lists.submissions.store', $duaList), [
             'content' => 'Visit https://one.example and https://two.example and https://three.example',
         ])
-        ->assertRedirect(route('dua-lists.public', $duaList))
+        ->assertRedirect(route('cms.show', $duaList))
         ->assertSessionHasErrors('duas');
 });
 

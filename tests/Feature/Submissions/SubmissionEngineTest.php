@@ -16,7 +16,7 @@ test('public visitor can submit a dua request to an open list', function () {
         'published_at' => now(),
     ]);
 
-    $this->get(route('dua-lists.public', $duaList))
+    $this->get(route('cms.show', $duaList))
         ->assertOk()
         ->assertSee('Your details')
         ->assertSee('Submit Dua Requests');
@@ -28,7 +28,7 @@ test('public visitor can submit a dua request to an open list', function () {
         'gender' => 'female',
         'terms' => '1',
         'content' => 'Please make dua for my family.',
-    ])->assertRedirect(route('dua-lists.public', $duaList).'#submit-dua');
+    ])->assertRedirect(route('cms.show', $duaList).'#submit-dua');
 
     $submission = DuaSubmission::query()->firstOrFail();
 
@@ -38,30 +38,17 @@ test('public visitor can submit a dua request to an open list', function () {
         ->and($submission->content)->toBe('Please make dua for my family.');
 });
 
-test('public submission supports anonymous requests and validates content', function () {
+test('public submission supports validated identity fields and validates content', function () {
     $duaList = DuaList::factory()->create([
         'status' => DuaList::STATUS_ACTIVE,
         'end_date' => now()->addMonth(),
         'published_at' => now(),
     ]);
 
-    $this->from(route('dua-lists.public', $duaList))
+    $this->from(route('cms.show', $duaList))
         ->post(route('dua-lists.submissions.store', $duaList), [])
-        ->assertRedirect(route('dua-lists.public', $duaList))
-        ->assertSessionHasErrors('content');
-
-    $this->post(route('dua-lists.submissions.store', $duaList), [
-        'is_anonymous' => '1',
-        'first_name' => 'Hidden',
-        'last_name' => 'Person',
-        'content' => 'Please remember me in your duas.',
-    ])->assertRedirect(route('dua-lists.public', $duaList));
-
-    $submission = DuaSubmission::query()->firstOrFail();
-
-    expect($submission->is_anonymous)->toBeTrue()
-        ->and($submission->first_name)->toBeNull()
-        ->and($submission->displayName())->toBe('Anonymous');
+        ->assertRedirect(route('cms.show', $duaList))
+        ->assertSessionHasErrors(['content', 'gender', 'first_name', 'last_name', 'email', 'terms']);
 });
 
 test('public visitor can submit multiple dua requests in one form', function () {
@@ -71,7 +58,7 @@ test('public visitor can submit multiple dua requests in one form', function () 
         'published_at' => now(),
     ]);
 
-    $this->get(route('dua-lists.public', $duaList))
+    $this->get(route('cms.show', $duaList))
         ->assertOk()
         ->assertSee('+ Add Another Dua')
         ->assertSee('Add up to 35 duas');
@@ -87,7 +74,7 @@ test('public visitor can submit multiple dua requests in one form', function () 
             'Please make dua for ease in my exams.',
             'Please make dua for our health.',
         ],
-    ])->assertRedirect(route('dua-lists.public', $duaList).'#submit-dua');
+    ])->assertRedirect(route('cms.show', $duaList).'#submit-dua');
 
     expect(DuaSubmission::query()->where('dua_list_id', $duaList->id)->count())->toBe(3);
 
@@ -105,11 +92,11 @@ test('public submission validates maximum batch size', function () {
         'published_at' => now(),
     ]);
 
-    $this->from(route('dua-lists.public', $duaList))
+    $this->from(route('cms.show', $duaList))
         ->post(route('dua-lists.submissions.store', $duaList), [
             'duas' => array_fill(0, 36, 'Please make dua for us.'),
         ])
-        ->assertRedirect(route('dua-lists.public', $duaList))
+        ->assertRedirect(route('cms.show', $duaList))
         ->assertSessionHasErrors('duas');
 });
 
@@ -125,12 +112,12 @@ test('closed archived and expired lists reject public submissions gracefully', f
         'published_at' => now(),
     ]);
 
-    $this->get(route('dua-lists.public', $archived))
+    $this->get(route('cms.show', $archived))
         ->assertOk()
         ->assertSee('Submissions Closed')
         ->assertSee('is no longer accepting dua requests');
 
-    $this->from(route('dua-lists.public', $archived))
+    $this->from(route('cms.show', $archived))
         ->post(route('dua-lists.submissions.store', $archived), [
             'first_name' => 'Amina',
             'last_name' => 'Khan',
@@ -139,10 +126,10 @@ test('closed archived and expired lists reject public submissions gracefully', f
             'terms' => '1',
             'duas' => ['Please make dua.'],
         ])
-        ->assertRedirect(route('dua-lists.public', $archived))
+        ->assertRedirect(route('cms.show', $archived))
         ->assertSessionHasErrors('content');
 
-    $this->from(route('dua-lists.public', $expired))
+    $this->from(route('cms.show', $expired))
         ->post(route('dua-lists.submissions.store', $expired), [
             'first_name' => 'Amina',
             'last_name' => 'Khan',
@@ -151,7 +138,7 @@ test('closed archived and expired lists reject public submissions gracefully', f
             'terms' => '1',
             'duas' => ['Please make dua.'],
         ])
-        ->assertRedirect(route('dua-lists.public', $expired))
+        ->assertRedirect(route('cms.show', $expired))
         ->assertSessionHasErrors('content');
 });
 
@@ -170,14 +157,14 @@ test('turning a list off blocks public submissions with valid form data', functi
 
     expect($duaList->refresh()->isArchived())->toBeTrue();
 
-    $response = $this->get(route('dua-lists.public', $duaList))
+    $response = $this->get(route('cms.show', $duaList))
         ->assertOk()
         ->assertSee('Submissions Closed')
         ->assertDontSee('Submit Dua Requests');
 
     expect($response->headers->get('Cache-Control'))->toContain('no-store');
 
-    $this->from(route('dua-lists.public', $duaList))
+    $this->from(route('cms.show', $duaList))
         ->post(route('dua-lists.submissions.store', $duaList), [
             'first_name' => 'Amina',
             'last_name' => 'Khan',
@@ -186,7 +173,7 @@ test('turning a list off blocks public submissions with valid form data', functi
             'terms' => '1',
             'duas' => ['Please make dua for my family.'],
         ])
-        ->assertRedirect(route('dua-lists.public', $duaList))
+        ->assertRedirect(route('cms.show', $duaList))
         ->assertSessionHasErrors('content');
 
     expect(DuaSubmission::query()->where('dua_list_id', $duaList->id)->exists())->toBeFalse();
@@ -204,12 +191,12 @@ test('per email submission limit is enforced per list', function () {
         'email' => 'same@example.com',
     ]);
 
-    $this->from(route('dua-lists.public', $duaList))
+    $this->from(route('cms.show', $duaList))
         ->post(route('dua-lists.submissions.store', $duaList), [
             'email' => 'same@example.com',
             'content' => 'A fourth dua request.',
         ])
-        ->assertRedirect(route('dua-lists.public', $duaList))
+        ->assertRedirect(route('cms.show', $duaList))
         ->assertSessionHasErrors('email');
 });
 
@@ -330,7 +317,7 @@ test('dashboard and public progress counts update after completion', function ()
         ->assertSee('1')
         ->assertSee('100%');
 
-    $this->get(route('dua-lists.public', $duaList))
+    $this->get(route('cms.show', $duaList))
         ->assertOk()
         ->assertSee('1 completed')
         ->assertSee('1 total')

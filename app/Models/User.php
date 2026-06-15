@@ -6,6 +6,7 @@ use App\Domains\Auth\Notifications\ResetPasswordNotification;
 use App\Domains\Auth\Notifications\VerifyEmailNotification;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
+use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -17,7 +18,7 @@ use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable implements FilamentUser, MustVerifyEmail
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
+    /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
 
     /**
@@ -36,6 +37,7 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
         'wp_legacy_id',
         'wp_password_hash',
         'email_verified_at',
+        'welcome_email_sent_at',
     ];
 
     /**
@@ -54,6 +56,7 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
     {
         return [
             'email_verified_at' => 'datetime',
+            'welcome_email_sent_at' => 'datetime',
             'password' => 'hashed',
             'role' => UserRole::class,
             'status' => UserStatus::class,
@@ -108,6 +111,30 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
     public function stripePayments(): HasMany
     {
         return $this->hasMany(StripePayment::class);
+    }
+
+    /**
+     * @return HasMany<CommunityDuaCompletion, $this>
+     */
+    public function communityDuaCompletions(): HasMany
+    {
+        return $this->hasMany(CommunityDuaCompletion::class);
+    }
+
+    /**
+     * @return HasMany<CommunityDuaSkip, $this>
+     */
+    public function communityDuaSkips(): HasMany
+    {
+        return $this->hasMany(CommunityDuaSkip::class);
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne<CommunityDuaQueueState, $this>
+     */
+    public function communityDuaQueueState(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(CommunityDuaQueueState::class);
     }
 
     public function sendEmailVerificationNotification(): void

@@ -48,7 +48,7 @@ test('owner can list submissions with pagination and filters', function () {
                 'locked_submission_count',
             ],
             'data' => [[
-                'id', 'status', 'is_personal_dua', 'locked',
+                'id', 'status', 'is_personal_dua', 'locked', 'gender',
             ]],
         ]);
 });
@@ -87,9 +87,9 @@ test('premium owner sees full submission content in api payload', function () {
     ]);
 
     DuaSubmission::factory()->count(26)->create(['dua_list_id' => $list->id]);
-    $submission = $list->submissions()->latest('id')->first();
+    $submission = DuaSubmission::query()->where('dua_list_id', $list->id)->orderBy('id')->first();
 
-    $response = $this->getJson('/api/v1/lists/'.$list->id.'/submissions')->assertOk();
+    $response = $this->getJson('/api/v1/lists/'.$list->id.'/submissions?per_page=50')->assertOk();
 
     $payload = collect($response->json('data'))->firstWhere('id', $submission->id);
 

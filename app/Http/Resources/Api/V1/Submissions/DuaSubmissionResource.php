@@ -37,6 +37,10 @@ class DuaSubmissionResource extends ApiResource
             'first_name' => $this->first_name,
             'last_name' => $this->last_name,
             'display_name' => $this->displayName(),
+            'gender' => $this->when(
+                ! $this->is_personal_dua && $this->gender !== null,
+                $this->gender,
+            ),
             'email' => $this->email,
             'is_anonymous' => $this->is_anonymous,
             'is_personal_dua' => $this->is_personal_dua,

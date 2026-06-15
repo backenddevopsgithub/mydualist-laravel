@@ -23,6 +23,7 @@ class DuaSubmissionFactory extends Factory
             'first_name' => fake()->firstName(),
             'last_name' => fake()->lastName(),
             'email' => fake()->safeEmail(),
+            'gender' => fake()->randomElement(['male', 'female']),
             'is_anonymous' => false,
             'is_personal_dua' => false,
             'content' => fake()->sentence(12),

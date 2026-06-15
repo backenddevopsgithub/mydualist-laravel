@@ -4,6 +4,7 @@ namespace App\Domains\Lists\Actions;
 
 use App\Actions\Action;
 use App\Domains\Billing\Services\UserEntitlementService;
+use App\Events\DuaListCreated;
 use App\Models\DuaList;
 use App\Models\User;
 use Illuminate\Support\Str;
@@ -13,8 +14,7 @@ class CreateDuaListAction extends Action
 {
     public function __construct(
         private readonly UserEntitlementService $entitlements,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array{title: string, occasion: string, start_date?: string|null, end_date?: string|null, cover_image_path?: string|null}  $data
@@ -46,6 +46,8 @@ class CreateDuaListAction extends Action
         $duaList->forceFill([
             'slug' => $this->publicSlug($user, $data['occasion'], $duaList->id),
         ])->save();
+
+        event(new DuaListCreated($duaList->fresh()));
 
         return $duaList;
     }

@@ -38,6 +38,7 @@ test('admin operations resources render core management pages', function () {
         '/admin/dua-suggestions',
         '/admin/support-tickets',
         '/admin/stripe-payments',
+        '/admin/community-duas',
     ];
 
     foreach ($routes as $route) {

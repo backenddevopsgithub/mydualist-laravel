@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Domains\Community\Actions\FulfillPaidCommunityDuaCheckoutAction;
 use App\Domains\Billing\Actions\FulfillPremiumCheckoutAction;
 use App\Domains\Billing\Actions\StartPremiumCheckoutAction;
 use App\Domains\Billing\Services\StripeCheckoutService;
@@ -10,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Arr;
 use RuntimeException;
 
 class BillingController extends Controller
@@ -42,6 +44,16 @@ class BillingController extends Controller
 
         $session = $stripe->retrieveCheckoutSession($sessionId);
 
+        $metadata = $this->metadata($session);
+
+        if (($metadata['entitlement'] ?? '') === 'community_dua_paid') {
+            app(FulfillPaidCommunityDuaCheckoutAction::class)($session);
+
+            return redirect()
+                ->route('community-dua.success', ['session_id' => $sessionId])
+                ->with('status', 'Your paid community dua has been submitted.');
+        }
+
         abort_unless((string) data_get($session, 'client_reference_id') === (string) Auth::id(), 403);
 
         $fulfill($session);
@@ -62,9 +74,29 @@ class BillingController extends Controller
         );
 
         if ($event->type === 'checkout.session.completed') {
-            $fulfill($event->data->object, $event->id);
+            $metadata = $this->metadata($event->data->object);
+
+            if (($metadata['entitlement'] ?? '') === 'community_dua_paid') {
+                app(FulfillPaidCommunityDuaCheckoutAction::class)($event->data->object, $event->id);
+            } else {
+                $fulfill($event->data->object, $event->id);
+            }
         }
 
         return response('', 204);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function metadata(mixed $session): array
+    {
+        $metadata = data_get($session, 'metadata', []);
+
+        if ($metadata instanceof \Stripe\StripeObject) {
+            return $metadata->toArray();
+        }
+
+        return Arr::wrap($metadata);
     }
 }

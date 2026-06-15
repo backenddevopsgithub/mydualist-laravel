@@ -182,7 +182,11 @@
                                 <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-100 to-emerald-100 text-sm font-black text-emerald-950 ring-1 ring-emerald-950/10 sm:h-12 sm:w-12 sm:text-base">
                                     {{ $initial ?: 'D' }}
                                 </div>
-                                <div class="min-w-0">
+                                <div class="flex min-w-0 items-center gap-2">
+                                    @if (! $locked && ! $submission->isPersonalDua() && in_array($submission->gender, ['male', 'female'], true))
+                                        <x-submissions.gender-indicator :gender="$submission->gender" />
+                                        <span class="shrink-0 text-stone-300" aria-hidden="true">•</span>
+                                    @endif
                                     <h2 class="truncate text-sm font-black tracking-tight text-stone-950 sm:text-xl">{{ $displayName }}</h2>
                                 </div>
                             </div>
@@ -322,6 +326,8 @@
                     </button>
                 </div>
             @endforelse
+
+            @include('dashboard.lists.partials.community-dua-section')
 
             @if ($submissions->hasPages())
                 <div class="mt-8">
