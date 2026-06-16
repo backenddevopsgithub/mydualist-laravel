@@ -2,6 +2,9 @@
 
 namespace App\Domains\Billing\Services;
 
+use App\Domains\Billing\Data\EntitlementSnapshot;
+use App\Domains\Billing\Data\ListEntitlementSnapshot;
+use App\Enums\EntitlementKey;
 use App\Models\DuaList;
 use App\Models\DuaSubmission;
 use App\Models\User;
@@ -10,15 +13,24 @@ use App\Services\Service;
 
 class UserEntitlementService extends Service
 {
+    public function __construct(
+        private readonly EntitlementGrantService $grants,
+        private readonly EntitlementResolverService $resolver,
+    ) {}
+
+    public function hasEntitlement(User $user, EntitlementKey|string $key, ?int $duaListId = null): bool
+    {
+        return $this->grants->hasEntitlement($user, $key, $duaListId);
+    }
+
+    public function entitlementQuantity(User $user, EntitlementKey|string $key, ?int $duaListId = null): int
+    {
+        return $this->grants->quantity($user, $key, $duaListId);
+    }
+
     public function hasPremium(User $user): bool
     {
-        return $user->entitlements()
-            ->where('key', UserEntitlement::KEY_PREMIUM)
-            ->where('active', true)
-            ->where(function ($query): void {
-                $query->whereNull('expires_at')->orWhere('expires_at', '>', now());
-            })
-            ->exists();
+        return $this->resolver->hasUnlimitedForever($user);
     }
 
     public function planName(User $user): string
@@ -26,9 +38,19 @@ class UserEntitlementService extends Service
         return $this->hasPremium($user) ? 'Premium' : 'Free';
     }
 
+    public function snapshot(User $user): EntitlementSnapshot
+    {
+        return $this->resolver->resolveForUser($user);
+    }
+
+    public function listSnapshot(User $user, DuaList $duaList): ListEntitlementSnapshot
+    {
+        return $this->resolver->resolveForList($user, $duaList);
+    }
+
     public function activeListLimit(User $user): ?int
     {
-        return $this->hasPremium($user) ? null : (int) config('mydualist.billing.free_list_limit', 2);
+        return $this->resolver->effectiveListCapacity($user);
     }
 
     public function activeListCount(User $user): int
@@ -52,39 +74,21 @@ class UserEntitlementService extends Service
 
     public function visibleSubmissionLimit(User $user, DuaList $duaList): ?int
     {
-        return $this->hasPremium($user) ? null : (int) config('mydualist.billing.free_visible_submissions_per_list', 25);
+        if ($this->resolver->hasListUnlimitedOverride($user, $duaList)) {
+            return null;
+        }
+
+        return $this->resolver->effectiveVisibleQuota($user, $duaList);
     }
 
     public function lockedSubmissionCount(User $user, DuaList $duaList): int
     {
-        $limit = $this->visibleSubmissionLimit($user, $duaList);
-
-        if ($limit === null) {
-            return 0;
-        }
-
-        return max(0, $duaList->submissions()->where('is_personal_dua', false)->count() - $limit);
+        return $this->resolver->lockedSubmissionCount($user, $duaList);
     }
 
     public function canViewSubmission(User $user, DuaSubmission $submission): bool
     {
-        if ($submission->is_personal_dua && $submission->duaList->user_id === $user->id) {
-            return true;
-        }
-
-        $limit = $this->visibleSubmissionLimit($user, $submission->duaList);
-
-        if ($limit === null) {
-            return true;
-        }
-
-        $rank = DuaSubmission::query()
-            ->where('dua_list_id', $submission->dua_list_id)
-            ->where('is_personal_dua', false)
-            ->where('id', '<=', $submission->id)
-            ->count();
-
-        return $rank <= $limit;
+        return $this->resolver->canViewSubmission($user, $submission);
     }
 
     /**
@@ -92,23 +96,7 @@ class UserEntitlementService extends Service
      */
     public function visibleSubmissionIds(User $user, DuaList $duaList): array
     {
-        $limit = $this->visibleSubmissionLimit($user, $duaList);
-
-        if ($limit === null) {
-            return $duaList->submissions()->pluck('id')->all();
-        }
-
-        $personalIds = $duaList->submissions()
-            ->where('is_personal_dua', true)
-            ->pluck('id');
-
-        $regularIds = $duaList->submissions()
-            ->where('is_personal_dua', false)
-            ->oldest('id')
-            ->limit($limit)
-            ->pluck('id');
-
-        return $personalIds->merge($regularIds)->all();
+        return $this->resolver->visibleSubmissionIds($user, $duaList);
     }
 
     /**

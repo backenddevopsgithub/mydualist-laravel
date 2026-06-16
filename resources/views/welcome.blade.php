@@ -1,4 +1,6 @@
 @php
+    use Illuminate\Support\Facades\Auth;
+
     $blogCategories = $blogCategories ?? collect();
     $homepagePosts = $homepagePosts ?? collect();
 
@@ -25,10 +27,22 @@
     ];
 
     $plans = [
-        ['Free Forever', 'Ideal for casual users getting started.', '£0', null, ['2 Dua Lists', '25 Dua Requests / List', 'Up to 5 duas per user', 'Contains ads', 'Standard Support'], 'Get started for free', false],
-        ['1 Unlimited List', 'Unlimited dua requests on any one list', '£7.99', 'one-time', ['Unlimited requests on one list', 'No dua limits per user', 'Contains ads', 'Premium Support'], 'Sign up', false],
-        ['Unlimited Forever', 'Unlimited requests and unlimited lists for a lifetime', '£12.99', 'one-time', ['Unlimited Dua Requests', 'Unlimited Dua Lists', 'No limit on duas per user', 'Ad-free experience', 'Premium Support'], 'Sign up', true],
+        ['Free Forever', 'Ideal for casual users getting started.', '£0', null, ['2 Dua Lists', '25 Dua Requests / List', 'Up to 5 duas per user', 'Contains ads', 'Standard Support'], 'Get started for free', false, null],
+        ['1 Unlimited List', 'Unlimited dua requests on any one list', '£7.99', 'one-time', ['Unlimited requests on one list', 'No dua limits per user', 'Contains ads', 'Premium Support'], 'View upgrade options', false, 'unlimited_one_list'],
+        ['Unlimited Forever', 'Unlimited requests and unlimited lists for a lifetime', '£11.99', 'one-time', ['Unlimited Dua Requests', 'Unlimited Dua Lists', 'No limit on duas per user', 'Ad-free experience', 'Premium Support'], 'View upgrade options', true, 'unlimited_forever'],
     ];
+
+    $pricingCtaUrl = function (?string $product = null): string {
+        if ($product === null) {
+            return route('onboarding.start');
+        }
+
+        if (Auth::check()) {
+            return route('dashboard.upgrade', ['product' => $product]);
+        }
+
+        return route('login');
+    };
 @endphp
 
 <!DOCTYPE html>
@@ -240,7 +254,7 @@
                         />
 
                         <div class="mt-12 grid gap-6 lg:grid-cols-3">
-                            @foreach ($plans as $index => [$name, $description, $price, $period, $items, $cta, $featured])
+                            @foreach ($plans as $index => [$name, $description, $price, $period, $items, $cta, $featured, $product])
                                 <article @class([
                                     'reveal-on-scroll relative rounded-3xl border bg-white p-8 text-center shadow-[0_22px_70px_rgba(15,23,42,0.06)]',
                                     'border-emerald-700 ring-4 ring-emerald-100' => $featured,
@@ -266,7 +280,7 @@
                                             </li>
                                         @endforeach
                                     </ul>
-                                    <a href="{{ route('onboarding.start') }}" @class([
+                                    <a href="{{ $pricingCtaUrl($product) }}" @class([
                                         'mt-8 inline-flex w-full items-center justify-center rounded-full px-5 py-3.5 text-sm font-bold transition',
                                         'bg-emerald-800 text-white hover:bg-emerald-700' => $featured,
                                         'border-2 border-emerald-800 text-emerald-800 hover:bg-emerald-50' => ! $featured,

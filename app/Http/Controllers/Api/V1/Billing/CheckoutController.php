@@ -15,6 +15,10 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Gate;
 use RuntimeException;
 
+/**
+ * @deprecated Legacy API Stripe Checkout Session endpoints. Use PurchaseController
+ *             and embedded checkout until rollout monitoring is complete.
+ */
 class CheckoutController extends ApiController
 {
     public function store(StartCheckoutRequest $request, StartPremiumCheckoutAction $action): JsonResponse

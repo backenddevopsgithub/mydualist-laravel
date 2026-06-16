@@ -8,6 +8,10 @@ use App\Models\StripePayment;
 use App\Models\User;
 use Illuminate\Support\Arr;
 
+/**
+ * @deprecated Legacy Stripe Checkout Session fulfillment. Use {@see PurchaseFulfillmentService}
+ *             until rollout monitoring is complete.
+ */
 class FulfillPremiumCheckoutAction extends Action
 {
     public function __construct(

@@ -11,13 +11,14 @@ use App\Http\Controllers\Dashboard\CommunityDuaController as DashboardCommunityD
 use App\Http\Controllers\Dashboard\DuaListController;
 use App\Http\Controllers\Dashboard\ListSubmissionController;
 use App\Http\Controllers\Dashboard\MySubmissionsController;
+use App\Http\Controllers\Dashboard\PurchaseHistoryController;
 use App\Http\Controllers\Dashboard\ProfileController;
 use App\Http\Controllers\Dashboard\SupportController;
 use App\Http\Controllers\Dashboard\UpgradeController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\Onboarding\CreateListOnboardingController;
-use App\Http\Controllers\PublicDuaListController;
+use App\Http\Controllers\PurchaseCheckoutController;
 use App\Http\Controllers\PublicDuaSubmissionController;
 use App\Models\BlogCategory;
 use App\Models\BlogPost;
@@ -51,6 +52,10 @@ Route::post('/submit-a-dua/checkout', [CommunityDuaController::class, 'checkout'
     ->name('community-dua.checkout');
 Route::get('/submit-a-dua/success', [CommunityDuaController::class, 'success'])->name('community-dua.success');
 
+Route::get('/billing/purchases/{purchase}/checkout', [PurchaseCheckoutController::class, 'show'])
+    ->middleware('throttle:billing-purchase-read')
+    ->name('billing.purchases.checkout');
+
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [LoginController::class, 'create'])->name('login');
     Route::post('/login', [LoginController::class, 'store'])->middleware('throttle:login')->name('login.store');
@@ -83,6 +88,11 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('/dashboard/profile/submissions.csv', [ProfileController::class, 'downloadSubmissions'])->name('dashboard.profile.submissions.download');
     Route::post('/logout', [ProfileController::class, 'logout'])->name('logout');
     Route::get('/dashboard/upgrade', UpgradeController::class)->name('dashboard.upgrade');
+    Route::get('/dashboard/purchases', PurchaseHistoryController::class)->name('dashboard.purchases');
+    Route::post('/billing/purchases/start', [PurchaseCheckoutController::class, 'store'])
+        ->middleware('throttle:billing')
+        ->name('billing.purchases.start');
+    /** @deprecated Legacy Stripe Checkout Session — use billing.purchases.start */
     Route::post('/billing/checkout', [BillingController::class, 'checkout'])->middleware('throttle:billing')->name('billing.checkout');
     Route::get('/billing/success', [BillingController::class, 'success'])->middleware('throttle:billing')->name('billing.success');
     Route::get('/dashboard/my-submissions', MySubmissionsController::class)->name('dashboard.submissions');

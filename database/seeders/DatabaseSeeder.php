@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $this->call([
+            BillingProductSeeder::class,
             BlogSeeder::class,
             CmsPageSeeder::class,
         ]);

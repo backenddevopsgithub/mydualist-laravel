@@ -9,6 +9,10 @@ use App\Models\CommunityDua;
 use App\Models\StripePayment;
 use Illuminate\Support\Arr;
 
+/**
+ * @deprecated Legacy Stripe Checkout Session fulfillment. Use {@see CommunityDuaPaidFulfillmentHandler}
+ *             until rollout monitoring is complete.
+ */
 class FulfillPaidCommunityDuaCheckoutAction extends Action
 {
     public function __construct(

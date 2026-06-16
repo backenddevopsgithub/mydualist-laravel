@@ -32,3 +32,13 @@ Schedule::job(new SendClosingSoonReminderJob)
 Schedule::job(new SendListImageReminderJob)
     ->daily()
     ->name('send-list-image-reminder');
+
+Schedule::command('billing:reconcile-purchases')
+    ->hourly()
+    ->name('billing-reconcile-purchases')
+    ->withoutOverlapping();
+
+Schedule::command('billing:health --alert')
+    ->dailyAt('08:00')
+    ->name('billing-health-alert')
+    ->withoutOverlapping();

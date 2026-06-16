@@ -16,6 +16,9 @@ use RuntimeException;
 
 class BillingController extends Controller
 {
+    /**
+     * @deprecated Use StartEmbeddedPurchaseCheckoutAction and embedded checkout instead.
+     */
     public function checkout(StartPremiumCheckoutAction $action): RedirectResponse
     {
         Gate::authorize('start-billing-checkout');

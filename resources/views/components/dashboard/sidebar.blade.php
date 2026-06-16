@@ -33,6 +33,10 @@
                 'flex items-center gap-3 rounded-xl px-3 py-3 transition hover:bg-white hover:text-emerald-950',
                 'bg-emerald-900/10 text-emerald-950' => request()->routeIs('dashboard.upgrade'),
             ])>Upgrade Plan</a>
+            <a href="{{ route('dashboard.purchases') }}" @class([
+                'flex items-center gap-3 rounded-xl px-3 py-3 transition hover:bg-white hover:text-emerald-950',
+                'bg-emerald-900/10 text-emerald-950' => request()->routeIs('dashboard.purchases'),
+            ])>Purchase History</a>
             <a href="{{ route('dashboard.submissions') }}" @class([
                 'flex items-center gap-3 rounded-xl px-3 py-3 transition hover:bg-white hover:text-emerald-950',
                 'bg-emerald-900/10 text-emerald-950' => request()->routeIs('dashboard.submissions'),

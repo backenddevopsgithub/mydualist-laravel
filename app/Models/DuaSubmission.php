@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\DuaSubmissionStatus;
+use App\Enums\SubmissionLockReason;
 use Database\Factories\DuaSubmissionFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -37,6 +38,11 @@ class DuaSubmission extends Model
         'gender',
         'is_anonymous',
         'is_personal_dua',
+        'is_locked',
+        'locked_at_quota',
+        'locked_reason',
+        'unlocked_at',
+        'unlock_purchase_id',
         'content',
         'note',
         'status',
@@ -59,6 +65,10 @@ class DuaSubmission extends Model
             'status' => DuaSubmissionStatus::class,
             'is_anonymous' => 'boolean',
             'is_personal_dua' => 'boolean',
+            'is_locked' => 'boolean',
+            'locked_at_quota' => 'integer',
+            'locked_reason' => SubmissionLockReason::class,
+            'unlocked_at' => 'datetime',
             'completed_at' => 'datetime',
             'completion_notified_at' => 'datetime',
             'digest_sent_at' => 'datetime',
@@ -82,6 +92,30 @@ class DuaSubmission extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * @return BelongsTo<BillingPurchase, $this>
+     */
+    public function unlockPurchase(): BelongsTo
+    {
+        return $this->belongsTo(BillingPurchase::class, 'unlock_purchase_id');
+    }
+
+    public function isQuotaLocked(): bool
+    {
+        return (bool) $this->is_locked && $this->unlocked_at === null;
+    }
+
+    /**
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
+    public function scopeQuotaLocked(Builder $query): Builder
+    {
+        return $query
+            ->where('is_locked', true)
+            ->whereNull('unlocked_at');
     }
 
     /**

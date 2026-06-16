@@ -17,10 +17,10 @@ return [
     ],
 
     'billing' => [
-        'free_list_limit' => 2,
-        'free_visible_submissions_per_list' => 25,
+        'free_list_limit' => config('billing.default_list_capacity', 2),
+        'free_visible_submissions_per_list' => config('billing.free_visible_submissions_per_list', 25),
         'premium_price' => env('MYDUALIST_PREMIUM_PRICE', '12.99'),
-        'premium_currency' => env('MYDUALIST_PREMIUM_CURRENCY', 'gbp'),
+        'premium_currency' => config('billing.currency', 'gbp'),
         'community_dua_price' => env('MYDUALIST_COMMUNITY_DUA_PRICE', '10.00'),
         'checkout_success_url' => env('MYDUALIST_STRIPE_SUCCESS_URL'),
         'checkout_cancel_url' => env('MYDUALIST_STRIPE_CANCEL_URL'),

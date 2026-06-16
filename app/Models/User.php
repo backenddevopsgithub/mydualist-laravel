@@ -2,8 +2,9 @@
 
 namespace App\Models;
 
-use App\Domains\Auth\Notifications\ResetPasswordNotification;
 use App\Domains\Auth\Notifications\VerifyEmailNotification;
+use App\Domains\Billing\Services\EntitlementGrantService;
+use App\Enums\EntitlementKey;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use Database\Factories\UserFactory;
@@ -12,6 +13,7 @@ use Filament\Panel;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -106,6 +108,32 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
     }
 
     /**
+     * @return HasMany<EntitlementGrant, $this>
+     */
+    public function entitlementGrants(): HasMany
+    {
+        return $this->hasMany(EntitlementGrant::class);
+    }
+
+    public function hasEntitlement(EntitlementKey|string $key, ?int $duaListId = null): bool
+    {
+        return app(EntitlementGrantService::class)->hasEntitlement($this, $key, $duaListId);
+    }
+
+    public function entitlementQuantity(EntitlementKey|string $key, ?int $duaListId = null): int
+    {
+        return app(EntitlementGrantService::class)->quantity($this, $key, $duaListId);
+    }
+
+    /**
+     * @return HasMany<BillingPurchase, $this>
+     */
+    public function billingPurchases(): HasMany
+    {
+        return $this->hasMany(BillingPurchase::class);
+    }
+
+    /**
      * @return HasMany<StripePayment, $this>
      */
     public function stripePayments(): HasMany
@@ -130,9 +158,9 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasOne<CommunityDuaQueueState, $this>
+     * @return HasOne<CommunityDuaQueueState, $this>
      */
-    public function communityDuaQueueState(): \Illuminate\Database\Eloquent\Relations\HasOne
+    public function communityDuaQueueState(): HasOne
     {
         return $this->hasOne(CommunityDuaQueueState::class);
     }

@@ -3,10 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Domains\Community\Actions\CreateFreeCommunityDuaAction;
-use App\Domains\Community\Actions\StartPaidCommunityDuaCheckoutAction;
-use App\Domains\Billing\Services\StripeCheckoutService;
 use App\Domains\Community\Actions\FulfillPaidCommunityDuaCheckoutAction;
+use App\Domains\Community\Actions\StartPaidCommunityDuaPurchaseAction;
+use App\Domains\Billing\Services\StripeCheckoutService;
 use App\Http\Requests\Community\StoreCommunityDuaRequest;
+use App\Models\BillingPurchase;
 use App\Models\StripePayment;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -37,15 +38,15 @@ class CommunityDuaController extends Controller
 
     public function checkout(
         StoreCommunityDuaRequest $request,
-        StartPaidCommunityDuaCheckoutAction $action,
+        StartPaidCommunityDuaPurchaseAction $action,
     ): RedirectResponse {
         try {
-            $checkout = $action($request->validated(), Auth::user());
+            $result = $action($request->validated(), Auth::user());
         } catch (RuntimeException $exception) {
             return back()->withErrors(['billing' => $exception->getMessage()])->withInput();
         }
 
-        return redirect()->away($checkout['session']['url']);
+        return redirect()->route('billing.purchases.checkout', $result['purchase']);
     }
 
     public function success(
@@ -53,6 +54,20 @@ class CommunityDuaController extends Controller
         StripeCheckoutService $stripe,
         FulfillPaidCommunityDuaCheckoutAction $fulfill,
     ): View|RedirectResponse {
+        $purchaseId = (int) $request->query('purchase_id');
+
+        if ($purchaseId > 0) {
+            $purchase = BillingPurchase::query()
+                ->with('communityDua')
+                ->find($purchaseId);
+
+            return view('community-dua.success', [
+                'payment' => null,
+                'purchase' => $purchase,
+                'communityDua' => $purchase?->communityDua,
+            ]);
+        }
+
         $sessionId = (string) $request->query('session_id');
 
         if ($sessionId !== '') {
@@ -66,6 +81,8 @@ class CommunityDuaController extends Controller
 
         return view('community-dua.success', [
             'payment' => $payment,
+            'purchase' => null,
+            'communityDua' => null,
         ]);
     }
 }

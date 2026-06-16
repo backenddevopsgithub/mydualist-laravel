@@ -10,6 +10,10 @@ use Stripe\Event;
 use Stripe\StripeClient;
 use Stripe\Webhook;
 
+/**
+ * @deprecated Legacy Stripe Checkout Session integration. Use embedded checkout
+ *             ({@see StartEmbeddedPurchaseCheckoutAction}) until rollout monitoring is complete.
+ */
 class StripeCheckoutService extends Service
 {
     /**

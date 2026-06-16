@@ -138,6 +138,42 @@ test('security headers are added to browser responses', function () {
         ->toContain("'unsafe-eval'");
 });
 
+test('local environment csp allows vite dev server origins', function () {
+    app()->detectEnvironment(fn (): string => 'local');
+
+    $policy = $this->get(route('home'))->headers->get('Content-Security-Policy');
+
+    expect($policy)
+        ->toContain("script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com http://127.0.0.1:5173")
+        ->toContain("style-src 'self' 'unsafe-inline' https://fonts.bunny.net https://js.stripe.com http://127.0.0.1:5173")
+        ->toContain("connect-src 'self' https://api.stripe.com https://r.stripe.com http://127.0.0.1:5173 ws://127.0.0.1:5173")
+        ->toContain("img-src 'self' data: blob: https://*.stripe.com")
+        ->toContain('frame-src https://js.stripe.com');
+});
+
+test('production environment csp allows stripe payment element resources', function () {
+    app()->detectEnvironment(fn (): string => 'production');
+
+    $policy = $this->get(route('home'))->headers->get('Content-Security-Policy');
+
+    expect($policy)
+        ->toContain('https://js.stripe.com')
+        ->toContain('https://api.stripe.com')
+        ->toContain('https://r.stripe.com')
+        ->toContain('https://*.stripe.com')
+        ->toContain('frame-src https://js.stripe.com');
+});
+
+test('production environment csp does not allow vite dev server origins', function () {
+    app()->detectEnvironment(fn (): string => 'production');
+
+    $policy = $this->get(route('home'))->headers->get('Content-Security-Policy');
+
+    expect($policy)
+        ->not->toContain('http://127.0.0.1:5173')
+        ->not->toContain('ws://127.0.0.1:5173');
+});
+
 test('submission policy prevents managing another owners submission', function () {
     $user = User::factory()->create();
     $duaList = DuaList::factory()->create();

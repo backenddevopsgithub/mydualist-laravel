@@ -17,7 +17,11 @@ test('free users are blocked from creating more than two active lists', function
 
     $this->actingAs($user)
         ->get('/create-list')
-        ->assertRedirect(route('dashboard.upgrade'))
+        ->assertRedirect(
+            route('dashboard.upgrade', [
+                'product' => 'additional_list',
+            ])
+        )
         ->assertSessionHasErrors('billing');
 });
 
@@ -80,10 +84,11 @@ test('premium users can view and manage all submissions', function () {
         'unlocked_at' => now(),
     ]);
 
-    $this->actingAs($owner)
-        ->get(route('dashboard.lists.show', $duaList))
-        ->assertOk()
-        ->assertSee('Premium owners can read this dua.')
+    $response = $this->actingAs($owner)
+        ->get(route('dashboard.lists.show', [$duaList, 'page' => 2]));
+
+    $response->assertOk()
+        ->assertSeeText('Premium owners can read this dua.')
         ->assertDontSee('Locked dua request');
 
     $this->actingAs($owner)

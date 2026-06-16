@@ -80,11 +80,20 @@
             </div>
         @endif
 
+        @if (request('payment') === 'success')
+            <div class="mt-6 rounded-2xl bg-emerald-50 px-5 py-4 text-sm font-bold text-emerald-900 ring-1 ring-emerald-900/10">
+                Payment successful. Your list entitlements have been updated.
+            </div>
+        @endif
+
         @if (! $hasPremium && $lockedSubmissionCount > 0)
             <section class="mt-6 rounded-[2rem] border border-amber-200 bg-amber-50 p-5 text-amber-950 sm:p-6">
                 <h2 class="text-xl font-extrabold">Upgrade to unlock {{ $lockedSubmissionCount }} more duas</h2>
-                <p class="mt-2 text-sm leading-6">Your free plan shows the first {{ $visibleSubmissionLimit }} submissions on each list. Upgrade once to unlock every current and future dua.</p>
-                <a href="{{ route('dashboard.upgrade') }}" class="mt-5 inline-flex rounded-2xl bg-emerald-900 px-5 py-3 text-sm font-extrabold text-white">Upgrade to Premium</a>
+                <p class="mt-2 text-sm leading-6">Your free plan shows the first {{ $visibleSubmissionLimit }} submissions on each list. Add a request pack or upgrade for unlimited access.</p>
+                <div class="mt-5 flex flex-wrap gap-3">
+                    <a href="{{ route('dashboard.upgrade', ['product' => 'request_pack_25', 'dua_list_id' => $duaList->id]) }}" class="inline-flex rounded-2xl bg-emerald-900 px-5 py-3 text-sm font-extrabold text-white">Buy 25 More Requests</a>
+                    <a href="{{ route('dashboard.upgrade', ['product' => 'unlimited_one_list', 'dua_list_id' => $duaList->id]) }}" class="inline-flex rounded-2xl border border-emerald-900 bg-white px-5 py-3 text-sm font-extrabold text-emerald-900">Upgrade This List</a>
+                </div>
             </section>
         @endif
 
@@ -220,7 +229,7 @@
                         @if ($locked)
                             <div class="mt-7 rounded-3xl bg-stone-50 p-5 ring-1 ring-stone-200">
                                 <p class="select-none blur-sm text-lg font-black leading-9 tracking-tight text-stone-500">This dua request is locked on the free plan. Upgrade to read and manage it.</p>
-                                <a href="{{ route('dashboard.upgrade') }}" class="mt-5 inline-flex rounded-2xl bg-emerald-900 px-5 py-3 text-sm font-extrabold text-white">Unlock Premium</a>
+                                <a href="{{ route('dashboard.upgrade', ['product' => 'request_pack_25', 'dua_list_id' => $duaList->id]) }}" class="mt-5 inline-flex rounded-2xl bg-emerald-900 px-5 py-3 text-sm font-extrabold text-white">Unlock More Requests</a>
                             </div>
                         @else
                             <p class="mt-5 text-[1.02rem] leading-8 tracking-tight sm:mt-7 sm:text-[1.45rem] sm:leading-10">{!! $submission->readableContent() !!}</p>
@@ -247,7 +256,7 @@
                         </div>
 
                         @if ($locked)
-                            <a href="{{ route('dashboard.upgrade') }}" class="inline-flex items-center justify-center rounded-full bg-lime-300 px-5 py-3 text-sm font-black text-emerald-950 shadow-[0_12px_30px_rgba(132,204,22,0.30)]">Unlock</a>
+                            <a href="{{ route('dashboard.upgrade', ['product' => 'request_pack_25', 'dua_list_id' => $duaList->id]) }}" class="inline-flex items-center justify-center rounded-full bg-lime-300 px-5 py-3 text-sm font-black text-emerald-950 shadow-[0_12px_30px_rgba(132,204,22,0.30)]">Unlock</a>
                         @elseif ($submission->status === App\Enums\DuaSubmissionStatus::Hidden)
                             <span class="text-sm font-extrabold text-emerald-50">Hidden</span>
                         @elseif ($submission->status !== App\Enums\DuaSubmissionStatus::Completed)

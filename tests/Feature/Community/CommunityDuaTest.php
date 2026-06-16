@@ -92,37 +92,33 @@ test('community dua submission validates name length gender and word limit', fun
     expect(CommunityDua::query()->count())->toBe(0);
 });
 
-test('paid checkout creates pending community dua and redirects to stripe', function () {
-    app()->instance(StripeCheckoutService::class, new class extends StripeCheckoutService
+test('paid checkout creates pending community dua and redirects to embedded checkout', function () {
+    $this->seed(\Database\Seeders\BillingProductSeeder::class);
+
+    app()->instance(\App\Domains\Billing\Services\StripePaymentIntentService::class, new class extends \App\Domains\Billing\Services\StripePaymentIntentService
     {
-        public function createCommunityDuaCheckout(CommunityDua $communityDua, ?User $user = null, ?string $successUrl = null, ?string $cancelUrl = null): array
+        public function createForPurchase(\App\Models\BillingPurchase $purchase): array
         {
             return [
-                'id' => 'cs_community_paid',
-                'url' => 'https://checkout.stripe.test/community',
-                'amount_total' => 1000,
-                'currency' => 'gbp',
+                'id' => 'pi_community_paid',
+                'client_secret' => 'pi_community_paid_secret',
             ];
         }
     });
 
     $this->post(route('community-dua.checkout'), validCommunityDuaPayload([
         'email' => 'paid@example.com',
-    ]))
-        ->assertRedirect('https://checkout.stripe.test/community');
+    ]))->assertRedirect();
 
     $dua = CommunityDua::query()->where('email', 'paid@example.com')->first();
+    $purchase = \App\Models\BillingPurchase::query()->where('community_dua_id', $dua?->id)->first();
 
     expect($dua)->not->toBeNull()
         ->and($dua->type)->toBe(CommunityDuaType::Paid)
         ->and($dua->status)->toBe(CommunityDuaStatus::PendingPayment)
         ->and($dua->required_completions)->toBe(20)
-        ->and($dua->is_visible)->toBeFalse();
-
-    $this->assertDatabaseHas('stripe_payments', [
-        'stripe_checkout_session_id' => 'cs_community_paid',
-        'status' => StripePayment::STATUS_PENDING,
-    ]);
+        ->and($dua->is_visible)->toBeFalse()
+        ->and($purchase)->not->toBeNull();
 });
 
 test('paid community dua activates only after successful payment fulfillment', function () {

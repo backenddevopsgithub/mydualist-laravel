@@ -32,8 +32,10 @@ class CreateListOnboardingController extends Controller
         if (Auth::check()) {
             if (! $entitlements->canCreateList(Auth::user())) {
                 return redirect()
-                    ->route('dashboard.upgrade')
-                    ->withErrors(['billing' => 'You have reached the free list limit. Upgrade to Premium to create unlimited lists.']);
+                    ->route('dashboard.upgrade', [
+                        'product' => 'additional_list',
+                    ])
+                    ->withErrors(['billing' => 'You have reached the free list limit. Upgrade to create another list.']);
             }
 
             $data = [

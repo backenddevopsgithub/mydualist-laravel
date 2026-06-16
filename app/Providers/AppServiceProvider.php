@@ -80,6 +80,10 @@ class AppServiceProvider extends ServiceProvider
             Limit::perMinute(6)->by((string) optional($request->user())->id ?: $request->ip()),
         ]);
 
+        RateLimiter::for('billing-purchase-read', fn (Request $request) => [
+            Limit::perMinute(60)->by((string) optional($request->user())->id ?: $request->ip()),
+        ]);
+
         RateLimiter::for('support', fn (Request $request) => [
             Limit::perMinute(3)->by((string) optional($request->user())->id ?: $request->ip()),
         ]);

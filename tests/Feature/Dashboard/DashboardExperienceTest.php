@@ -224,7 +224,8 @@ test('upgrade and my submissions foundations render', function () {
         ->assertOk()
         ->assertSee('Upgrade Plan')
         ->assertSee('Current Plan: Free')
-        ->assertSee('Upgrade with Stripe');
+        ->assertSee('25 More Dua Requests')
+        ->assertSee('billing/purchases/start', false);
 
     $this->actingAs($user)
         ->get(route('dashboard.submissions'))

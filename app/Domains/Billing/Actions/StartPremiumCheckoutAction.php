@@ -7,6 +7,9 @@ use App\Domains\Billing\Services\StripeCheckoutService;
 use App\Models\StripePayment;
 use App\Models\User;
 
+/**
+ * @deprecated Use StartEmbeddedPurchaseCheckoutAction with product-specific billing purchases instead.
+ */
 class StartPremiumCheckoutAction extends Action
 {
     public function __construct(

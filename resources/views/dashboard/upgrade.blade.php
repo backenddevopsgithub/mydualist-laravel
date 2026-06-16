@@ -16,41 +16,23 @@
             </div>
         @endif
 
+        @if ($paymentSucceeded)
+            <div class="mt-6 rounded-2xl bg-emerald-50 px-5 py-4 text-sm font-bold text-emerald-900 ring-1 ring-emerald-900/10">
+                Payment successful. Your entitlements have been updated.
+            </div>
+        @endif
+
         @error('billing')
             <div class="mt-6 rounded-2xl bg-red-50 px-5 py-4 text-sm font-bold text-red-700 ring-1 ring-red-100">
                 {{ $message }}
             </div>
         @enderror
 
-        <section class="mt-8 grid gap-5 lg:grid-cols-3">
-            @foreach ([
-                [
-                    'id' => 'additional_list',
-                    'name' => 'One Additional List',
-                    'price' => '£7.99',
-                    'description' => 'Adds one extra list with unlimited dua requests.',
-                    'features' => ['1 additional active list', 'Unlimited dua requests on that list', 'Premium support'],
-                ],
-                [
-                    'id' => 'unlimited_one_list',
-                    'name' => 'Unlimited One List',
-                    'price' => '£7.99',
-                    'description' => 'Unlock unlimited dua requests on one existing list.',
-                    'features' => ['Unlimited requests on one list', 'Choose which list to upgrade', 'Premium support'],
-                    'hasListSelect' => true,
-                ],
-                [
-                    'id' => 'unlimited_forever',
-                    'name' => 'Unlimited Forever',
-                    'price' => '£11.99',
-                    'description' => 'Unlimited requests and unlimited lists for life.',
-                    'features' => ['Unlimited dua requests', 'Unlimited dua lists', 'Ad-free experience', 'Premium support'],
-                    'featured' => true,
-                ],
-            ] as $plan)
+        <section class="mt-8 grid gap-5 lg:grid-cols-2 xl:grid-cols-4">
+            @foreach ($plans as $plan)
                 <x-ui.card @class([
-                    'ring-4 ring-emerald-100' => $plan['featured'] ?? false,
-                    '!border-emerald-800' => $plan['featured'] ?? false,
+                    'ring-4 ring-emerald-100' => ($plan['featured'] ?? false) || $selectedProduct === $plan['product_code'],
+                    '!border-emerald-800' => ($plan['featured'] ?? false) || $selectedProduct === $plan['product_code'],
                 ])>
                     @if ($plan['featured'] ?? false)
                         <span class="mb-4 inline-flex rounded-full bg-amber-300 px-3 py-1 text-xs font-extrabold text-emerald-950">Popular</span>
@@ -67,14 +49,14 @@
                         @endforeach
                     </ul>
 
-                    <form method="POST" action="{{ route('billing.checkout') }}" class="mt-7 space-y-4">
+                    <form method="POST" action="{{ route('billing.purchases.start') }}" class="mt-7 space-y-4">
                         @csrf
-                        <input type="hidden" name="plan" value="{{ $plan['id'] }}">
+                        <input type="hidden" name="product_code" value="{{ $plan['product_code'] }}">
                         @if ($plan['hasListSelect'] ?? false)
                             <x-ui.select name="dua_list_id" label="List" required>
                                 <option value="">Select a list</option>
                                 @foreach ($user->duaLists()->active()->orderBy('title')->get() as $list)
-                                    <option value="{{ $list->id }}">{{ $list->title }}</option>
+                                    <option value="{{ $list->id }}" @selected($selectedDuaListId === $list->id)>{{ $list->title }}</option>
                                 @endforeach
                             </x-ui.select>
                         @endif

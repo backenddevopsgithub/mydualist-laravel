@@ -10,6 +10,9 @@ use App\Models\CommunityDua;
 use App\Models\StripePayment;
 use App\Models\User;
 
+/**
+ * @deprecated Use StartPaidCommunityDuaPurchaseAction and embedded checkout instead.
+ */
 class StartPaidCommunityDuaCheckoutAction extends Action
 {
     public function __construct(
