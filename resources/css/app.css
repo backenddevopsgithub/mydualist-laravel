@@ -479,3 +479,35 @@
 .form-select {
     @apply ui-select mt-2;
 }
+
+.whatsapp-phone-field .whatsapp-phone-iti {
+    @apply mt-1 block w-full;
+}
+
+.whatsapp-phone-field .iti__tel-input {
+    @apply w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-900 outline-none;
+}
+
+.whatsapp-phone-field .iti__tel-input:focus {
+    @apply border-emerald-700 ring-4 ring-emerald-100;
+}
+
+.whatsapp-phone-field .iti__country-container {
+    @apply rounded-l-xl;
+}
+
+.whatsapp-phone-field .iti__selected-country {
+    @apply rounded-l-xl bg-white;
+}
+
+.whatsapp-phone-field .iti__dropdown-content {
+    @apply max-h-[min(50vh,18rem)] overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl;
+}
+
+.whatsapp-phone-field .iti__search-input {
+    @apply w-full border-0 border-b border-stone-200 px-3 py-2 text-sm outline-none focus:ring-0;
+}
+
+.whatsapp-phone-field .iti__country-list {
+    @apply max-h-[min(45vh,16rem)];
+}

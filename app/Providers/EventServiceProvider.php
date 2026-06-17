@@ -10,6 +10,7 @@ use App\Events\UserEmailVerified;
 use App\Listeners\LogEmailNotificationDelivery;
 use App\Listeners\SendCommunityDuaCompletedEmail;
 use App\Listeners\SendDuaCompletedEmail;
+use App\Listeners\SendDuaCompletedWhatsApp;
 use App\Listeners\SendListCreatedEmail;
 use App\Listeners\SendSubmissionTransactionalEmails;
 use App\Listeners\SendWelcomeAndPendingListEmails;
@@ -34,6 +35,7 @@ class EventServiceProvider extends ServiceProvider
         ],
         DuaSubmissionCompleted::class => [
             SendDuaCompletedEmail::class,
+            SendDuaCompletedWhatsApp::class,
         ],
         CommunityDuaCompletedByPilgrim::class => [
             SendCommunityDuaCompletedEmail::class,

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Domains\Cms\Services\DuaSuggestionService;
 use App\Domains\Security\Services\PublicSubmissionSpamGuard;
 use App\Domains\Submissions\Actions\CreateDuaSubmissionAction;
 use App\Http\Requests\Submissions\StorePublicSubmissionRequest;
@@ -16,6 +17,7 @@ class PublicDuaSubmissionController extends Controller
         DuaList $duaList,
         CreateDuaSubmissionAction $action,
         PublicSubmissionSpamGuard $spamGuard,
+        DuaSuggestionService $suggestions,
     ): RedirectResponse {
         if (! $duaList->acceptsSubmissions()) {
             throw ValidationException::withMessages([
@@ -28,6 +30,7 @@ class PublicDuaSubmissionController extends Controller
         $spamGuard->inspect($duaList, $data, $request->ip());
 
         $submissions = $action($duaList, $data, $request->user());
+        $suggestions->incrementUsedCounts($data['suggestion_ids'] ?? []);
         $count = $submissions->count();
 
         return redirect()

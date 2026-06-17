@@ -12,6 +12,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="csrf-token" content="{{ csrf_token() }}">
         <meta name="description" content="Submit a dua request for {{ $duaList->title }} on My Dua List.">
         <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
         <meta http-equiv="Pragma" content="no-cache">
@@ -72,45 +73,22 @@
 
                     @if ($acceptsSubmissions)
                         <div
-                            x-data="{
-                                step: @js($errors->any() && $duaErrors->isNotEmpty() ? 'duas' : 'info'),
-                                showGuide: false,
-                                maxDuas: 35,
-                                duas: @js(old('duas', [''])),
-                                gender: @js(old('gender', '')),
-                                whatsapp: @js((bool) old('whatsapp_notifications')),
-                                whatsappVerified: @js((bool) old('whatsapp_verified')),
-                                terms: @js((bool) old('terms')),
-                                firstName: @js(old('first_name', '')),
-                                lastName: @js(old('last_name', '')),
-                                email: @js(old('email', '')),
-                                get canContinue() {
-                                    return this.firstName.trim() !== ''
-                                        && this.lastName.trim() !== ''
-                                        && this.email.trim() !== ''
-                                        && this.gender !== ''
-                                        && this.terms
-                                        && (!this.whatsapp || this.whatsappVerified);
-                                },
-                                addDua() {
-                                    if (this.duas.length < this.maxDuas) {
-                                        const index = this.duas.length;
-                                        this.duas.push('');
-                                        this.$nextTick(() => document.getElementById('dua-field-' + index)?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
-                                    }
-                                },
-                                removeDua(index) {
-                                    if (this.duas.length > 1) this.duas.splice(index, 1);
-                                },
-                                openDuas() {
-                                    this.showGuide = true;
-                                },
-                                acceptGuide() {
-                                    this.showGuide = false;
-                                    this.step = 'duas';
-                                    this.$nextTick(() => document.getElementById('dua-field-0')?.focus());
-                                },
-                            }"
+                            x-data="publicSubmissionForm(@js([
+                                'step' => $errors->any() && $duaErrors->isNotEmpty() ? 'duas' : 'info',
+                                'duas' => old('duas', ['']),
+                                'gender' => old('gender', ''),
+                                'whatsapp' => (bool) old('whatsapp_notifications'),
+                                'whatsappCountryCode' => old('whatsapp_country_code', '+44'),
+                                'whatsappPhone' => old('whatsapp_phone', ''),
+                                'whatsappVerified' => (bool) old('whatsapp_verification_token'),
+                                'whatsappVerificationToken' => old('whatsapp_verification_token', ''),
+                                'terms' => (bool) old('terms'),
+                                'firstName' => old('first_name', ''),
+                                'lastName' => old('last_name', ''),
+                                'email' => old('email', ''),
+                                'slug' => $duaList->slug,
+                                'selectedSuggestionIds' => array_map('intval', old('suggestion_ids', [])),
+                            ]))"
                             x-init="@if($firstErrorIndex !== null) $nextTick(() => document.getElementById('dua-field-{{ $firstErrorIndex }}')?.scrollIntoView({ behavior: 'smooth', block: 'center' })) @endif"
                         >
                             <form method="POST" action="{{ route('dua-lists.submissions.store', $duaList) }}" class="space-y-5">
@@ -161,21 +139,60 @@
                                     </label>
 
                                     <div x-show="whatsapp" x-cloak class="mt-4 space-y-3 rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4">
-                                        <div class="grid gap-3 sm:grid-cols-[8rem_1fr]">
-                                            <div>
-                                                <label class="block text-xs font-bold text-stone-700">Country code</label>
-                                                <input name="whatsapp_country_code" value="{{ old('whatsapp_country_code', '+44') }}" class="mt-1 block w-full rounded-xl border border-stone-200 px-3 py-2 text-sm" placeholder="+44">
+                                        <div x-show="! whatsappVerified">
+                                            <div x-show="whatsappOtpStep === 'phone'" class="space-y-3">
+                                                <div class="whatsapp-phone-field">
+                                                    <label for="whatsapp_phone_input" class="block text-xs font-bold text-stone-700">WhatsApp number</label>
+                                                    <input
+                                                        id="whatsapp_phone_input"
+                                                        type="tel"
+                                                        x-ref="whatsappPhoneInput"
+                                                        inputmode="tel"
+                                                        autocomplete="tel"
+                                                        class="mt-1 block w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-900 outline-none focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100"
+                                                        aria-describedby="whatsapp_phone_help whatsapp_phone_country"
+                                                    >
+                                                    <p id="whatsapp_phone_help" class="mt-2 text-xs text-stone-500">Select your country, then enter your local number. We'll send a verification code on WhatsApp.</p>
+                                                    <p id="whatsapp_phone_country" class="sr-only" x-text="whatsappPhoneCountryLabel ? `Selected country: ${whatsappPhoneCountryLabel}` : 'No country selected yet.'"></p>
+                                                    <input type="hidden" name="whatsapp_country_code" x-bind:value="whatsappCountryCode">
+                                                    <input type="hidden" name="whatsapp_phone" x-bind:value="whatsappPhone">
+                                                </div>
+
+                                                <div class="mt-3">
+                                                    <button
+                                                        type="button"
+                                                        x-on:click="sendWhatsAppOtp()"
+                                                        x-bind:disabled="whatsappOtpSending || ! whatsappPhoneValid"
+                                                        class="rounded-xl bg-emerald-800 px-4 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-stone-400"
+                                                    >
+                                                        <span x-text="whatsappOtpSending ? 'Sending...' : 'Verify via WhatsApp'"></span>
+                                                    </button>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <label class="block text-xs font-bold text-stone-700">Phone number</label>
-                                                <input name="whatsapp_phone" value="{{ old('whatsapp_phone') }}" class="mt-1 block w-full rounded-xl border border-stone-200 px-3 py-2 text-sm" placeholder="7700 900123">
+
+                                            <div x-show="whatsappOtpStep === 'otp'" class="space-y-3">
+                                                <div>
+                                                    <label for="whatsapp_otp" class="block text-xs font-bold text-stone-700">Check WhatsApp for OTP</label>
+                                                    <input id="whatsapp_otp" x-model="whatsappOtp" maxlength="6" inputmode="numeric" class="mt-1 block w-full rounded-xl border border-stone-200 px-3 py-2 text-sm tracking-[0.3em]" placeholder="Enter OTP">
+                                                </div>
+                                                <div class="flex flex-wrap items-center gap-3">
+                                                    <button type="button" x-on:click="verifyWhatsAppOtp()" x-bind:disabled="whatsappOtpVerifying || whatsappOtp.trim() === ''" class="rounded-xl bg-emerald-800 px-4 py-2 text-sm font-bold text-white disabled:bg-stone-400">
+                                                        <span x-text="whatsappOtpVerifying ? 'Verifying...' : 'Verify OTP'"></span>
+                                                    </button>
+                                                    <button type="button" x-show="! whatsappOtpResent" x-on:click="resendWhatsAppOtp()" x-bind:disabled="whatsappOtpSending" class="text-sm font-bold text-emerald-800 hover:text-emerald-700">
+                                                        Resend OTP
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
-                                        <input type="hidden" name="whatsapp_verified" value="0" x-bind:value="whatsappVerified ? 1 : 0">
-                                        <button type="button" x-on:click="whatsappVerified = true" class="rounded-xl bg-emerald-800 px-4 py-2 text-sm font-bold text-white" x-bind:class="whatsappVerified ? 'bg-stone-400' : 'bg-emerald-800'" x-bind:disabled="whatsappVerified">
-                                            <span x-text="whatsappVerified ? 'Verified' : 'Verify via WhatsApp'"></span>
-                                        </button>
-                                        <p class="text-xs text-stone-500">Twilio WhatsApp verification will be sent to this number.</p>
+
+                                        <p x-show="whatsappOtpError" x-text="whatsappOtpError" class="text-sm font-medium text-red-600"></p>
+                                        <p x-show="whatsappOtpMessage" x-text="whatsappOtpMessage" class="text-sm font-semibold text-emerald-700"></p>
+                                        <p x-show="whatsappVerified" class="text-sm font-semibold text-emerald-700">WhatsApp verification completed!</p>
+
+                                        <input type="hidden" name="whatsapp_verification_token" x-bind:value="whatsappVerificationToken">
+                                        @error('whatsapp_verification_token') <p class="text-sm font-medium text-red-600">{{ $message }}</p> @enderror
+                                        @error('whatsapp_phone') <p class="text-sm font-medium text-red-600">{{ $message }}</p> @enderror
                                     </div>
 
                                     <label class="mt-5 flex cursor-pointer items-start gap-3 rounded-2xl border border-stone-200 p-4 text-sm leading-6 text-stone-700">
@@ -198,18 +215,96 @@
 
                                     <div class="mt-5 space-y-3">
                                         <template x-for="(dua, index) in duas" :key="'dua-' + index + '-' + duas.length">
-                                            <div class="rounded-2xl border p-3" x-bind:class="@js($duaErrorIndexes).includes(index) ? 'border-red-400 bg-red-50' : 'border-stone-200 bg-white'" x-bind:id="'dua-field-' + index">
+                                            <div
+                                                class="rounded-2xl border p-3 transition"
+                                                x-bind:class="[
+                                                    @js($duaErrorIndexes).includes(index) ? 'border-red-400 bg-red-50' : (activeDuaIndex === index ? 'border-emerald-700 bg-emerald-50/40 ring-2 ring-emerald-100' : 'border-stone-200 bg-white'),
+                                                ]"
+                                                x-bind:id="'dua-field-' + index"
+                                            >
                                                 <div class="mb-2 flex items-center justify-between gap-3">
                                                     <p class="text-xs font-extrabold uppercase tracking-[0.14em] text-stone-500" x-text="'Dua ' + (index + 1)"></p>
                                                     <button type="button" x-show="duas.length > 1" x-on:click="removeDua(index)" class="rounded-full bg-red-50 px-3 py-1 text-xs font-extrabold text-red-700">Remove</button>
                                                 </div>
-                                                <textarea name="duas[]" rows="4" x-model="duas[index]" maxlength="1500" placeholder="Write your dua here..." class="block w-full rounded-xl border border-stone-100 bg-stone-50 px-4 py-3 text-sm leading-7 outline-none focus:border-emerald-700 focus:bg-white focus:ring-4 focus:ring-emerald-100" required></textarea>
+                                                <textarea
+                                                    name="duas[]"
+                                                    rows="4"
+                                                    x-model="duas[index]"
+                                                    x-on:focus="setActiveDuaIndex(index)"
+                                                    x-on:click="setActiveDuaIndex(index)"
+                                                    maxlength="1500"
+                                                    placeholder="Write your dua here..."
+                                                    class="block w-full rounded-xl border border-stone-100 bg-stone-50 px-4 py-3 text-base leading-7 outline-none focus:border-emerald-700 focus:bg-white focus:ring-4 focus:ring-emerald-100 sm:text-sm"
+                                                    required
+                                                ></textarea>
                                                 @foreach ($duaErrors as $field => $messages)
                                                     @if (preg_match('/^duas\.(\d+)$/', $field, $m))
                                                         <p x-show="index === {{ $m[1] }}" x-cloak class="mt-2 text-sm font-medium text-red-600">{{ $messages[0] }}</p>
                                                     @endif
                                                 @endforeach
                                             </div>
+                                        </template>
+                                    </div>
+
+                                    <div
+                                        class="mt-6 rounded-2xl border border-emerald-900/10 bg-emerald-50/40 p-4 sm:p-5"
+                                        aria-live="polite"
+                                    >
+                                        <div class="flex items-start justify-between gap-3">
+                                            <div>
+                                                <h3 class="text-lg font-extrabold text-stone-950">Suggestions</h3>
+                                                <p class="mt-1 text-sm text-stone-600">Tap a suggestion to add it to the dua field you are currently editing.</p>
+                                            </div>
+                                            <span x-show="suggestionsLoading" x-cloak class="rounded-full bg-white px-3 py-1 text-xs font-bold text-emerald-800 ring-1 ring-emerald-900/10">Loading</span>
+                                        </div>
+
+                                        <p x-show="suggestionsLoadError" x-cloak class="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700 ring-1 ring-red-200">
+                                            <span x-text="suggestionsLoadError"></span>
+                                        </p>
+
+                                        <template x-for="section in suggestionSections" :key="section.key">
+                                            <div
+                                                x-show="hasSuggestionSection(section.key)"
+                                                class="mt-5"
+                                                x-bind:id="'suggestions-' + section.key"
+                                            >
+                                                <h4 class="text-sm font-extrabold uppercase tracking-[0.12em] text-emerald-900" x-text="section.label"></h4>
+
+                                                <ul class="mt-3 space-y-2" role="list">
+                                                    <template x-for="suggestion in visibleSuggestions(section.key)" :key="section.key + '-' + suggestion.id">
+                                                        <li>
+                                                            <button
+                                                                type="button"
+                                                                class="w-full rounded-2xl border border-emerald-900/10 bg-white px-4 py-3 text-left text-sm leading-6 text-stone-800 shadow-sm transition hover:border-emerald-800 hover:bg-emerald-50 focus:outline-none focus:ring-4 focus:ring-emerald-100"
+                                                                x-on:click="selectSuggestion(suggestion)"
+                                                                x-bind:aria-label="'Add suggestion: ' + suggestion.title"
+                                                            >
+                                                                <span class="block font-bold text-stone-950" x-text="suggestion.title"></span>
+                                                                <span
+                                                                    x-show="suggestion.source_reference"
+                                                                    class="mt-1 block text-xs font-semibold text-emerald-800"
+                                                                    x-text="'Source: ' + suggestion.source_reference"
+                                                                ></span>
+                                                            </button>
+                                                        </li>
+                                                    </template>
+                                                </ul>
+
+                                                <button
+                                                    type="button"
+                                                    x-show="hasMoreSuggestions(section.key)"
+                                                    class="mt-3 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-extrabold text-emerald-900 ring-1 ring-emerald-900/10 transition hover:bg-emerald-100 focus:outline-none focus:ring-4 focus:ring-emerald-100"
+                                                    x-on:click="showMoreSuggestions(section.key)"
+                                                    x-bind:aria-expanded="expandedSuggestionSections[section.key] ? 'true' : 'false'"
+                                                    x-bind:aria-controls="'suggestions-' + section.key"
+                                                >
+                                                    Show More
+                                                </button>
+                                            </div>
+                                        </template>
+
+                                        <template x-for="id in selectedSuggestionIds" :key="'suggestion-id-' + id">
+                                            <input type="hidden" name="suggestion_ids[]" x-bind:value="id">
                                         </template>
                                     </div>
 

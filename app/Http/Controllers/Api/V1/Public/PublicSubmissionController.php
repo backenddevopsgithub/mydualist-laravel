@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Public;
 
+use App\Domains\Cms\Services\DuaSuggestionService;
 use App\Domains\Lists\Services\DuaListQueryService;
 use App\Domains\Security\Services\PublicSubmissionSpamGuard;
 use App\Domains\Submissions\Actions\CreateDuaSubmissionAction;
@@ -19,6 +20,7 @@ class PublicSubmissionController extends ApiController
         DuaListQueryService $lists,
         CreateDuaSubmissionAction $action,
         PublicSubmissionSpamGuard $spamGuard,
+        DuaSuggestionService $suggestions,
     ): JsonResponse {
         $duaList = $lists->findPublicBySlug($slug);
 
@@ -33,6 +35,7 @@ class PublicSubmissionController extends ApiController
         $spamGuard->inspect($duaList, $data, $request->ip());
 
         $submissions = $action($duaList, $data, $request->user());
+        $suggestions->incrementUsedCounts($data['suggestion_ids'] ?? []);
         $result = (new PublicSubmissionResultResource($submissions))->resolve();
 
         return $this->success($result, $result['message'], 201);

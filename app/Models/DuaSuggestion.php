@@ -2,10 +2,15 @@
 
 namespace App\Models;
 
+use Database\Factories\DuaSuggestionFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class DuaSuggestion extends Model
 {
+    /** @use HasFactory<DuaSuggestionFactory> */
+    use HasFactory;
+
     /**
      * @var list<string>
      */
@@ -17,6 +22,7 @@ class DuaSuggestion extends Model
         'source_reference',
         'is_visible',
         'sort_order',
+        'used_count',
     ];
 
     /**
@@ -27,6 +33,7 @@ class DuaSuggestion extends Model
         return [
             'is_visible' => 'boolean',
             'sort_order' => 'integer',
+            'used_count' => 'integer',
         ];
     }
 }

@@ -37,6 +37,9 @@ class DuaSubmission extends Model
         'email',
         'gender',
         'is_anonymous',
+        'whatsapp_country_code',
+        'whatsapp_phone',
+        'whatsapp_verified_at',
         'is_personal_dua',
         'is_locked',
         'locked_at_quota',
@@ -64,6 +67,7 @@ class DuaSubmission extends Model
         return [
             'status' => DuaSubmissionStatus::class,
             'is_anonymous' => 'boolean',
+            'whatsapp_verified_at' => 'datetime',
             'is_personal_dua' => 'boolean',
             'is_locked' => 'boolean',
             'locked_at_quota' => 'integer',

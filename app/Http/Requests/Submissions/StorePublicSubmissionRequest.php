@@ -35,11 +35,14 @@ class StorePublicSubmissionRequest extends FormRequest
             'whatsapp_notifications' => ['nullable', 'boolean'],
             'whatsapp_country_code' => ['nullable', 'required_if:whatsapp_notifications,1', 'string', 'max:6'],
             'whatsapp_phone' => ['nullable', 'required_if:whatsapp_notifications,1', 'string', 'max:20'],
-            'whatsapp_verified' => ['nullable', 'boolean'],
+            'whatsapp_verification_token' => ['nullable', 'required_if:whatsapp_notifications,1', 'string', 'size:64'],
+            'is_anonymous' => ['nullable', 'boolean'],
             'terms' => ['accepted'],
             'content' => ['nullable', 'required_without:duas', 'string', 'min:3', 'max:1500'],
             'duas' => ['nullable', 'array', 'min:1', 'max:35'],
             'duas.*' => ['required', 'string', 'min:3', 'max:1500'],
+            'suggestion_ids' => ['nullable', 'array'],
+            'suggestion_ids.*' => ['integer', 'exists:dua_suggestions,id'],
             'website' => ['nullable', 'string', 'max:0'],
         ];
     }

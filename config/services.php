@@ -41,4 +41,15 @@ return [
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
     ],
 
+    'twilio' => [
+        'account_sid' => env('TWILIO_ACCOUNT_SID'),
+        'auth_token' => env('TWILIO_AUTH_TOKEN'),
+        'messaging_service_sid' => env('TWILIO_MESSAGING_SERVICE_SID'),
+        'whatsapp_from' => env('TWILIO_WHATSAPP_FROM'),
+        'otp_template_sid' => env('TWILIO_OTP_TEMPLATE_SID'),
+        'completion_template_sid' => env('TWILIO_COMPLETION_TEMPLATE_SID'),
+        'salawat_template_sid' => env('TWILIO_SALAWAT_TEMPLATE_SID'),
+        'test_otp' => env('TWILIO_TEST_OTP'),
+    ],
+
 ];
