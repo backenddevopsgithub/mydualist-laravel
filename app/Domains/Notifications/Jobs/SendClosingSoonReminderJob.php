@@ -2,6 +2,7 @@
 
 namespace App\Domains\Notifications\Jobs;
 
+use App\Domains\Notifications\Services\ReminderEmailService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -12,8 +13,8 @@ class SendClosingSoonReminderJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public function handle(): void
+    public function handle(ReminderEmailService $reminders): void
     {
-        // TODO: Send closing-soon reminder emails for lists approaching their end date.
+        $reminders->sendClosingSoonReminders();
     }
 }

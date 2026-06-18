@@ -40,6 +40,11 @@ class EmailPresentation
         return route('dashboard.lists.show', $duaList);
     }
 
+    public static function listImageUploadUrl(DuaList $duaList): string
+    {
+        return route('dashboard.profile', ['tab' => 'list-settings']);
+    }
+
     public static function brandLogoUrl(): string
     {
         return asset(config('mydualist.brand.logo_url', 'images/logo-mdl.svg'));

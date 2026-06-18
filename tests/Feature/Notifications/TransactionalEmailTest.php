@@ -153,6 +153,91 @@ test('completion notification is not resent for the same submission', function (
     Notification::assertNothingSent();
 });
 
+test('salawat completion notification uses salawat subject and template', function () {
+    $owner = User::factory()->create(['first_name' => 'Amina', 'gender' => 'female']);
+    $duaList = DuaList::factory()->create([
+        'user_id' => $owner->id,
+        'occasion' => 'salawat',
+        'title' => 'Friday Salawat',
+    ]);
+    $submission = DuaSubmission::factory()->create([
+        'dua_list_id' => $duaList->id,
+        'email' => 'submitter@example.com',
+        'first_name' => 'Hassan',
+        'content' => 'Please send salawat for my family.',
+    ]);
+
+    $message = (new DuaCompletedNotification($submission))->toMail(
+        Notification::route('mail', 'submitter@example.com')
+    );
+
+    expect($message->subject)->toBe('Amina has completed your salawat request')
+        ->and($message->view)->toBe('mail.dua-completed-salawat');
+
+    $html = view($message->view, $message->viewData)->render();
+
+    expect($html)
+        ->toContain('given Salawat on your behalf')
+        ->toContain('conveying your salam to the prophet')
+        ->not->toContain('Dua requested:')
+        ->not->toContain('Support Now')
+        ->not->toContain('Why not show thanks by donating');
+});
+
+test('standard completion notification keeps default subject and template for non salawat occasions', function () {
+    $owner = User::factory()->create(['first_name' => 'Yusuf', 'gender' => 'male']);
+    $duaList = DuaList::factory()->create([
+        'user_id' => $owner->id,
+        'occasion' => 'hajj',
+    ]);
+    $submission = DuaSubmission::factory()->create([
+        'dua_list_id' => $duaList->id,
+        'email' => 'submitter@example.com',
+        'first_name' => 'Sara',
+        'content' => 'Please make dua for my parents.',
+    ]);
+
+    $message = (new DuaCompletedNotification($submission))->toMail(
+        Notification::route('mail', 'submitter@example.com')
+    );
+
+    expect($message->subject)->toBe('Yusuf Just Completed Your Dua Request')
+        ->and($message->view)->toBe('mail.dua-completed');
+
+    $html = view($message->view, $message->viewData)->render();
+
+    expect($html)
+        ->toContain('has just completed your dua request')
+        ->toContain('Please make dua for my parents.')
+        ->not->toContain('given Salawat on your behalf')
+        ->not->toContain('Support Now')
+        ->not->toContain('Why not show thanks by donating');
+});
+
+test('marking a salawat submission complete notifies the submitter with salawat template', function () {
+    Notification::fake();
+
+    $owner = User::factory()->create(['first_name' => 'Amina']);
+    $duaList = DuaList::factory()->create([
+        'user_id' => $owner->id,
+        'occasion' => 'salawat',
+    ]);
+    $submission = DuaSubmission::factory()->create([
+        'dua_list_id' => $duaList->id,
+        'email' => 'submitter@example.com',
+        'first_name' => 'Hassan',
+    ]);
+
+    app(TransitionDuaSubmissionStatusAction::class)($submission, DuaSubmissionStatus::Completed);
+
+    Notification::assertSentOnDemand(DuaCompletedNotification::class, function (DuaCompletedNotification $notification) {
+        $message = $notification->toMail(Notification::route('mail', 'submitter@example.com'));
+
+        return $message->subject === 'Amina has completed your salawat request'
+            && $message->view === 'mail.dua-completed-salawat';
+    });
+});
+
 test('quota warning notification is sent once when visible slots drop to five', function () {
     Notification::fake();
 

@@ -40,6 +40,9 @@ class DuaList extends Model
         'published_at',
         'list_created_email_sent_at',
         'submission_quota_warning_sent_at',
+        'no_activity_reminder_sent_at',
+        'closing_soon_reminder_sent_at',
+        'list_image_reminder_sent_at',
     ];
 
     /**
@@ -54,6 +57,9 @@ class DuaList extends Model
             'published_at' => 'datetime',
             'list_created_email_sent_at' => 'datetime',
             'submission_quota_warning_sent_at' => 'datetime',
+            'no_activity_reminder_sent_at' => 'datetime',
+            'closing_soon_reminder_sent_at' => 'datetime',
+            'list_image_reminder_sent_at' => 'datetime',
         ];
     }
 
@@ -186,5 +192,16 @@ class DuaList extends Model
         }
 
         return $days === 0 ? 'Ends today' : ((int) $days).'d left';
+    }
+
+    public function daysRemainingUntilEnd(): int
+    {
+        if (! $this->end_date) {
+            return 0;
+        }
+
+        $days = now()->startOfDay()->diffInDays($this->end_date->startOfDay(), false);
+
+        return max(0, (int) $days);
     }
 }

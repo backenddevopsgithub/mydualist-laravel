@@ -37,6 +37,10 @@ return [
     'notifications' => [
         'daily_digest_at' => env('MYDUALIST_DAILY_DIGEST_AT', '23:59'),
         'daily_digest_list_chunk' => 50,
+        'reminder_list_chunk' => 50,
+        'no_activity_hours' => 24,
+        'closing_soon_hours_before_end' => 3,
+        'list_image_hours_after_start' => 1,
     ],
 
 ];

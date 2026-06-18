@@ -28,19 +28,33 @@ class DuaCompletedNotification extends Notification implements ShouldQueue
     public function toMail(object $notifiable): MailMessage
     {
         $this->submission->loadMissing('duaList.user');
-        $owner = $this->submission->duaList->user;
+        $duaList = $this->submission->duaList;
+        $owner = $duaList->user;
         $duaAuthor = EmailPresentation::userFirstName($owner);
+        $isSalawat = $duaList->occasion === 'salawat';
+
+        $subject = $isSalawat
+            ? "{$duaAuthor} has completed your salawat request"
+            : "{$duaAuthor} Just Completed Your Dua Request";
+
+        $view = $isSalawat ? 'mail.dua-completed-salawat' : 'mail.dua-completed';
+
+        $viewData = [
+            'duaAuthor' => $duaAuthor,
+            'requestedBy' => trim((string) $this->submission->first_name) ?: 'there',
+            'possessivePronoun' => EmailPresentation::possessivePronoun($owner),
+            'listTitle' => $duaList->title,
+            'listImageUrl' => $duaList->coverImageUrl(),
+            'createListUrl' => EmailPresentation::createListUrl(),
+        ];
+
+        if (! $isSalawat) {
+            $viewData['occasionLabel'] = $duaList->occasionLabel();
+            $viewData['duaMessage'] = $this->submission->content;
+        }
 
         return (new MailMessage)
-            ->subject("{$duaAuthor} Just Completed Your Dua Request")
-            ->view('mail.dua-completed', [
-                'duaAuthor' => $duaAuthor,
-                'requestedBy' => trim((string) $this->submission->first_name) ?: 'there',
-                'possessivePronoun' => EmailPresentation::possessivePronoun($owner),
-                'occasionLabel' => $this->submission->duaList->occasionLabel(),
-                'listTitle' => $this->submission->duaList->title,
-                'listImageUrl' => $this->submission->duaList->coverImageUrl(),
-                'duaMessage' => $this->submission->content,
-            ]);
+            ->subject($subject)
+            ->view($view, $viewData);
     }
 }

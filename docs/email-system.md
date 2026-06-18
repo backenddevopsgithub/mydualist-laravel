@@ -6,7 +6,26 @@ This document describes the transactional email architecture for the MyDualist L
 
 Transactional emails are implemented with Laravel Notifications, queued via `ShouldQueue`, and dispatched from domain events or scheduled jobs. Business rules and idempotency live in service classes (`TransactionalEmailService`, `DailyDigestService`); notification classes only format messages.
 
-Reminder emails (no-activity, closing-soon, list-image) are not implemented yet.
+Reminder emails (no-activity, closing-soon, list-image) are implemented via `ReminderEmailService` and scheduled jobs.
+
+## Completion email variants
+
+`DuaCompletedNotification` branches on list occasion:
+
+| Occasion | Template | Subject |
+|----------|----------|---------|
+| `salawat` | `mail.dua-completed-salawat` | `{owner} has completed your salawat request` |
+| All others | `mail.dua-completed` | `{owner} Just Completed Your Dua Request` |
+
+### Salawat vs standard content
+
+Salawat completion emails use salawat-specific copy (conveying salam to the Prophet, hadith quote, create-list CTA) and omit the dua message panel shown in standard completion emails.
+
+### Fundraising block (`{fundraising_content}`)
+
+WordPress injects a per-list creator fundraising block into standard completion emails when `listMode = creator` and both `donationLink` and `donationNote` are set on the list.
+
+Laravel does **not** store per-list donation links or notes on `dua_lists`, so this block is intentionally omitted. Standard completion emails instead link to the global Donorbox and Trustpilot URLs. Salawat completion emails never included `{fundraising_content}` in the WordPress template either.
 
 ## Notification flow
 
@@ -44,7 +63,7 @@ flowchart TD
 | `ListCreatedNotification` | List owner | `{name}, Your Dua List is Ready – Explore Our Key Features!` | List created while verified, or on verification for pending lists |
 | `NewSubmissionNotification` | List owner | You Just Received A Dua Request | Public submission when `email_frequency = every_submission` |
 | `DailyDigestNotification` | List owner | You Just Received A Dua Request | Scheduled digest for `email_frequency = daily_summary` |
-| `DuaCompletedNotification` | Submitter email | `{owner} Just Completed Your Dua Request` | Submission marked complete (visible slot, has email) |
+| `DuaCompletedNotification` | Submitter email | `{owner} Just Completed Your Dua Request` (standard) or `{owner} has completed your salawat request` (Salawat lists) | Submission marked complete (visible slot, has email) |
 | `SubmissionQuotaWarningNotification` | List owner | Your Dua List is Full – Time to Upgrade for More Requests! | Free plan visible slots cross from >5 to ≤5 remaining (once per list) |
 
 ### Idempotency
@@ -233,7 +252,5 @@ Log in to `/admin` and review the **Email Health** widget on the dashboard.
 
 ## Out of scope (future work)
 
-- No-activity, closing-soon, and list-image reminders
-- Salawat-specific template variants
-- Fundraising/donation blocks in completion emails
+- Per-list creator fundraising blocks in completion emails (requires `donationLink` / `donationNote` list fields)
 - Mailchimp marketing integrations
