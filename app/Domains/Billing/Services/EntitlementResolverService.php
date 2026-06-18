@@ -5,6 +5,7 @@ namespace App\Domains\Billing\Services;
 use App\Domains\Billing\Data\EntitlementSnapshot;
 use App\Domains\Billing\Data\ListEntitlementSnapshot;
 use App\Enums\EntitlementKey;
+use App\Enums\SubmissionLockReason;
 use App\Models\DuaList;
 use App\Models\DuaSubmission;
 use App\Models\User;
@@ -94,27 +95,20 @@ class EntitlementResolverService extends Service
 
     public function lockedSubmissionCount(User $user, DuaList $duaList, ?int $quota = null): int
     {
-        $quota ??= $this->effectiveVisibleQuota($user, $duaList);
-
-        $persistedLocked = $duaList->submissions()
-            ->where('is_personal_dua', false)
-            ->where('is_locked', true)
-            ->whereNull('unlocked_at')
-            ->count();
-
-        if ($persistedLocked > 0) {
-            return $persistedLocked;
+        if ($this->hasListUnlimitedOverride($user, $duaList)) {
+            return 0;
         }
 
-        $total = $duaList->submissions()
+        return $duaList->submissions()
             ->where('is_personal_dua', false)
+            ->quotaLocked()
             ->count();
-
-        return max(0, $total - $quota);
     }
 
     public function canViewSubmission(User $user, DuaSubmission $submission): bool
     {
+        $submission->loadMissing('duaList');
+
         if ($submission->isPersonalDua() && $submission->duaList->user_id === $user->id) {
             return true;
         }
@@ -123,58 +117,46 @@ class EntitlementResolverService extends Service
             return true;
         }
 
-        if ($submission->is_locked) {
-            return false;
+        if ($this->hasListUnlimitedOverride($user, $submission->duaList)) {
+            return true;
         }
 
-        $quota = $this->effectiveVisibleQuota($user, $submission->duaList);
-
-        $rank = DuaSubmission::query()
-            ->where('dua_list_id', $submission->dua_list_id)
-            ->where('is_personal_dua', false)
-            ->where('id', '<=', $submission->id)
-            ->count();
-
-        return $rank <= $quota;
+        return ! $submission->isQuotaLocked();
     }
 
     /**
-     * @return list<int>
+     * @return array{is_locked: bool, locked_reason: ?SubmissionLockReason, locked_at_quota: ?int}
      */
-    public function visibleSubmissionIds(User $user, DuaList $duaList): array
+    public function lockAttributesForNewRegularSubmission(User $user, DuaList $duaList, int $regularRank): array
     {
-        $quota = $this->effectiveVisibleQuota($user, $duaList);
-        $hasUnlimited = $this->hasListUnlimitedOverride($user, $duaList);
-
-        $personalIds = $duaList->submissions()
-            ->where('is_personal_dua', true)
-            ->pluck('id');
-
-        if ($hasUnlimited) {
-            $regularIds = $duaList->submissions()
-                ->where('is_personal_dua', false)
-                ->where(function ($query): void {
-                    $query->where('is_locked', false)
-                        ->orWhereNotNull('unlocked_at');
-                })
-                ->pluck('id');
-
-            return $personalIds->merge($regularIds)->all();
+        if ($this->hasListUnlimitedOverride($user, $duaList)) {
+            return [
+                'is_locked' => false,
+                'locked_reason' => null,
+                'locked_at_quota' => null,
+            ];
         }
 
-        $unlockedIds = $duaList->submissions()
-            ->where('is_personal_dua', false)
-            ->whereNotNull('unlocked_at')
-            ->pluck('id');
+        $quota = $this->effectiveVisibleQuota($user, $duaList);
+        $shouldLock = $regularRank > $quota;
 
-        $regularIds = $duaList->submissions()
-            ->where('is_personal_dua', false)
-            ->where('is_locked', false)
-            ->whereNull('unlocked_at')
-            ->oldest('id')
-            ->limit($quota)
-            ->pluck('id');
+        return [
+            'is_locked' => $shouldLock,
+            'locked_reason' => $shouldLock ? SubmissionLockReason::VisibleQuotaExhausted : null,
+            'locked_at_quota' => $shouldLock ? $quota : null,
+        ];
+    }
 
-        return $personalIds->merge($unlockedIds)->merge($regularIds)->unique()->values()->all();
+    public function submissionIsLockedForOwner(DuaSubmission $submission, User $user, DuaList $duaList): bool
+    {
+        if ($submission->isPersonalDua()) {
+            return false;
+        }
+
+        if ($this->hasListUnlimitedOverride($user, $duaList)) {
+            return false;
+        }
+
+        return $submission->isQuotaLocked();
     }
 }

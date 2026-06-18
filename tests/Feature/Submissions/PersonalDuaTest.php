@@ -4,6 +4,7 @@ use App\Enums\DuaSubmissionStatus;
 use App\Models\DuaList;
 use App\Models\DuaSubmission;
 use App\Models\User;
+use App\Services\LegacyImport\Submissions\SubmissionLockReconciliationService;
 
 test('list owner can add a personal dua from the submissions page', function () {
     $owner = User::factory()->create([
@@ -96,6 +97,8 @@ test('personal duas remain visible to free plan owners beyond the submission lim
     $duaList = DuaList::factory()->create(['user_id' => $owner->id]);
 
     DuaSubmission::factory()->count(30)->create(['dua_list_id' => $duaList->id]);
+    app(SubmissionLockReconciliationService::class)->reconcile(false);
+
     $personalDua = DuaSubmission::factory()->personal()->create([
         'dua_list_id' => $duaList->id,
         'user_id' => $owner->id,
@@ -103,7 +106,7 @@ test('personal duas remain visible to free plan owners beyond the submission lim
     ]);
 
     $this->actingAs($owner)
-        ->get(route('dashboard.lists.show', $duaList))
+        ->get(route('dashboard.lists.show', ['duaList' => $duaList, 'page' => 3]))
         ->assertOk()
         ->assertSee('limit.')
         ->assertSee('• Personal Dua');

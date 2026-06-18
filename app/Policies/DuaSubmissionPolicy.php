@@ -28,6 +28,8 @@ class DuaSubmissionPolicy
             return false;
         }
 
+        $submission->loadMissing('duaList');
+
         return app(UserEntitlementService::class)->canViewSubmission($user, $submission);
     }
 

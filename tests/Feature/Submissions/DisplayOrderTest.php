@@ -156,6 +156,8 @@ test('display order places locked submissions before visible submissions on free
         ]));
     }
 
+    app(\App\Services\LegacyImport\Submissions\SubmissionLockReconciliationService::class)->reconcile(false);
+
     $locked = $submissions->last();
     $visible = $submissions->first();
 
@@ -171,7 +173,9 @@ test('display order places locked submissions before visible submissions on free
 });
 
 test('public submission stores submitter gender for display ordering', function () {
+    $owner = User::factory()->create();
     $duaList = DuaList::factory()->create([
+        'user_id' => $owner->id,
         'status' => DuaList::STATUS_ACTIVE,
         'end_date' => now()->addMonth(),
         'published_at' => now(),

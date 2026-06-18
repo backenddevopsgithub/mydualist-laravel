@@ -57,15 +57,21 @@ class DailyDigestService extends Service
         }
 
         return DB::transaction(function () use ($list, $owner): bool {
+            $hasUnlimited = $this->entitlements->visibleSubmissionLimit($owner, $list) === null;
+
             $submissions = DuaSubmission::query()
                 ->where('dua_list_id', $list->id)
                 ->pendingDigest()
                 ->visible()
+                ->when(! $hasUnlimited, function ($query): void {
+                    $query->where(function ($query): void {
+                        $query->where('is_locked', false)
+                            ->orWhereNotNull('unlocked_at');
+                    });
+                })
                 ->orderBy('id')
                 ->lockForUpdate()
-                ->get()
-                ->filter(fn (DuaSubmission $submission): bool => $this->entitlements->canViewSubmission($owner, $submission))
-                ->values();
+                ->get();
 
             if ($submissions->isEmpty()) {
                 return false;

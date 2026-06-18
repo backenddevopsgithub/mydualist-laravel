@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\DuaSubmissionStatus;
+use App\Enums\SubmissionLockReason;
 use App\Models\DuaList;
 use App\Models\DuaSubmission;
 use App\Models\User;
@@ -112,7 +113,12 @@ test('free owner still cannot moderate locked non personal submissions via api',
     $list = DuaList::factory()->create(['user_id' => $user->id]);
 
     DuaSubmission::factory()->count(25)->create(['dua_list_id' => $list->id]);
-    $locked = DuaSubmission::factory()->create(['dua_list_id' => $list->id]);
+    $locked = DuaSubmission::factory()->create([
+        'dua_list_id' => $list->id,
+        'is_locked' => true,
+        'locked_reason' => SubmissionLockReason::VisibleQuotaExhausted,
+        'locked_at_quota' => (int) config('billing.free_visible_submissions_per_list'),
+    ]);
 
     $this->patchJson('/api/v1/lists/'.$list->id.'/submissions/'.$locked->id.'/complete')
         ->assertForbidden();
@@ -132,7 +138,12 @@ test('premium owner can moderate locked non personal submissions via api', funct
     ]);
 
     DuaSubmission::factory()->count(25)->create(['dua_list_id' => $list->id]);
-    $locked = DuaSubmission::factory()->create(['dua_list_id' => $list->id]);
+    $locked = DuaSubmission::factory()->create([
+        'dua_list_id' => $list->id,
+        'is_locked' => true,
+        'locked_reason' => SubmissionLockReason::VisibleQuotaExhausted,
+        'locked_at_quota' => (int) config('billing.free_visible_submissions_per_list'),
+    ]);
 
     $this->patchJson('/api/v1/lists/'.$list->id.'/submissions/'.$locked->id.'/complete')
         ->assertOk()

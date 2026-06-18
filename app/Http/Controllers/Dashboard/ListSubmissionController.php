@@ -66,7 +66,6 @@ class ListSubmissionController extends Controller
             'hasPremium' => $hasPremium,
             'lockedSubmissionCount' => $this->entitlements->lockedSubmissionCount($user, $duaList),
             'visibleSubmissionLimit' => $this->entitlements->visibleSubmissionLimit($user, $duaList),
-            'visibleSubmissionIds' => $this->entitlements->visibleSubmissionIds($user, $duaList),
             'statusCounts' => $submissions->statusCounts($duaList),
             'showCommunityDuas' => $showCommunityDuas,
             'communityDua' => $communityDua,

@@ -177,7 +177,7 @@
         <section class="mt-4 space-y-3 sm:mt-6 sm:space-y-4">
             @forelse ($submissions as $submission)
                 @php
-                    $locked = ! in_array($submission->id, $visibleSubmissionIds, true);
+                    $locked = $visibleSubmissionLimit !== null && $submission->isQuotaLocked();
                     $position = ($submissions->firstItem() ?? 1) + $loop->index;
                     $displayName = $locked ? 'Locked dua request' : $submission->displayName();
                     $initial = Illuminate\Support\Str::upper(Illuminate\Support\Str::substr($displayName, 0, 1));

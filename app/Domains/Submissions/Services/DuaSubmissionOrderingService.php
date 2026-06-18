@@ -37,17 +37,8 @@ class DuaSubmissionOrderingService extends Service
             return;
         }
 
-        $visibleIds = $this->entitlements->visibleSubmissionIds($owner, $duaList);
-
-        if ($visibleIds === []) {
-            return;
-        }
-
-        $placeholders = implode(',', array_fill(0, count($visibleIds), '?'));
-
         $query->orderByRaw(
-            'CASE WHEN is_personal_dua = 1 OR id IN ('.$placeholders.') THEN 1 ELSE 0 END',
-            $visibleIds,
+            'CASE WHEN is_personal_dua = 1 OR unlocked_at IS NOT NULL OR is_locked = 0 THEN 1 ELSE 0 END ASC',
         );
     }
 

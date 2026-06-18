@@ -33,6 +33,9 @@ class SubmissionUnlockService extends Service
             ->update([
                 'unlocked_at' => now(),
                 'unlock_purchase_id' => $purchase->id,
+                'is_locked' => false,
+                'locked_reason' => null,
+                'locked_at_quota' => null,
             ]);
     }
 

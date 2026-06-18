@@ -245,6 +245,51 @@ class SubmissionCounterService extends Service
     }
 
     /**
+     * @param  iterable<int, DuaSubmission>  $submissions
+     */
+    public function recordBatchCreated(DuaList $lockedList, iterable $submissions): void
+    {
+        if (self::isDisabled()) {
+            return;
+        }
+
+        $deltas = [];
+
+        foreach ($submissions as $submission) {
+            if (! $this->shouldCount($submission)) {
+                continue;
+            }
+
+            foreach ($this->createDeltas($submission) as $column => $delta) {
+                $deltas[$column] = ($deltas[$column] ?? 0) + $delta;
+            }
+        }
+
+        $this->applyDeltasToLockedList($lockedList, $deltas);
+    }
+
+    /**
+     * @param  array<string, int>  $deltas
+     */
+    public function applyDeltasToLockedList(DuaList $list, array $deltas): void
+    {
+        $deltas = array_filter(
+            $deltas,
+            fn (int $delta): bool => $delta !== 0,
+        );
+
+        if ($deltas === []) {
+            return;
+        }
+
+        foreach ($deltas as $column => $delta) {
+            $list->{$column} = max(0, (int) $list->{$column} + (int) $delta);
+        }
+
+        $list->saveQuietly();
+    }
+
+    /**
      * @param  array<string, int>  $deltas
      */
     private function adjustCounters(int $listId, array $deltas): void
@@ -266,11 +311,7 @@ class SubmissionCounterService extends Service
                 return;
             }
 
-            foreach ($deltas as $column => $delta) {
-                $list->{$column} = max(0, (int) $list->{$column} + (int) $delta);
-            }
-
-            $list->saveQuietly();
+            $this->applyDeltasToLockedList($list, $deltas);
         });
     }
 

@@ -92,12 +92,9 @@ class UserEntitlementService extends Service
         return $this->resolver->canViewSubmission($user, $submission);
     }
 
-    /**
-     * @return list<int>
-     */
-    public function visibleSubmissionIds(User $user, DuaList $duaList): array
+    public function submissionIsLockedForOwner(DuaSubmission $submission, User $user, DuaList $duaList): bool
     {
-        return $this->resolver->visibleSubmissionIds($user, $duaList);
+        return $this->resolver->submissionIsLockedForOwner($submission, $user, $duaList);
     }
 
     /**

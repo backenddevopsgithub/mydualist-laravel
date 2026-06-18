@@ -3,11 +3,13 @@
 namespace App\Domains\Submissions\Actions;
 
 use App\Actions\Action;
+use App\Domains\Billing\Services\EntitlementResolverService;
 use App\Enums\DuaSubmissionStatus;
 use App\Events\DuaSubmissionsCreated;
 use App\Models\DuaList;
 use App\Models\DuaSubmission;
 use App\Models\User;
+use App\Services\SubmissionCounterService;
 use App\Services\WhatsAppOtpService;
 use App\Support\SubmissionGenders;
 use App\Support\WhatsAppPhone;
@@ -22,6 +24,8 @@ class CreateDuaSubmissionAction extends Action
 
     public function __construct(
         private readonly WhatsAppOtpService $whatsappOtp,
+        private readonly SubmissionCounterService $counters,
+        private readonly EntitlementResolverService $entitlements,
     ) {}
 
     /**
@@ -44,9 +48,16 @@ class CreateDuaSubmissionAction extends Action
 
             abort_unless($lockedList->acceptsSubmissions(), 403, $lockedList->closedReason() ?? 'This list is not accepting submissions.');
 
+            $lockedList->loadMissing('user');
+            $owner = $lockedList->user;
+
+            abort_if($owner === null, 403, 'This list is not accepting submissions.');
+
             $email = isset($data['email']) ? mb_strtolower((string) $data['email']) : null;
             $contents = $this->contents($data);
             $whatsappFields = $this->resolveWhatsAppFields($data);
+            $nonPersonalCountBefore = (int) $lockedList->non_personal_submissions_count;
+            $regularRank = $nonPersonalCountBefore;
 
             if ($email) {
                 $limit = $lockedList->dua_limit_per_person ?: self::MAX_PER_EMAIL_PER_LIST;
@@ -62,27 +73,32 @@ class CreateDuaSubmissionAction extends Action
                 }
             }
 
-            $nonPersonalCountBefore = DuaSubmission::query()
-                ->where('dua_list_id', $lockedList->id)
-                ->where('is_personal_dua', false)
-                ->count();
+            $submissions = SubmissionCounterService::withoutCounterUpdates(function () use ($lockedList, $data, $user, $email, $contents, $whatsappFields, $owner, &$regularRank): Collection {
+                return collect($contents)
+                    ->map(function (string $content) use ($lockedList, $data, $user, $email, $whatsappFields, $owner, &$regularRank): DuaSubmission {
+                        $regularRank++;
+                        $lockAttributes = $this->entitlements->lockAttributesForNewRegularSubmission($owner, $lockedList, $regularRank);
 
-            $submissions = collect($contents)
-                ->map(fn (string $content): DuaSubmission => DuaSubmission::query()->create([
-                    'dua_list_id' => $lockedList->id,
-                    'user_id' => $user?->id,
-                    'first_name' => $data['first_name'] ?? null,
-                    'last_name' => $data['last_name'] ?? null,
-                    'email' => $email,
-                    'gender' => SubmissionGenders::normalize($data['gender'] ?? null),
-                    'is_anonymous' => (bool) ($data['is_anonymous'] ?? false),
-                    'whatsapp_country_code' => $whatsappFields['whatsapp_country_code'],
-                    'whatsapp_phone' => $whatsappFields['whatsapp_phone'],
-                    'whatsapp_verified_at' => $whatsappFields['whatsapp_verified_at'],
-                    'content' => $content,
-                    'note' => null,
-                    'status' => DuaSubmissionStatus::Pending,
-                ]));
+                        return DuaSubmission::query()->create([
+                            'dua_list_id' => $lockedList->id,
+                            'user_id' => $user?->id,
+                            'first_name' => $data['first_name'] ?? null,
+                            'last_name' => $data['last_name'] ?? null,
+                            'email' => $email,
+                            'gender' => SubmissionGenders::normalize($data['gender'] ?? null),
+                            'is_anonymous' => (bool) ($data['is_anonymous'] ?? false),
+                            'whatsapp_country_code' => $whatsappFields['whatsapp_country_code'],
+                            'whatsapp_phone' => $whatsappFields['whatsapp_phone'],
+                            'whatsapp_verified_at' => $whatsappFields['whatsapp_verified_at'],
+                            'content' => $content,
+                            'note' => null,
+                            'status' => DuaSubmissionStatus::Pending,
+                            ...$lockAttributes,
+                        ]);
+                    });
+            });
+
+            $this->counters->recordBatchCreated($lockedList, $submissions);
 
             event(new DuaSubmissionsCreated($lockedList, $submissions, $nonPersonalCountBefore));
 
