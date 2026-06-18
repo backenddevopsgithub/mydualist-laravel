@@ -67,6 +67,24 @@ return [
         'cache_ttl_seconds' => (int) env('MYDUALIST_ADMIN_DASHBOARD_CACHE_TTL_SECONDS', 600),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Load testing (k6)
+    |--------------------------------------------------------------------------
+    |
+    | Only active in local/staging. Enables higher rate limits and optional
+    | spam-guard bypass so k6 can simulate Arafah traffic realistically.
+    |
+    */
+    'load_testing' => [
+        'enabled' => filter_var(env('MYDUALIST_LOAD_TESTING', false), FILTER_VALIDATE_BOOL)
+            && in_array(env('APP_ENV', 'production'), ['local', 'staging'], true),
+        'skip_spam_guard' => filter_var(env('MYDUALIST_LOAD_TESTING_SKIP_SPAM_GUARD', true), FILTER_VALIDATE_BOOL),
+        'public_submissions_per_minute' => (int) env('MYDUALIST_LOAD_TESTING_PUBLIC_SUBMISSIONS_PER_MINUTE', 10000),
+        'public_submissions_per_hour' => (int) env('MYDUALIST_LOAD_TESTING_PUBLIC_SUBMISSIONS_PER_HOUR', 100000),
+        'login_per_minute' => (int) env('MYDUALIST_LOAD_TESTING_LOGIN_PER_MINUTE', 1000),
+    ],
+
     'super_admin_emails' => array_values(array_filter(array_map(
         static fn (string $email): string => mb_strtolower(trim($email)),
         explode(',', (string) env('MYDUALIST_SUPER_ADMIN_EMAILS', '')),

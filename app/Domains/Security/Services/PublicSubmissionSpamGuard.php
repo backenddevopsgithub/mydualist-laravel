@@ -17,6 +17,19 @@ class PublicSubmissionSpamGuard extends Service
      */
     public function inspect(DuaList $duaList, array $data, ?string $ipAddress = null): void
     {
+        if (
+            config('mydualist.load_testing.enabled')
+            && config('mydualist.load_testing.skip_spam_guard')
+        ) {
+            if (filled($data['website'] ?? null)) {
+                throw ValidationException::withMessages([
+                    'content' => 'Your dua request could not be submitted. Please try again.',
+                ]);
+            }
+
+            return;
+        }
+
         $ipAddress ??= 'unknown';
 
         if (filled($data['website'] ?? null)) {

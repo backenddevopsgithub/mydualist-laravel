@@ -4,7 +4,13 @@
     "scripts": {
         "build": "vite build",
         "dev": "vite",
-        "test:js": "vitest run"
+        "test:js": "vitest run",
+        "load-test:seed": "php artisan load-test:seed",
+        "load-test:smoke": "k6 run load-tests/smoke.js",
+        "load-test:public-list": "k6 run load-tests/public-list.js",
+        "load-test:public-submit": "k6 run load-tests/public-submit.js",
+        "load-test:owner-dashboard": "k6 run load-tests/owner-dashboard.js",
+        "load-test:arafah": "k6 run load-tests/arafah-mixed.js"
     },
     "devDependencies": {
         "autoprefixer": "^10.4.20",

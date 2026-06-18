@@ -22,7 +22,7 @@ yarn-error.log
 /.idea
 /.nova
 /.vscode
-/.zed
+/load-tests/fixtures/manifest.json
 .DS_Store
 /coverage
 *.log

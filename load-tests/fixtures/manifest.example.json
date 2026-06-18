@@ -1,0 +1,15 @@
+{
+  "base_url": "http://mydualist-laravel.test",
+  "owner": {
+    "email": "loadtest@mydualist.local",
+    "password": "loadtest-password"
+  },
+  "list": {
+    "id": 1,
+    "slug": "arafah-load-test",
+    "public_path": "/arafah-load-test",
+    "owner_path": "/dashboard/lists/arafah-load-test",
+    "submission_count": 500
+  },
+  "generated_at": "2026-06-18T00:00:00+00:00"
+}

@@ -82,9 +82,11 @@ class AppServiceProvider extends ServiceProvider
 
     private function configureRateLimiting(): void
     {
-        RateLimiter::for('login', fn (Request $request) => [
-            Limit::perMinute(5)->by(Str::lower((string) $request->input('email')).'|'.$request->ip()),
-        ]);
+        $loadTesting = (bool) config('mydualist.load_testing.enabled');
+
+        RateLimiter::for('login', fn (Request $request) => $loadTesting
+            ? [Limit::perMinute((int) config('mydualist.load_testing.login_per_minute', 1000))->by($request->ip())]
+            : [Limit::perMinute(5)->by(Str::lower((string) $request->input('email')).'|'.$request->ip())]);
 
         RateLimiter::for('password-actions', fn (Request $request) => [
             Limit::perMinute(3)->by($request->ip()),
@@ -99,10 +101,15 @@ class AppServiceProvider extends ServiceProvider
             Limit::perMinute(5)->by((string) optional($request->user())->id ?: $request->ip()),
         ]);
 
-        RateLimiter::for('public-submissions', fn (Request $request) => [
-            Limit::perMinute(8)->by($request->ip()),
-            Limit::perHour(60)->by($request->ip()),
-        ]);
+        RateLimiter::for('public-submissions', fn (Request $request) => $loadTesting
+            ? [
+                Limit::perMinute((int) config('mydualist.load_testing.public_submissions_per_minute', 10000))->by($request->ip()),
+                Limit::perHour((int) config('mydualist.load_testing.public_submissions_per_hour', 100000))->by($request->ip()),
+            ]
+            : [
+                Limit::perMinute(8)->by($request->ip()),
+                Limit::perHour(60)->by($request->ip()),
+            ]);
 
         RateLimiter::for('billing', fn (Request $request) => [
             Limit::perMinute(6)->by((string) optional($request->user())->id ?: $request->ip()),
