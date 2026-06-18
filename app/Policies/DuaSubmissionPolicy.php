@@ -24,11 +24,11 @@ class DuaSubmissionPolicy
             return true;
         }
 
-        if ($submission->duaList->user_id !== $user->id && ! $user->isAdmin()) {
+        $submission->loadMissing('duaList');
+
+        if ($submission->duaList->user_id !== $user->id) {
             return false;
         }
-
-        $submission->loadMissing('duaList');
 
         return app(UserEntitlementService::class)->canViewSubmission($user, $submission);
     }

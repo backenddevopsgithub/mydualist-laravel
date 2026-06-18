@@ -6,10 +6,13 @@ use App\Enums\EntitlementKey;
 use App\Models\EntitlementGrant;
 use App\Models\User;
 use App\Services\Service;
+use App\Support\MemoizesPerRequest;
 use Illuminate\Database\Eloquent\Builder;
 
 class EntitlementGrantService extends Service
 {
+    use MemoizesPerRequest;
+
     public function hasEntitlement(User $user, EntitlementKey|string $key, ?int $duaListId = null): bool
     {
         return $this->quantity($user, $key, $duaListId) > 0;
@@ -18,27 +21,36 @@ class EntitlementGrantService extends Service
     public function quantity(User $user, EntitlementKey|string $key, ?int $duaListId = null): int
     {
         $keyValue = $key instanceof EntitlementKey ? $key->value : $key;
+        $scope = $duaListId ?? 'global';
 
-        $query = $this->activeGrantsQuery($user)
-            ->where('entitlement_key', $keyValue);
+        return $this->memo(
+            "quantity:{$user->id}:{$keyValue}:{$scope}",
+            function () use ($user, $keyValue, $duaListId): int {
+                $query = $this->activeGrantsQuery($user)
+                    ->where('entitlement_key', $keyValue);
 
-        if ($duaListId !== null) {
-            $query->where('dua_list_id', $duaListId);
-        } else {
-            $query->whereNull('dua_list_id');
-        }
+                if ($duaListId !== null) {
+                    $query->where('dua_list_id', $duaListId);
+                } else {
+                    $query->whereNull('dua_list_id');
+                }
 
-        return (int) $query->sum('quantity');
+                return (int) $query->sum('quantity');
+            },
+        );
     }
 
     public function listScopedQuantity(User $user, EntitlementKey|string $key, int $duaListId): int
     {
         $keyValue = $key instanceof EntitlementKey ? $key->value : $key;
 
-        return (int) $this->activeGrantsQuery($user)
-            ->where('entitlement_key', $keyValue)
-            ->where('dua_list_id', $duaListId)
-            ->sum('quantity');
+        return $this->memo(
+            "listScopedQuantity:{$user->id}:{$keyValue}:{$duaListId}",
+            fn (): int => (int) $this->activeGrantsQuery($user)
+                ->where('entitlement_key', $keyValue)
+                ->where('dua_list_id', $duaListId)
+                ->sum('quantity'),
+        );
     }
 
     /**

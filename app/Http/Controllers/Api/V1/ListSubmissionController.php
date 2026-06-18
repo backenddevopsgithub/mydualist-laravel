@@ -138,6 +138,7 @@ class ListSubmissionController extends ApiController
         Gate::authorize('view', $duaList);
 
         $submission = $duaList->submissions()->whereKey($submissionId)->firstOrFail();
+        $submission->loadMissing('duaList');
 
         Gate::authorize('manage', $submission);
 

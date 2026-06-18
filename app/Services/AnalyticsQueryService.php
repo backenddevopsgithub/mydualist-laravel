@@ -114,7 +114,12 @@ class AnalyticsQueryService extends Service
     public function userAnalyticsQuery(array $filters = []): Builder
     {
         $query = User::query()
-            ->withCount(['duaLists', 'duaSubmissions']);
+            ->withCount(['duaLists', 'duaSubmissions'])
+            ->with([
+                'duaLists' => fn ($relation) => $relation
+                    ->orderBy('title')
+                    ->select('id', 'user_id', 'title'),
+            ]);
 
         $this->applyDateRange($query, $filters, 'created_at');
 

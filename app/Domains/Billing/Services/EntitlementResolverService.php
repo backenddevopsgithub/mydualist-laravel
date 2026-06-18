@@ -11,54 +11,76 @@ use App\Models\DuaSubmission;
 use App\Models\User;
 use App\Models\UserEntitlement;
 use App\Services\Service;
+use App\Support\MemoizesPerRequest;
 
 class EntitlementResolverService extends Service
 {
+    use MemoizesPerRequest;
+
     public function __construct(
         private readonly EntitlementGrantService $grants,
     ) {}
 
     public function hasLegacyPremium(User $user): bool
     {
-        return $user->entitlements()
-            ->where('key', UserEntitlement::KEY_PREMIUM)
-            ->where('active', true)
-            ->where(function ($query): void {
-                $query->whereNull('expires_at')->orWhere('expires_at', '>', now());
-            })
-            ->exists();
+        return $this->memo(
+            "legacyPremium:{$user->id}",
+            fn (): bool => $user->entitlements()
+                ->where('key', UserEntitlement::KEY_PREMIUM)
+                ->where('active', true)
+                ->where(function ($query): void {
+                    $query->whereNull('expires_at')->orWhere('expires_at', '>', now());
+                })
+                ->exists(),
+        );
     }
 
     public function hasUnlimitedForever(User $user): bool
     {
-        return $this->grants->hasEntitlement($user, EntitlementKey::UserUnlimitedForever)
-            || $this->hasLegacyPremium($user);
+        return $this->memo(
+            "unlimitedForever:{$user->id}",
+            fn (): bool => $this->grants->hasEntitlement($user, EntitlementKey::UserUnlimitedForever)
+                || $this->hasLegacyPremium($user),
+        );
     }
 
     public function hasListUnlimitedOverride(User $user, DuaList $duaList): bool
     {
-        return $this->hasUnlimitedForever($user)
-            || $this->grants->hasEntitlement($user, EntitlementKey::ListUnlimitedOverride, $duaList->id);
+        return $this->memo(
+            "listUnlimitedOverride:{$user->id}:{$duaList->id}",
+            fn (): bool => $this->hasUnlimitedForever($user)
+                || $this->grants->hasEntitlement($user, EntitlementKey::ListUnlimitedOverride, $duaList->id),
+        );
     }
 
     public function effectiveListCapacity(User $user): ?int
     {
-        if ($this->hasUnlimitedForever($user)) {
-            return null;
-        }
+        return $this->memo(
+            "effectiveListCapacity:{$user->id}",
+            function () use ($user): ?int {
+                if ($this->hasUnlimitedForever($user)) {
+                    return null;
+                }
 
-        return (int) config('billing.default_list_capacity')
-            + $this->grants->quantity($user, EntitlementKey::UserExtraListSlot);
+                return (int) config('billing.default_list_capacity')
+                    + $this->grants->quantity($user, EntitlementKey::UserExtraListSlot);
+            },
+        );
     }
 
     public function effectiveVisibleQuota(User $user, DuaList $duaList): int
     {
-        if ($this->hasListUnlimitedOverride($user, $duaList)) {
-            return (int) config('billing.unlimited_list_submission_cap');
-        }
+        return $this->memo(
+            "effectiveVisibleQuota:{$user->id}:{$duaList->id}",
+            function () use ($user, $duaList): int {
+                if ($this->hasListUnlimitedOverride($user, $duaList)) {
+                    return (int) config('billing.unlimited_list_submission_cap');
+                }
 
-        return (int) config('billing.free_visible_submissions_per_list')
-            + $this->grants->listScopedQuantity($user, EntitlementKey::ListVisibleSubmissionPack, $duaList->id);
+                return (int) config('billing.free_visible_submissions_per_list')
+                    + $this->grants->listScopedQuantity($user, EntitlementKey::ListVisibleSubmissionPack, $duaList->id);
+            },
+        );
     }
 
     public function resolveForUser(User $user): EntitlementSnapshot
@@ -95,14 +117,19 @@ class EntitlementResolverService extends Service
 
     public function lockedSubmissionCount(User $user, DuaList $duaList, ?int $quota = null): int
     {
-        if ($this->hasListUnlimitedOverride($user, $duaList)) {
-            return 0;
-        }
+        return $this->memo(
+            "lockedSubmissionCount:{$user->id}:{$duaList->id}",
+            function () use ($user, $duaList): int {
+                if ($this->hasListUnlimitedOverride($user, $duaList)) {
+                    return 0;
+                }
 
-        return $duaList->submissions()
-            ->where('is_personal_dua', false)
-            ->quotaLocked()
-            ->count();
+                return $duaList->submissions()
+                    ->where('is_personal_dua', false)
+                    ->quotaLocked()
+                    ->count();
+            },
+        );
     }
 
     public function canViewSubmission(User $user, DuaSubmission $submission): bool

@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Domains\Billing\Services\EntitlementGrantService;
+use App\Domains\Billing\Services\EntitlementResolverService;
+use App\Domains\Billing\Services\UserEntitlementService;
 use App\Domains\Cms\Services\CmsPageQueryService;
 use App\Domains\Auth\Policies\UserPolicy;
 use App\Models\AdminExport;
@@ -34,7 +37,9 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        $this->app->singleton(EntitlementGrantService::class);
+        $this->app->singleton(EntitlementResolverService::class);
+        $this->app->singleton(UserEntitlementService::class);
     }
 
     public function boot(): void

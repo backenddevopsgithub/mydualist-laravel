@@ -126,10 +126,10 @@ test('admin export creation is rate limited per user', function () {
         ->toThrow(AdminExportRateLimitException::class);
 });
 
-test('user analytics query does not eager load dua lists', function () {
+test('user analytics query eager loads dua lists for list name preview', function () {
     $eagerLoads = app(AnalyticsQueryService::class)->userAnalyticsQuery([])->getEagerLoads();
 
-    expect($eagerLoads)->not->toHaveKey('duaLists');
+    expect($eagerLoads)->toHaveKey('duaLists');
 });
 
 test('submission admin test scopes use cached admin emails instead of user subqueries', function () {

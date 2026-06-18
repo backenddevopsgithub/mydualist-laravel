@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Dashboard;
 use App\Domains\Billing\Services\UserEntitlementService;
 use App\Domains\Community\Services\CommunityDuaEligibilityService;
 use App\Domains\Community\Services\CommunityDuaQueueService;
-use App\Domains\Lists\Services\DuaListQueryService;
 use App\Domains\Submissions\Actions\CreatePersonalDuaAction;
 use App\Domains\Submissions\Actions\ReportDuaSubmissionAction;
 use App\Domains\Submissions\Actions\TransitionDuaSubmissionStatusAction;
@@ -31,14 +30,12 @@ class ListSubmissionController extends Controller
     public function index(
         Request $request,
         DuaList $duaList,
-        DuaListQueryService $lists,
         DuaSubmissionQueryService $submissions,
         CommunityDuaEligibilityService $communityEligibility,
         CommunityDuaQueueService $communityQueue,
     ): View {
         Gate::authorize('viewAny', [DuaSubmission::class, $duaList]);
         $user = Auth::user();
-        $duaList = $lists->findOwnedForUser($user, $duaList->id);
 
         $allowedStatuses = [
             DuaSubmissionStatus::Pending->value,
@@ -142,6 +139,7 @@ class ListSubmissionController extends Controller
     {
         Gate::authorize('view', $duaList);
         abort_unless($submission->dua_list_id === $duaList->id, 404);
+        $submission->loadMissing('duaList');
         Gate::authorize('manage', $submission);
     }
 }

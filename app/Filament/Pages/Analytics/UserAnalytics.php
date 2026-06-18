@@ -44,8 +44,7 @@ class UserAnalytics extends BaseAnalyticsPage
     public function table(Table $table): Table
     {
         return $table
-            ->query(fn (): Builder => User::query()
-                ->withCount(['duaLists', 'duaSubmissions']))
+            ->query(fn (): Builder => app(AnalyticsQueryService::class)->userAnalyticsQuery([]))
             ->columns([
                 TextColumn::make('index')->label('S.No')->rowIndex(),
                 TextColumn::make('name')->label('Username')->searchable(),
@@ -55,7 +54,7 @@ class UserAnalytics extends BaseAnalyticsPage
                     ->badge()
                     ->limitList(3)
                     ->listWithLineBreaks()
-                    ->state(fn (User $record): array => $record->duaLists()->orderBy('title')->limit(3)->pluck('title')->all()),
+                    ->state(fn (User $record): array => $record->duaLists->take(3)->pluck('title')->all()),
                 TextColumn::make('dua_lists_count')->label('Number of Dua Lists')->sortable(),
                 TextColumn::make('dua_submissions_count')->label('Total Dua Submissions')->sortable(),
                 TextColumn::make('created_at')->label('Registration Date')->dateTime()->sortable(),
