@@ -15,6 +15,7 @@ class DuaSuggestion extends Model
      * @var list<string>
      */
     protected $fillable = [
+        'wp_post_id',
         'title',
         'category',
         'content',
@@ -34,6 +35,7 @@ class DuaSuggestion extends Model
             'is_visible' => 'boolean',
             'sort_order' => 'integer',
             'used_count' => 'integer',
+            'wp_post_id' => 'integer',
         ];
     }
 }

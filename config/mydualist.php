@@ -43,6 +43,15 @@ return [
         'list_image_hours_after_start' => 1,
     ],
 
+    'legacy' => [
+        'import' => [
+            'batch_size' => (int) env('LEGACY_IMPORT_BATCH_SIZE', 100),
+            'users_report_path' => storage_path('app/legacy-import-users-report.json'),
+            'suggestions_report_path' => storage_path('app/legacy-import-suggestions-report.json'),
+            'lists_report_path' => storage_path('app/legacy-import-lists-report.json'),
+        ],
+    ],
+
     'blog' => [
         'bismillah_image_url' => env(
             'MYDUALIST_BISMILLAH_IMAGE_URL',

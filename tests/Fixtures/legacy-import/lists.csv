@@ -1,0 +1,2 @@
+wp_post_id,owner_wp_legacy_id,post_title,post_name,category,tripstart,tripend,status,post_date,post_modified,dua_limit_per_person,dua_display_order,frequency_of_emails,cover_image_url
+301,42,Umrah 2024,sara-umrah-301,Umrah,15/03/2024,25/03/2024,1,2024-01-20 09:00:00,2024-01-21 10:00:00,5,order_by_gender,daily,https://thepilgrim.co/wp-content/uploads/2024/01/list-cover.jpg

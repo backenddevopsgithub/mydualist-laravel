@@ -26,6 +26,7 @@ class DuaList extends Model
      * @var list<string>
      */
     protected $fillable = [
+        'wp_post_id',
         'user_id',
         'title',
         'slug',
@@ -54,6 +55,7 @@ class DuaList extends Model
             'start_date' => 'date',
             'end_date' => 'date',
             'dua_limit_per_person' => 'integer',
+            'wp_post_id' => 'integer',
             'published_at' => 'datetime',
             'list_created_email_sent_at' => 'datetime',
             'submission_quota_warning_sent_at' => 'datetime',

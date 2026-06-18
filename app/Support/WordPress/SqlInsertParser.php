@@ -67,11 +67,11 @@ class SqlInsertParser
         $position = 0;
 
         while ($position < $length) {
-            while ($position < $length && ! in_array($valuesClause[$position], ['(', ','], true)) {
+            while ($position < $length && $valuesClause[$position] !== '(') {
                 $position++;
             }
 
-            if ($position >= $length || $valuesClause[$position] !== '(') {
+            if ($position >= $length) {
                 break;
             }
 
