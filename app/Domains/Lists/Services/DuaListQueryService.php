@@ -2,9 +2,7 @@
 
 namespace App\Domains\Lists\Services;
 
-use App\Enums\DuaSubmissionStatus;
 use App\Models\DuaList;
-use App\Models\DuaSubmission;
 use App\Models\User;
 use App\Services\Service;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -66,16 +64,21 @@ class DuaListQueryService extends Service
      */
     public function dashboardSummary(User $user): array
     {
-        $ownedListIds = $user->duaLists()->pluck('id');
+        $aggregates = $user->duaLists()
+            ->selectRaw(
+                'SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as active_lists_count,
+                SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as archived_lists_count,
+                COALESCE(SUM(submissions_count), 0) as total_submissions_count,
+                COALESCE(SUM(completed_submissions_count), 0) as completed_duas_count',
+                [DuaList::STATUS_ACTIVE, DuaList::STATUS_ARCHIVED],
+            )
+            ->first();
 
         return [
-            'active_lists_count' => $user->duaLists()->active()->count(),
-            'archived_lists_count' => $user->duaLists()->archived()->count(),
-            'total_submissions_count' => DuaSubmission::query()->whereIn('dua_list_id', $ownedListIds)->count(),
-            'completed_duas_count' => DuaSubmission::query()
-                ->whereIn('dua_list_id', $ownedListIds)
-                ->where('status', DuaSubmissionStatus::Completed->value)
-                ->count(),
+            'active_lists_count' => (int) ($aggregates->active_lists_count ?? 0),
+            'archived_lists_count' => (int) ($aggregates->archived_lists_count ?? 0),
+            'total_submissions_count' => (int) ($aggregates->total_submissions_count ?? 0),
+            'completed_duas_count' => (int) ($aggregates->completed_duas_count ?? 0),
         ];
     }
 }
