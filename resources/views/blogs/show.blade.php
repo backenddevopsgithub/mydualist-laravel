@@ -22,7 +22,7 @@
                     <img src="{{ $post->featuredImageUrl() }}" alt="{{ $post->title }}" class="h-[28rem] w-full object-cover">
                 </div>
 
-                <div class="prose prose-lg prose-stone mt-10 max-w-none text-xl leading-9">
+                <div class="blog-content prose prose-lg prose-stone mt-10 max-w-none text-xl leading-9">
                     {!! $post->content !!}
                 </div>
             </article>

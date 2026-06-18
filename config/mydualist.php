@@ -43,4 +43,22 @@ return [
         'list_image_hours_after_start' => 1,
     ],
 
+    'blog' => [
+        'bismillah_image_url' => env(
+            'MYDUALIST_BISMILLAH_IMAGE_URL',
+            'https://thepilgrim.co/wp-content/uploads/2024/03/arabic-calligraphy-bismillah-first-verse-600nw-707955160-e1710954419173.webp',
+        ),
+        'import' => [
+            'default_category_slug' => env('BLOG_IMPORT_DEFAULT_CATEGORY', 'essentials'),
+            'report_path' => storage_path('app/blog-import-report.json'),
+            'wordpress_origins' => array_filter([
+                env('BLOG_IMPORT_WP_ORIGIN'),
+                'https://thepilgrim.co',
+                'https://www.thepilgrim.co',
+                'https://mydualist.com',
+                'https://www.mydualist.com',
+            ]),
+        ],
+    ],
+
 ];

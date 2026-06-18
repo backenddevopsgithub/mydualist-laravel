@@ -12,6 +12,7 @@ class BlogPost extends Model
      * @var list<string>
      */
     protected $fillable = [
+        'wp_post_id',
         'blog_category_id',
         'title',
         'slug',

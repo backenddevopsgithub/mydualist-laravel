@@ -1,0 +1,2 @@
+wp_post_id,post_title,post_name,post_excerpt,post_content,post_date,featured_image_url,category_slug,meta_title,meta_description
+101,Test Import Post,test-import-post,Short excerpt,"[warning_box]Watch out[/warning_box]<p>Body copy</p><p><img src=""https://thepilgrim.co/wp-content/uploads/2024/01/sample.jpg"" alt=""Sample"" /></p><p>&nbsp;</p>",2024-01-15 10:00:00,https://thepilgrim.co/wp-content/uploads/2024/01/featured.jpg,essentials,SEO Title,SEO Description
