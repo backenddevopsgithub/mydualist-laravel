@@ -24,32 +24,50 @@ class ExportDuaSubmissionsAction extends Action
             ->where('user_id', $user->id)
             ->firstOrFail();
 
-        $ordering = app(DuaSubmissionOrderingService::class);
-
         return [
-            'filename' => 'dua-submissions-'.$duaList->id.'.csv',
-            'callback' => function () use ($duaList, $user, $ordering): void {
-                $handle = fopen('php://output', 'w');
-                fputcsv($handle, ['Name', 'Email', 'Status', 'Dua', 'Note', 'Submitted At']);
-
-                $query = DuaSubmission::query()->where('dua_list_id', $duaList->id);
-                $ordering->applyOwnerListOrdering($query, $duaList, $user);
-
-                $query->chunk(200, function ($submissions) use ($handle): void {
-                    foreach ($submissions as $submission) {
-                        fputcsv($handle, [
-                            $submission->displayName(),
-                            $submission->email,
-                            $submission->status->value,
-                            $submission->content,
-                            $submission->note,
-                            optional($submission->created_at)->toDateTimeString(),
-                        ]);
-                    }
-                });
-
-                fclose($handle);
-            },
+            'filename' => $this->fileName($duaList),
+            'callback' => fn (): mixed => $this->streamCsv($user, $duaList),
         ];
+    }
+
+    public function streamCsv(User $user, DuaList $duaList): void
+    {
+        $handle = fopen('php://output', 'w');
+        $this->writeCsv($handle, $user, $duaList);
+        fclose($handle);
+    }
+
+    /**
+     * @param  resource  $handle
+     */
+    public function writeCsv($handle, User $user, DuaList $duaList): int
+    {
+        fputcsv($handle, ['Name', 'Email', 'Status', 'Dua', 'Note', 'Submitted At']);
+
+        $query = DuaSubmission::query()->where('dua_list_id', $duaList->id);
+        app(DuaSubmissionOrderingService::class)->applyOwnerListOrdering($query, $duaList, $user);
+
+        $rowCount = 0;
+
+        $query->chunk(200, function ($submissions) use ($handle, &$rowCount): void {
+            foreach ($submissions as $submission) {
+                $rowCount++;
+                fputcsv($handle, [
+                    $submission->displayName(),
+                    $submission->email,
+                    $submission->status->value,
+                    $submission->content,
+                    $submission->note,
+                    optional($submission->created_at)->toDateTimeString(),
+                ]);
+            }
+        });
+
+        return $rowCount;
+    }
+
+    public function fileName(DuaList $duaList): string
+    {
+        return 'dua-submissions-'.$duaList->id.'.csv';
     }
 }

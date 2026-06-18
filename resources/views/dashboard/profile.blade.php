@@ -94,15 +94,16 @@
 
             <div class="grid gap-6 lg:grid-cols-2">
                 <x-ui.card>
-                    <form method="GET" action="{{ route('dashboard.profile.submissions.download') }}">
+                    <form method="POST" action="{{ route('dashboard.profile.submissions.export') }}">
+                        @csrf
                         <h2 class="text-xl font-extrabold">Download submissions</h2>
-                        <p class="mt-2 text-sm leading-6 text-stone-600">Export all submissions for one list as CSV.</p>
+                        <p class="mt-2 text-sm leading-6 text-stone-600">Export all submissions for one list as CSV. We will email you when the file is ready.</p>
                         <x-ui.select name="dua_list_id" label="List" class="mt-5" required>
                             @foreach ($duaLists as $list)
                                 <option value="{{ $list->id }}">{{ $list->title }}</option>
                             @endforeach
                         </x-ui.select>
-                        <x-ui.button type="submit" variant="primary" full-width class="mt-5">Download CSV</x-ui.button>
+                        <x-ui.button type="submit" variant="primary" full-width class="mt-5">Queue CSV export</x-ui.button>
                     </form>
                 </x-ui.card>
 

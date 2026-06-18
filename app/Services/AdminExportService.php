@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Domains\Notifications\Notifications\SubmissionExportReadyNotification;
+use App\Domains\Profile\Actions\ExportDuaSubmissionsAction;
 use App\Enums\AdminExportStatus;
 use App\Enums\AdminExportType;
 use App\Exceptions\AdminExportDuplicateException;
@@ -59,6 +61,44 @@ class AdminExportService extends Service
         return $export;
     }
 
+    public function queueUserListSubmissions(User $user, int $duaListId): AdminExport
+    {
+        if (app()->isProduction() && config('queue.default') === 'sync') {
+            throw AdminExportQueueException::syncConnectionNotAllowedInProduction();
+        }
+
+        $duaList = DuaList::query()
+            ->whereKey($duaListId)
+            ->where('user_id', $user->id)
+            ->firstOrFail();
+
+        if ($this->hasPendingExport($user)) {
+            throw AdminExportDuplicateException::pendingExportExists();
+        }
+
+        $rateLimitKey = 'user-exports:'.$user->id;
+        $maxAttempts = (int) config('mydualist.user_exports.rate_limit_per_hour', 5);
+
+        if (! RateLimiter::attempt($rateLimitKey, $maxAttempts, fn (): bool => true, 3600)) {
+            throw AdminExportRateLimitException::exceeded();
+        }
+
+        $export = AdminExport::query()->create([
+            'user_id' => $user->id,
+            'type' => AdminExportType::UserListSubmissions,
+            'status' => AdminExportStatus::Pending,
+            'filters' => [
+                'dua_list_id' => $duaList->id,
+                'dua_list_title' => $duaList->title,
+            ],
+            'file_name' => app(ExportDuaSubmissionsAction::class)->fileName($duaList),
+        ]);
+
+        GenerateAdminExportJob::dispatch($export);
+
+        return $export;
+    }
+
     public function generate(AdminExport $export): void
     {
         $export = $export->fresh();
@@ -77,6 +117,7 @@ class AdminExportService extends Service
         }
 
         $export->refresh();
+        $export->loadMissing('user');
         $path = null;
 
         try {
@@ -160,6 +201,7 @@ class AdminExportService extends Service
             AdminExportType::CategoryAnalytics => $rowCount = $this->writeCategoryAnalytics($handle, $filters),
             AdminExportType::SubmissionAnalytics => $rowCount = $this->writeSubmissionAnalytics($handle, $filters),
             AdminExportType::KeywordAnalytics => $rowCount = $this->writeKeywordAnalytics($handle, $filters),
+            AdminExportType::UserListSubmissions => $rowCount = $this->writeUserListSubmissions($export, $handle, $filters),
         };
 
         return $rowCount;
@@ -328,11 +370,36 @@ class AdminExportService extends Service
         return $serial;
     }
 
+    /**
+     * @param  resource  $handle
+     * @param  array<string, mixed>  $filters
+     */
+    private function writeUserListSubmissions(AdminExport $export, $handle, array $filters): int
+    {
+        $user = $export->user;
+        $duaListId = (int) ($filters['dua_list_id'] ?? 0);
+
+        abort_if($user === null || $duaListId <= 0, 422, 'Export filters are invalid.');
+
+        $duaList = DuaList::query()
+            ->whereKey($duaListId)
+            ->where('user_id', $user->id)
+            ->firstOrFail();
+
+        return app(ExportDuaSubmissionsAction::class)->writeCsv($handle, $user, $duaList);
+    }
+
     private function notifyUser(AdminExport $export): void
     {
         $user = $export->user;
 
         if ($user === null) {
+            return;
+        }
+
+        if ($export->type->isUserFacing()) {
+            $user->notify(new SubmissionExportReadyNotification($export->fresh()));
+
             return;
         }
 

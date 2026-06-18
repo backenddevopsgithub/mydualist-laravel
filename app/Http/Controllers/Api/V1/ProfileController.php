@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Domains\Lists\Services\DuaListQueryService;
 use App\Domains\Profile\Actions\ChangeUserPasswordAction;
-use App\Domains\Profile\Actions\ExportDuaSubmissionsAction;
 use App\Domains\Profile\Actions\UpdateListSettingsAction;
 use App\Domains\Profile\Actions\UpdateUserProfileAction;
 use App\Domains\Profile\Actions\UploadListImageAction;
+use App\Exceptions\AdminExportDuplicateException;
+use App\Exceptions\AdminExportQueueException;
+use App\Exceptions\AdminExportRateLimitException;
 use App\Http\Requests\Profile\DownloadSubmissionsRequest;
 use App\Http\Requests\Profile\UpdateListSettingsRequest;
 use App\Http\Requests\Profile\UpdatePasswordRequest;
@@ -15,9 +17,9 @@ use App\Http\Requests\Profile\UpdateProfileRequest;
 use App\Http\Requests\Profile\UploadListImageRequest;
 use App\Http\Resources\Api\V1\Lists\DuaListDetailResource;
 use App\Http\Resources\Api\V1\Profile\ProfileResource;
+use App\Services\AdminExportService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ProfileController extends ApiController
 {
@@ -76,12 +78,20 @@ class ProfileController extends ApiController
 
     public function exportSubmissions(
         DownloadSubmissionsRequest $request,
-        ExportDuaSubmissionsAction $action,
-    ): StreamedResponse {
-        $export = ($action)($request->user(), (int) $request->validated('dua_list_id'));
+        AdminExportService $exports,
+    ): JsonResponse {
+        try {
+            $export = $exports->queueUserListSubmissions(
+                $request->user(),
+                (int) $request->validated('dua_list_id'),
+            );
+        } catch (AdminExportDuplicateException|AdminExportRateLimitException|AdminExportQueueException $exception) {
+            return $this->error($exception->getMessage(), 422);
+        }
 
-        return response()->streamDownload($export['callback'], $export['filename'], [
-            'Content-Type' => 'text/csv',
-        ]);
+        return $this->success([
+            'export_id' => $export->id,
+            'status' => $export->status->value,
+        ], 'Export queued. You will receive an email when your CSV is ready to download.', 202);
     }
 }

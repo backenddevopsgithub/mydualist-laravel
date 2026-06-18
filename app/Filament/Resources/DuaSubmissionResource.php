@@ -13,6 +13,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables\Actions\Action;
+use Filament\Notifications\Notification;
 use Filament\Tables\Actions\BulkAction;
 use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
@@ -107,6 +108,19 @@ class DuaSubmissionResource extends Resource
             ->bulkActions([
                 BulkAction::make('exportCsv')
                     ->label('Export CSV')
+                    ->before(function (BulkAction $action, Collection $records): void {
+                        $maxRows = (int) config('mydualist.admin_exports.max_bulk_selection_rows', 500);
+
+                        if ($records->count() > $maxRows) {
+                            Notification::make()
+                                ->title('Export too large')
+                                ->body("Select up to {$maxRows} submissions or use Submission Analytics export.")
+                                ->danger()
+                                ->send();
+
+                            $action->halt();
+                        }
+                    })
                     ->action(fn (Collection $records): StreamedResponse => response()->streamDownload(function () use ($records): void {
                         $handle = fopen('php://output', 'w');
                         fputcsv($handle, ['ID', 'List', 'Name', 'Email', 'Status', 'Report Reason', 'Dua', 'Created At']);

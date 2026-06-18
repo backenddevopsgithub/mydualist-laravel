@@ -168,9 +168,11 @@ test('profile list settings image upload and csv download work', function () {
     Storage::disk('public')->assertExists($duaList->refresh()->cover_image_path);
 
     $this->actingAs($user)
-        ->get(route('dashboard.profile.submissions.download', ['dua_list_id' => $duaList->id]))
-        ->assertOk()
-        ->assertHeader('content-type', 'text/csv; charset=utf-8');
+        ->post(route('dashboard.profile.submissions.export'), [
+            'dua_list_id' => $duaList->id,
+        ])
+        ->assertRedirect(route('dashboard.profile'))
+        ->assertSessionHas('status');
 });
 
 test('help and support page stores validated requests', function () {

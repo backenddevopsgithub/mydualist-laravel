@@ -161,6 +161,7 @@ test('category analytics rows compute percentages from filtered totals', functio
 
 test('analytics cache invalidates when underlying data changes', function () {
     Cache::flush();
+    config(['mydualist.analytics.cache_invalidation_debounce_seconds' => 60]);
 
     $cache = app(AnalyticsCacheService::class);
     $filters = [];
@@ -171,6 +172,10 @@ test('analytics cache invalidates when underlying data changes', function () {
     expect(Cache::has($keyBefore))->toBeTrue();
 
     DuaList::factory()->create();
+
+    expect($cache->key('analytics.user_metrics', $filters))->toBe($keyBefore);
+
+    $this->travel(61)->seconds();
 
     $keyAfter = $cache->key('analytics.user_metrics', $filters);
 

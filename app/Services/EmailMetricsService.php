@@ -62,4 +62,29 @@ class EmailMetricsService extends Service
 
         return $sentAt ? Carbon::parse($sentAt) : null;
     }
+
+    /**
+     * @return array{
+     *     emails_sent_today: int,
+     *     daily_digests_sent_today: int,
+     *     pending_digest_submissions: int,
+     *     failed_emails_today: int,
+     *     last_email_sent_at: ?string,
+     *     last_digest_sent_at: ?string,
+     * }
+     */
+    public function dashboardWidgetMetrics(): array
+    {
+        return app(AdminDashboardCacheService::class)->remember(
+            'email_health',
+            fn (): array => [
+                'emails_sent_today' => $this->emailsSentToday(),
+                'daily_digests_sent_today' => $this->dailyDigestsSentToday(),
+                'pending_digest_submissions' => $this->pendingDigestSubmissions(),
+                'failed_emails_today' => $this->failedEmailsToday(),
+                'last_email_sent_at' => $this->lastEmailSentAt()?->toIso8601String(),
+                'last_digest_sent_at' => $this->lastDigestSentAt()?->toIso8601String(),
+            ],
+        );
+    }
 }

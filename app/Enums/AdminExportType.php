@@ -10,6 +10,7 @@ enum AdminExportType: string
     case CategoryAnalytics = 'category_analytics';
     case SubmissionAnalytics = 'submission_analytics';
     case KeywordAnalytics = 'keyword_analytics';
+    case UserListSubmissions = 'user_list_submissions';
 
     public function label(): string
     {
@@ -20,6 +21,12 @@ enum AdminExportType: string
             self::CategoryAnalytics => 'Category Analytics',
             self::SubmissionAnalytics => 'Submission Analytics',
             self::KeywordAnalytics => 'Keyword Analytics',
+            self::UserListSubmissions => 'List Submissions',
         };
+    }
+
+    public function isUserFacing(): bool
+    {
+        return $this === self::UserListSubmissions;
     }
 }

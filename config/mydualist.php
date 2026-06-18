@@ -50,6 +50,21 @@ return [
         'retention_days' => (int) env('ADMIN_EXPORT_RETENTION_DAYS', 7),
         'rate_limit_per_hour' => (int) env('ADMIN_EXPORT_RATE_LIMIT_PER_HOUR', 10),
         'download_url_ttl_days' => (int) env('ADMIN_EXPORT_DOWNLOAD_URL_TTL_DAYS', 7),
+        'max_bulk_selection_rows' => (int) env('ADMIN_EXPORT_MAX_BULK_SELECTION_ROWS', 500),
+    ],
+
+    'user_exports' => [
+        'rate_limit_per_hour' => (int) env('USER_EXPORT_RATE_LIMIT_PER_HOUR', 5),
+    ],
+
+    'analytics' => [
+        // Coalesce analytics cache version bumps during write bursts (e.g. Arafah submissions).
+        'cache_invalidation_debounce_seconds' => (int) env('MYDUALIST_ANALYTICS_CACHE_INVALIDATION_DEBOUNCE_SECONDS', 60),
+    ],
+
+    'admin_dashboard' => [
+        // Filament dashboard widget aggregates (platform stats, charts, email health).
+        'cache_ttl_seconds' => (int) env('MYDUALIST_ADMIN_DASHBOARD_CACHE_TTL_SECONDS', 600),
     ],
 
     'super_admin_emails' => array_values(array_filter(array_map(

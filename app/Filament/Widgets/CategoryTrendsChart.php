@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Models\DuaList;
+use App\Services\AdminDashboardCacheService;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Str;
 
@@ -13,6 +14,17 @@ class CategoryTrendsChart extends ChartWidget
     protected static ?int $sort = 3;
 
     protected function getData(): array
+    {
+        return app(AdminDashboardCacheService::class)->remember(
+            'category_trends',
+            fn (): array => $this->categoryTrendsData(),
+        );
+    }
+
+    /**
+     * @return array{datasets: list<array<string, mixed>>, labels: list<string>}
+     */
+    private function categoryTrendsData(): array
     {
         $rows = DuaList::query()
             ->selectRaw('occasion, COUNT(*) as aggregate')

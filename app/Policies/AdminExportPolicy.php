@@ -9,6 +9,14 @@ class AdminExportPolicy
 {
     public function download(User $user, AdminExport $export): bool
     {
-        return $user->isAdmin() && $user->isActive() && $user->id === $export->user_id;
+        if ($user->id !== $export->user_id) {
+            return false;
+        }
+
+        if ($export->type->isUserFacing()) {
+            return $user->hasVerifiedEmail();
+        }
+
+        return $user->isAdmin() && $user->isActive();
     }
 }

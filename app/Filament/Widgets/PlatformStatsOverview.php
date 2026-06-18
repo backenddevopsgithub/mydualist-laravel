@@ -8,6 +8,7 @@ use App\Models\StripePayment;
 use App\Models\SupportTicket;
 use App\Models\User;
 use App\Models\UserEntitlement;
+use App\Services\AdminDashboardCacheService;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
@@ -17,38 +18,114 @@ class PlatformStatsOverview extends StatsOverviewWidget
 
     protected function getStats(): array
     {
-        $premiumUsers = UserEntitlement::query()
-            ->where('key', UserEntitlement::KEY_PREMIUM)
-            ->where('active', true)
-            ->distinct('user_id')
-            ->count('user_id');
+        $data = app(AdminDashboardCacheService::class)->remember(
+            'platform_stats',
+            fn (): array => $this->platformStatsData(),
+        );
 
-        $totalUsers = User::query()->count();
-        $paidRevenue = StripePayment::query()
-            ->where('status', StripePayment::STATUS_PAID)
-            ->sum('amount_total');
+        return $this->statsFromData($data);
+    }
+
+    /**
+     * @return array{
+     *     premium_users: int,
+     *     total_users: int,
+     *     paid_revenue: int,
+     *     total_lists: int,
+     *     active_lists: int,
+     *     archived_lists: int,
+     *     total_submissions: int,
+     *     completed_submissions: int,
+     *     moderation_alerts: int,
+     *     support_tickets: int,
+     *     support_tickets_last_7_days: int,
+     * }
+     */
+    private function platformStatsData(): array
+    {
+        $listStats = DuaList::query()
+            ->selectRaw(
+                'COUNT(*) as total_lists,
+                SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as active_lists,
+                SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as archived_lists',
+                [DuaList::STATUS_ACTIVE, DuaList::STATUS_ARCHIVED],
+            )
+            ->first();
+
+        $submissionStats = DuaSubmission::query()
+            ->selectRaw(
+                'COUNT(*) as total_submissions,
+                SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as completed_submissions,
+                SUM(CASE WHEN status IN (?, ?) THEN 1 ELSE 0 END) as moderation_alerts',
+                [
+                    DuaSubmission::STATUS_COMPLETED,
+                    DuaSubmission::STATUS_REPORTED,
+                    DuaSubmission::STATUS_HIDDEN,
+                ],
+            )
+            ->first();
+
+        return [
+            'premium_users' => UserEntitlement::query()
+                ->where('key', UserEntitlement::KEY_PREMIUM)
+                ->where('active', true)
+                ->distinct('user_id')
+                ->count('user_id'),
+            'total_users' => User::query()->count(),
+            'paid_revenue' => (int) StripePayment::query()
+                ->where('status', StripePayment::STATUS_PAID)
+                ->sum('amount_total'),
+            'total_lists' => (int) ($listStats->total_lists ?? 0),
+            'active_lists' => (int) ($listStats->active_lists ?? 0),
+            'archived_lists' => (int) ($listStats->archived_lists ?? 0),
+            'total_submissions' => (int) ($submissionStats->total_submissions ?? 0),
+            'completed_submissions' => (int) ($submissionStats->completed_submissions ?? 0),
+            'moderation_alerts' => (int) ($submissionStats->moderation_alerts ?? 0),
+            'support_tickets' => SupportTicket::query()->count(),
+            'support_tickets_last_7_days' => SupportTicket::query()
+                ->where('created_at', '>=', now()->subDays(7))
+                ->count(),
+        ];
+    }
+
+    /**
+     * @param  array{
+     *     premium_users: int,
+     *     total_users: int,
+     *     paid_revenue: int,
+     *     total_lists: int,
+     *     active_lists: int,
+     *     archived_lists: int,
+     *     total_submissions: int,
+     *     completed_submissions: int,
+     *     moderation_alerts: int,
+     *     support_tickets: int,
+     *     support_tickets_last_7_days: int,
+     * }  $data
+     * @return list<Stat>
+     */
+    private function statsFromData(array $data): array
+    {
+        $totalUsers = $data['total_users'];
 
         return [
             Stat::make('Total Users', number_format($totalUsers))
                 ->description('Registered accounts'),
-            Stat::make('Premium Users', number_format($premiumUsers))
-                ->description($totalUsers > 0 ? round(($premiumUsers / $totalUsers) * 100, 1).'% conversion' : '0% conversion')
+            Stat::make('Premium Users', number_format($data['premium_users']))
+                ->description($totalUsers > 0 ? round(($data['premium_users'] / $totalUsers) * 100, 1).'% conversion' : '0% conversion')
                 ->color('success'),
-            Stat::make('Total Lists', number_format(DuaList::query()->count()))
-                ->description(DuaList::query()->active()->count().' active / '.DuaList::query()->archived()->count().' archived'),
-            Stat::make('Submissions', number_format(DuaSubmission::query()->count()))
-                ->description(DuaSubmission::query()->where('status', DuaSubmission::STATUS_COMPLETED)->count().' completed'),
-            Stat::make('Moderation Alerts', number_format(DuaSubmission::query()->whereIn('status', [
-                DuaSubmission::STATUS_REPORTED,
-                DuaSubmission::STATUS_HIDDEN,
-            ])->count()))
+            Stat::make('Total Lists', number_format($data['total_lists']))
+                ->description($data['active_lists'].' active / '.$data['archived_lists'].' archived'),
+            Stat::make('Submissions', number_format($data['total_submissions']))
+                ->description($data['completed_submissions'].' completed'),
+            Stat::make('Moderation Alerts', number_format($data['moderation_alerts']))
                 ->description('Reported and hidden duas')
                 ->color('warning'),
-            Stat::make('Paid Revenue', '$'.number_format(((int) $paidRevenue) / 100, 2))
+            Stat::make('Paid Revenue', '$'.number_format($data['paid_revenue'] / 100, 2))
                 ->description('Stripe paid checkout total')
                 ->color('success'),
-            Stat::make('Support Tickets', number_format(SupportTicket::query()->count()))
-                ->description(SupportTicket::query()->where('created_at', '>=', now()->subDays(7))->count().' opened in 7 days'),
+            Stat::make('Support Tickets', number_format($data['support_tickets']))
+                ->description($data['support_tickets_last_7_days'].' opened in 7 days'),
         ];
     }
 }

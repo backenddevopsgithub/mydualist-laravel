@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Models\DuaSubmission;
+use App\Services\AdminDashboardCacheService;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Carbon;
 
@@ -13,6 +14,17 @@ class SubmissionGrowthChart extends ChartWidget
     protected static ?int $sort = 2;
 
     protected function getData(): array
+    {
+        return app(AdminDashboardCacheService::class)->remember(
+            'submission_growth',
+            fn (): array => $this->submissionGrowthData(),
+        );
+    }
+
+    /**
+     * @return array{datasets: list<array<string, mixed>>, labels: list<string>}
+     */
+    private function submissionGrowthData(): array
     {
         $start = now()->subDays(13)->startOfDay();
         $rows = DuaSubmission::query()

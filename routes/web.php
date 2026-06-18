@@ -95,7 +95,10 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::patch('/dashboard/profile/list-settings', [ProfileController::class, 'listSettings'])->name('dashboard.profile.list-settings');
     Route::patch('/dashboard/profile/creator-mode', [ProfileController::class, 'creatorModeSettings'])->name('dashboard.profile.creator-mode');
     Route::post('/dashboard/profile/list-image', [ProfileController::class, 'listImage'])->name('dashboard.profile.list-image');
-    Route::get('/dashboard/profile/submissions.csv', [ProfileController::class, 'downloadSubmissions'])->name('dashboard.profile.submissions.download');
+    Route::post('/dashboard/profile/submissions/export', [ProfileController::class, 'queueSubmissionsExport'])->name('dashboard.profile.submissions.export');
+    Route::get('/dashboard/exports/{export}/download', \App\Http\Controllers\Dashboard\UserExportDownloadController::class)
+        ->middleware('signed')
+        ->name('dashboard.exports.download');
     Route::post('/logout', [ProfileController::class, 'logout'])->name('logout');
     Route::get('/dashboard/upgrade', UpgradeController::class)->name('dashboard.upgrade');
     Route::get('/dashboard/purchases', PurchaseHistoryController::class)->name('dashboard.purchases');

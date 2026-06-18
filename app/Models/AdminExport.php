@@ -62,9 +62,12 @@ class AdminExport extends Model
         }
 
         $ttlDays = (int) config('mydualist.admin_exports.download_url_ttl_days', 7);
+        $routeName = $this->type->isUserFacing()
+            ? 'dashboard.exports.download'
+            : 'filament.admin.exports.download';
 
         return URL::temporarySignedRoute(
-            'filament.admin.exports.download',
+            $routeName,
             now()->addDays($ttlDays),
             ['export' => $this->id],
         );
