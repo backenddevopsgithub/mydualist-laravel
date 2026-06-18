@@ -7,6 +7,7 @@ use App\Domains\Billing\Services\UserEntitlementService;
 use App\Events\DuaListCreated;
 use App\Models\DuaList;
 use App\Models\User;
+use App\Support\CreatorMode;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -17,7 +18,7 @@ class CreateDuaListAction extends Action
     ) {}
 
     /**
-     * @param  array{title: string, occasion: string, start_date?: string|null, end_date?: string|null, cover_image_path?: string|null}  $data
+     * @param  array{title: string, occasion: string, start_date?: string|null, end_date?: string|null, cover_image_path?: string|null, list_mode?: string|null, donation_link?: string|null, donation_note?: string|null}  $data
      */
     public function handle(mixed ...$args): mixed
     {
@@ -39,6 +40,11 @@ class CreateDuaListAction extends Action
             'start_date' => $data['start_date'] ?? null,
             'end_date' => $data['end_date'] ?? null,
             'cover_image_path' => $data['cover_image_path'] ?? null,
+            'list_mode' => CreatorMode::enabled() && ($data['list_mode'] ?? null) === CreatorMode::MODE_CREATOR
+                ? CreatorMode::MODE_CREATOR
+                : null,
+            'donation_link' => CreatorMode::enabled() ? ($data['donation_link'] ?? null) : null,
+            'donation_note' => CreatorMode::enabled() ? ($data['donation_note'] ?? null) : null,
             'status' => 'active',
             'published_at' => now(),
         ]);

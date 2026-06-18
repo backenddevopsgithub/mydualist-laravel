@@ -13,4 +13,6 @@ enum BillingPurchaseEventType: string
     case FulfillmentApplied = 'fulfillment.applied';
     case WebhookFailure = 'webhook.failure';
     case ReconcileAttempt = 'reconcile.attempt';
+    case AdminMarkedFulfilled = 'admin.marked_fulfilled';
+    case AdminMarkedRefunded = 'admin.marked_refunded';
 }

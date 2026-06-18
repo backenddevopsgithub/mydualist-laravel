@@ -16,12 +16,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Lab404\Impersonate\Models\Impersonate;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable implements FilamentUser, MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Impersonate, Notifiable;
 
     /**
      * @var list<string>
@@ -71,9 +72,34 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
         return $this->role === UserRole::Admin;
     }
 
+    public function isSuperAdmin(): bool
+    {
+        if (! $this->isAdmin() || ! $this->isActive()) {
+            return false;
+        }
+
+        $superAdminEmails = config('mydualist.super_admin_emails', []);
+
+        if ($superAdminEmails === []) {
+            return false;
+        }
+
+        return in_array(mb_strtolower($this->email), $superAdminEmails, true);
+    }
+
     public function isActive(): bool
     {
         return $this->status === UserStatus::Active;
+    }
+
+    public function canImpersonate(): bool
+    {
+        return $this->isAdmin() && $this->isActive();
+    }
+
+    public function canBeImpersonated(): bool
+    {
+        return ! $this->isAdmin() && $this->isActive();
     }
 
     public function canAccessPanel(Panel $panel): bool

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\BlogCategory;
 use App\Models\BlogPost;
 use App\Support\Http\PartialHtmlRequest;
+use App\Support\Seo\SeoPresenter;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -32,6 +33,11 @@ class BlogController extends Controller
             'posts' => $posts,
             'activeCategory' => $activeCategory,
             'search' => $search,
+            'seo' => SeoPresenter::forRoute(
+                'blogs.index',
+                'Dua Resources',
+                'Browse dua resources, guides, and reminders from My Dua List.',
+            ),
         ]);
     }
 
@@ -55,6 +61,7 @@ class BlogController extends Controller
         return view('blogs.show', [
             'post' => $post,
             'relatedPosts' => $relatedPosts,
+            'seo' => SeoPresenter::forBlogPost($post),
         ]);
     }
 

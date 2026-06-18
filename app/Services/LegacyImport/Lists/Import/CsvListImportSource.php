@@ -80,6 +80,8 @@ class CsvListImportSource implements ListImportSource
             'email_frequency' => WordPressValueMapper::normalizeEmailFrequency($data['frequency_of_emails'] ?? $data['email_frequency'] ?? null),
         ];
 
+        $listMode = WordPressValueMapper::nullableString($data['listmode'] ?? $data['list_mode'] ?? null);
+
         return new WordPressListRecord(
             wpPostId: $wpPostId,
             ownerWpLegacyId: $ownerWpId,
@@ -93,6 +95,11 @@ class CsvListImportSource implements ListImportSource
             publishedAt: $isActive ? ($postDate ?? now()) : null,
             isTrashed: in_array(strtolower((string) ($data['post_status'] ?? '')), ['trash', 'deleted'], true),
             ownerPreferences: $ownerPreferences,
+            listMode: $listMode === 'creator' ? 'creator' : null,
+            donationLink: WordPressValueMapper::nullableString($data['donationlink'] ?? $data['donation_link'] ?? null),
+            donationNote: WordPressValueMapper::nullableString($data['donationnote'] ?? $data['donation_note'] ?? null),
+            insightsViews: (int) ($data['insights_views'] ?? $data['_insights_views'] ?? 0),
+            insightsClicks: (int) ($data['insights_clicks'] ?? $data['_insights_clicks'] ?? 0),
             createdAt: $postDate,
             updatedAt: WordPressValueMapper::parseDateTime($data['post_modified'] ?? $data['updated_at'] ?? null),
         );

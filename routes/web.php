@@ -16,6 +16,7 @@ use App\Http\Controllers\Dashboard\ProfileController;
 use App\Http\Controllers\Dashboard\SupportController;
 use App\Http\Controllers\Dashboard\UpgradeController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FundraisingRedirectController;
 use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\Onboarding\CreateListOnboardingController;
 use App\Http\Controllers\PurchaseCheckoutController;
@@ -23,17 +24,18 @@ use App\Http\Controllers\PublicDuaSubmissionController;
 use App\Models\BlogCategory;
 use App\Models\BlogPost;
 use App\Models\DuaList;
-use Illuminate\Support\Facades\Auth;
+use App\Support\Seo\SeoPresenter;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    if (Auth::check()) {
-        return redirect()->route('dashboard');
-    }
-
     return view('welcome', [
         'blogCategories' => BlogCategory::query()->ordered()->get(),
         'homepagePosts' => BlogPost::query()->published()->with('category')->latest('published_at')->take(12)->get(),
+        'seo' => SeoPresenter::forRoute(
+            'home',
+            'The easiest way to collect dua requests',
+            'The easiest way to collect dua requests for Hajj, Umrah, and every occasion.',
+        ),
     ]);
 })->name('home');
 
@@ -68,6 +70,7 @@ Route::middleware('guest')->group(function (): void {
 });
 
 Route::get('/create-list', [CreateListOnboardingController::class, 'start'])->name('onboarding.start');
+Route::get('/creator-mode', [CreateListOnboardingController::class, 'startCreator'])->name('onboarding.creator.start');
 Route::get('/create-list/{step}', [CreateListOnboardingController::class, 'show'])->name('onboarding.show');
 Route::post('/create-list/verify', [CreateListOnboardingController::class, 'store'])
     ->middleware('throttle:otp')
@@ -77,23 +80,32 @@ Route::post('/create-list/resend-code', [CreateListOnboardingController::class, 
     ->name('onboarding.resend');
 Route::post('/create-list/{step}', [CreateListOnboardingController::class, 'store'])->middleware('throttle:onboarding')->name('onboarding.store');
 
+Route::middleware('auth')->group(function (): void {
+    Route::impersonate();
+});
+
 Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
     Route::get('/dashboard/archived', DashboardController::class)->name('dashboard.archived');
     Route::get('/dashboard/profile', [ProfileController::class, 'edit'])->name('dashboard.profile');
     Route::patch('/dashboard/profile', [ProfileController::class, 'update'])->name('dashboard.profile.update');
-    Route::patch('/dashboard/profile/password', [ProfileController::class, 'password'])->name('dashboard.profile.password');
+    Route::patch('/dashboard/profile/password', [ProfileController::class, 'password'])
+        ->middleware('impersonate.protect')
+        ->name('dashboard.profile.password');
     Route::patch('/dashboard/profile/list-settings', [ProfileController::class, 'listSettings'])->name('dashboard.profile.list-settings');
+    Route::patch('/dashboard/profile/creator-mode', [ProfileController::class, 'creatorModeSettings'])->name('dashboard.profile.creator-mode');
     Route::post('/dashboard/profile/list-image', [ProfileController::class, 'listImage'])->name('dashboard.profile.list-image');
     Route::get('/dashboard/profile/submissions.csv', [ProfileController::class, 'downloadSubmissions'])->name('dashboard.profile.submissions.download');
     Route::post('/logout', [ProfileController::class, 'logout'])->name('logout');
     Route::get('/dashboard/upgrade', UpgradeController::class)->name('dashboard.upgrade');
     Route::get('/dashboard/purchases', PurchaseHistoryController::class)->name('dashboard.purchases');
     Route::post('/billing/purchases/start', [PurchaseCheckoutController::class, 'store'])
-        ->middleware('throttle:billing')
+        ->middleware(['throttle:billing', 'impersonate.protect'])
         ->name('billing.purchases.start');
     /** @deprecated Legacy Stripe Checkout Session — use billing.purchases.start */
-    Route::post('/billing/checkout', [BillingController::class, 'checkout'])->middleware('throttle:billing')->name('billing.checkout');
+    Route::post('/billing/checkout', [BillingController::class, 'checkout'])
+        ->middleware(['throttle:billing', 'impersonate.protect'])
+        ->name('billing.checkout');
     Route::get('/billing/success', [BillingController::class, 'success'])->middleware('throttle:billing')->name('billing.success');
     Route::get('/dashboard/my-submissions', MySubmissionsController::class)->name('dashboard.submissions');
     Route::get('/dashboard/help', [SupportController::class, 'create'])->name('dashboard.support');
@@ -125,6 +137,11 @@ Route::get('/lists/{duaList}', function (DuaList $duaList) {
 Route::post('/{duaList}/submissions', [PublicDuaSubmissionController::class, 'store'])
     ->middleware('throttle:public-submissions')
     ->name('dua-lists.submissions.store');
+
+Route::get('/fundraising/redirect', [FundraisingRedirectController::class, 'redirect'])->name('fundraising.redirect');
+Route::post('/{duaList}/fundraising/views', [FundraisingRedirectController::class, 'trackView'])
+    ->middleware('throttle:public-submissions')
+    ->name('fundraising.track-view');
 
 Route::get('/{slug}', [CmsPageController::class, 'resolve'])
     ->name('cms.show');

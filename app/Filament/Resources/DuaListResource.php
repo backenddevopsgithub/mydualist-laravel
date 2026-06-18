@@ -75,10 +75,7 @@ class DuaListResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('user')->withCount([
-                'submissions',
-                'submissions as completed_submissions_count' => fn (Builder $query) => $query->where('status', 'completed'),
-            ]))
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('user'))
             ->columns([
                 TextColumn::make('title')->searchable()->sortable()->limit(36),
                 TextColumn::make('user.name')->label('Creator')->searchable()->sortable(),

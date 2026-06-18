@@ -1,0 +1,5 @@
+wp_post_id,list_wp_post_id,first_name,last_name,email,gender,content,type,show,status,phone,created_at
+401,301,Ahmed,Ali,ahmed@example.com,male,Please make dua for my journey.,,1,0,+447700900123,2024-01-21 09:00:00
+402,301,Sara,Khan,sara@example.com,female,Another dua request.,,0,1,,2024-01-22 09:00:00
+403,301,Personal Dua,,owner@example.com,male,Private intention.,personal,1,0,,2024-01-23 09:00:00
+404,301,Unlocked,User,unlocked@example.com,female,Purchased unlock.,,0,0,,2024-01-24 09:00:00

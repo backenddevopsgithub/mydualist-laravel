@@ -22,6 +22,8 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="bg-[#fbfaf7] font-sans text-stone-950 antialiased">
+        <x-impersonation.banner />
+
         <div class="min-h-screen lg:grid lg:grid-cols-[18rem_1fr]">
             <x-dashboard.sidebar />
 

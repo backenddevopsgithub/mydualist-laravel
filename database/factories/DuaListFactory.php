@@ -30,4 +30,13 @@ class DuaListFactory extends Factory
             'published_at' => now(),
         ];
     }
+
+    public function creator(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'list_mode' => \App\Support\CreatorMode::MODE_CREATOR,
+            'donation_link' => 'https://www.launchgood.com/test-campaign',
+            'donation_note' => 'Please support this cause.',
+        ]);
+    }
 }

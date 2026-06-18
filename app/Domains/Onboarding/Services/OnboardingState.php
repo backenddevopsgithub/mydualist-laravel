@@ -3,6 +3,7 @@
 namespace App\Domains\Onboarding\Services;
 
 use App\Services\Service;
+use App\Support\CreatorMode;
 use Illuminate\Session\Store;
 
 class OnboardingState extends Service
@@ -14,6 +15,7 @@ class OnboardingState extends Service
         'list',
         'dates',
         'image',
+        'fundraising',
         'verify',
         'success',
     ];
@@ -49,21 +51,45 @@ class OnboardingState extends Service
         $this->session->forget(self::SESSION_KEY);
     }
 
+    /**
+     * @return list<string>
+     */
+    public function steps(): array
+    {
+        if ($this->isCreatorMode()) {
+            return self::STEPS;
+        }
+
+        return array_values(array_filter(
+            self::STEPS,
+            fn (string $step): bool => $step !== 'fundraising',
+        ));
+    }
+
+    public function isCreatorMode(): bool
+    {
+        return CreatorMode::enabled() && (bool) $this->get('creator_mode', false);
+    }
+
     public function stepIndex(string $step): int
     {
-        $index = array_search($step, self::STEPS, true);
+        $index = array_search($step, $this->steps(), true);
 
         return $index === false ? 0 : $index;
     }
 
     public function nextStep(string $step): ?string
     {
-        return self::STEPS[$this->stepIndex($step) + 1] ?? null;
+        $steps = $this->steps();
+
+        return $steps[$this->stepIndex($step) + 1] ?? null;
     }
 
     public function previousStep(string $step): ?string
     {
-        return self::STEPS[$this->stepIndex($step) - 1] ?? null;
+        $steps = $this->steps();
+
+        return $steps[$this->stepIndex($step) - 1] ?? null;
     }
 
     public function currentStep(): string
@@ -73,6 +99,6 @@ class OnboardingState extends Service
 
     public function displayStepCount(): int
     {
-        return count(self::STEPS) - 1;
+        return count($this->steps()) - 1;
     }
 }

@@ -8,6 +8,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 test('onboarding pages render and guarded steps redirect safely', function () {
     $this->get('/create-list')->assertRedirect(route('onboarding.show', 'account'));
@@ -243,10 +244,18 @@ test('dates step includes bundled date picker initializers', function () {
         ->assertDontSee('cdn.jsdelivr.net/npm/flatpickr', false);
 });
 
-test('logged in homepage header shows dashboard without create list cta', function () {
+test('logged in homepage header shows dashboard and community dua cta', function () {
     $user = User::factory()->create();
 
-    $this->actingAs($user)
-        ->get('/')
-        ->assertRedirect(route('dashboard'));
+    $response = $this->actingAs($user)->get('/');
+
+    $response->assertOk()
+        ->assertSee('Submit Community Dua')
+        ->assertSee('Dashboard');
+
+    $header = Str::before($response->getContent(), '</header>');
+
+    expect($header)->toContain('Submit Community Dua')
+        ->and($header)->toContain('Dashboard')
+        ->and($header)->not->toContain('Create a Dua List');
 });

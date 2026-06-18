@@ -2,8 +2,10 @@
 
 namespace App\Support\Seo;
 
+use App\Models\BlogPost;
 use App\Models\CmsPage;
 use App\Models\SeoMetadata;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 
 class SeoPresenter
@@ -17,6 +19,34 @@ class SeoPresenter
         public readonly string $canonicalUrl,
         public readonly bool $noindex,
     ) {}
+
+    public static function forRoute(
+        string $routeName,
+        ?string $fallbackTitle = null,
+        ?string $fallbackDescription = null,
+    ): self {
+        $metadata = SeoMetadata::query()
+            ->where('scope', 'route')
+            ->where('route_name', $routeName)
+            ->first();
+
+        $title = $metadata?->meta_title ?: $fallbackTitle ?: config('mydualist.name', 'My Dua List');
+        $description = $metadata?->meta_description ?: $fallbackDescription;
+        $ogTitle = $metadata?->og_title ?: $title;
+        $ogDescription = $metadata?->og_description ?: $description;
+        $ogImageUrl = self::imageUrl($metadata?->og_image_path);
+        $canonicalUrl = $metadata?->canonical_url ?: (Route::has($routeName) ? route($routeName) : url('/'));
+
+        return new self(
+            title: $title,
+            description: $description,
+            ogTitle: $ogTitle,
+            ogDescription: $ogDescription,
+            ogImageUrl: $ogImageUrl,
+            canonicalUrl: $canonicalUrl,
+            noindex: (bool) ($metadata?->noindex ?? false),
+        );
+    }
 
     public static function forCmsPage(CmsPage $page): self
     {
@@ -42,6 +72,31 @@ class SeoPresenter
             ogImageUrl: $ogImageUrl,
             canonicalUrl: $canonicalUrl,
             noindex: $page->noindex || (bool) ($metadata?->noindex ?? false),
+        );
+    }
+
+    public static function forBlogPost(BlogPost $post): self
+    {
+        $metadata = SeoMetadata::query()
+            ->where('scope', 'blog')
+            ->where('key', $post->slug)
+            ->first();
+
+        $title = $metadata?->meta_title ?: $post->title;
+        $description = $metadata?->meta_description ?: $post->excerpt;
+        $ogTitle = $metadata?->og_title ?: $title;
+        $ogDescription = $metadata?->og_description ?: $description;
+        $ogImageUrl = self::imageUrl($metadata?->og_image_path) ?: $post->featuredImageUrl();
+        $canonicalUrl = $metadata?->canonical_url ?: route('blogs.show', $post->slug);
+
+        return new self(
+            title: $title,
+            description: $description,
+            ogTitle: $ogTitle,
+            ogDescription: $ogDescription,
+            ogImageUrl: $ogImageUrl,
+            canonicalUrl: $canonicalUrl,
+            noindex: (bool) ($metadata?->noindex ?? false),
         );
     }
 

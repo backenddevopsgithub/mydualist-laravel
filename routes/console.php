@@ -42,3 +42,13 @@ Schedule::command('billing:health --alert')
     ->dailyAt('08:00')
     ->name('billing-health-alert')
     ->withoutOverlapping();
+
+Schedule::command('admin:monitor-exports')
+    ->everyFifteenMinutes()
+    ->name('admin-monitor-exports')
+    ->withoutOverlapping();
+
+Schedule::job(new \App\Jobs\CleanupAdminExportsJob)
+    ->daily()
+    ->name('admin-cleanup-exports')
+    ->withoutOverlapping();

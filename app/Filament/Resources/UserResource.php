@@ -5,16 +5,20 @@ namespace App\Filament\Resources;
 use App\Domains\Auth\Actions\ActivateUserAction;
 use App\Domains\Auth\Actions\ResetEmailVerificationAction;
 use App\Domains\Auth\Actions\SuspendUserAction;
-use App\Domains\Billing\Services\UserEntitlementService;
+use App\Domains\Billing\Actions\GrantUserPlanAction;
+use App\Enums\EntitlementProductType;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Filament\Resources\UserResource\Pages;
 use App\Models\User;
 use App\Models\UserEntitlement;
+use App\Support\Impersonation;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables\Actions\Action;
 use Filament\Tables\Actions\EditAction;
@@ -23,6 +27,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use RuntimeException;
 
 class UserResource extends Resource
 {
@@ -41,9 +46,15 @@ class UserResource extends Resource
             TextInput::make('last_name')->maxLength(60),
             TextInput::make('name')->required()->maxLength(255),
             TextInput::make('email')->email()->required()->maxLength(255),
+            TextInput::make('password')
+                ->password()
+                ->revealable()
+                ->dehydrated(fn (?string $state): bool => filled($state))
+                ->required(fn (string $operation): bool => $operation === 'create')
+                ->maxLength(255),
             Select::make('role')
                 ->options([
-                    UserRole::User->value => 'User',
+                    UserRole::User->value => 'Subscriber',
                     UserRole::Admin->value => 'Admin',
                 ])
                 ->required(),
@@ -54,7 +65,9 @@ class UserResource extends Resource
                     UserStatus::Banned->value => 'Banned',
                 ])
                 ->required(),
-            DateTimePicker::make('email_verified_at'),
+            DateTimePicker::make('email_verified_at')
+                ->label('Email verification status')
+                ->helperText('Set a date to mark the email as verified, or clear to mark as unverified.'),
         ]);
     }
 
@@ -77,7 +90,7 @@ class UserResource extends Resource
             ])
             ->filters([
                 SelectFilter::make('role')->options([
-                    UserRole::User->value => 'User',
+                    UserRole::User->value => 'Subscriber',
                     UserRole::Admin->value => 'Admin',
                 ]),
                 SelectFilter::make('status')->options([
@@ -88,6 +101,14 @@ class UserResource extends Resource
             ])
             ->actions([
                 EditAction::make(),
+                Action::make('impersonate')
+                    ->label('Impersonate')
+                    ->icon('heroicon-o-arrow-right-on-rectangle')
+                    ->color('info')
+                    ->visible(fn (User $record): bool => static::canImpersonateUser($record))
+                    ->requiresConfirmation()
+                    ->modalDescription('You will be signed in as this user on the member dashboard. Sensitive actions remain disabled until you stop impersonating.')
+                    ->url(fn (User $record): string => route('impersonate', $record)),
                 Action::make('activate')
                     ->visible(fn (User $record): bool => $record->status !== UserStatus::Active)
                     ->requiresConfirmation()
@@ -97,15 +118,51 @@ class UserResource extends Resource
                     ->color('warning')
                     ->requiresConfirmation()
                     ->action(fn (User $record) => app(SuspendUserAction::class)($record)),
-                Action::make('grantPremium')
-                    ->label('Grant Premium')
+                Action::make('grantPlan')
+                    ->label('Grant Plan')
+                    ->icon('heroicon-o-gift')
                     ->color('success')
+                    ->visible(fn (): bool => ! Impersonation::isActive())
+                    ->authorize(fn (User $record): bool => auth()->user()?->isAdmin() ?? false)
+                    ->form([
+                        Select::make('product')
+                            ->label('Plan')
+                            ->options(EntitlementProductType::options())
+                            ->required()
+                            ->live(),
+                        Select::make('dua_list_id')
+                            ->label('Dua list')
+                            ->options(fn (User $record): array => $record->duaLists()->orderBy('title')->pluck('title', 'id')->all())
+                            ->searchable()
+                            ->visible(fn (Get $get): bool => self::grantPlanRequiresList($get('product')))
+                            ->required(fn (Get $get): bool => self::grantPlanRequiresList($get('product'))),
+                    ])
                     ->requiresConfirmation()
-                    ->action(fn (User $record) => app(UserEntitlementService::class)->grantPremium(
-                        $record,
-                        'admin',
-                        'admin-'.$record->id,
-                    )),
+                    ->modalDescription('This will create a billing purchase, grant entitlements, and record your admin action.')
+                    ->action(function (User $record, array $data): void {
+                        /** @var User $admin */
+                        $admin = auth()->user();
+
+                        try {
+                            app(GrantUserPlanAction::class)(
+                                $record,
+                                EntitlementProductType::from($data['product']),
+                                $admin,
+                                $data['dua_list_id'] ?? null,
+                            );
+
+                            Notification::make()
+                                ->title('Plan granted')
+                                ->success()
+                                ->send();
+                        } catch (RuntimeException $exception) {
+                            Notification::make()
+                                ->title('Plan grant failed')
+                                ->body($exception->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
                 Action::make('resetVerification')
                     ->label('Reset Verification')
                     ->color('gray')
@@ -118,7 +175,31 @@ class UserResource extends Resource
     {
         return [
             'index' => Pages\ListUsers::route('/'),
+            'create' => Pages\CreateUser::route('/create'),
             'edit' => Pages\EditUser::route('/{record}/edit'),
         ];
+    }
+
+    private static function grantPlanRequiresList(?string $product): bool
+    {
+        if ($product === null) {
+            return false;
+        }
+
+        return EntitlementProductType::from($product)->requiresList();
+    }
+
+    private static function canImpersonateUser(User $record): bool
+    {
+        $admin = auth()->user();
+
+        if (! $admin instanceof User) {
+            return false;
+        }
+
+        return $admin->canImpersonate()
+            && $record->canBeImpersonated()
+            && $record->id !== $admin->id
+            && ! Impersonation::isActive();
     }
 }

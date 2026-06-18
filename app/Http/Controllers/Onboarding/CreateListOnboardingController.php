@@ -10,6 +10,7 @@ use App\Domains\Onboarding\Services\OnboardingVerificationService;
 use App\Http\Controllers\Controller;
 use App\Models\DuaList;
 use App\Models\User;
+use App\Support\CreatorMode;
 use App\Support\DuaListOccasions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -29,6 +30,105 @@ class CreateListOnboardingController extends Controller
     ): RedirectResponse {
         $state->reset();
 
+        return $this->redirectToFirstStep($state, $entitlements, $verification, creatorMode: false);
+    }
+
+    public function startCreator(
+        Request $request,
+        OnboardingState $state,
+        UserEntitlementService $entitlements,
+        OnboardingVerificationService $verification,
+    ): RedirectResponse {
+        if (! CreatorMode::enabled()) {
+            abort(404);
+        }
+
+        $state->reset();
+        $state->merge(['creator_mode' => true]);
+        $this->prefillCreatorStateFromQuery($request, $state);
+
+        return $this->redirectToFirstStep($state, $entitlements, $verification, creatorMode: true);
+    }
+
+    public function show(string $step, OnboardingState $state): View|RedirectResponse
+    {
+        if (! in_array($step, OnboardingState::STEPS, true)) {
+            return redirect()->route('onboarding.start');
+        }
+
+        if (! in_array($step, $state->steps(), true)) {
+            return redirect()->route('onboarding.show', $state->currentStep());
+        }
+
+        if ($redirect = $this->guardStep($step, $state)) {
+            return $redirect;
+        }
+
+        $duaList = $this->completedList($state);
+
+        return view("onboarding.{$step}", [
+            'step' => $step,
+            'stepIndex' => $state->stepIndex($step) + 1,
+            'totalSteps' => $state->displayStepCount(),
+            'previousStep' => $state->previousStep($step),
+            'state' => $state->all(),
+            'creatorMode' => $state->isCreatorMode(),
+            'creatorModeEnabled' => CreatorMode::enabled(),
+            'duaList' => $duaList,
+            'shareUrl' => $duaList ? $duaList->publicUrl() : null,
+            'coverImageUrl' => $state->get('image.cover_image_path')
+                ? Storage::disk('public')->url($state->get('image.cover_image_path'))
+                : null,
+        ]);
+    }
+
+    public function store(
+        Request $request,
+        string $step,
+        OnboardingState $state,
+        RegisterUserAction $registerUser,
+        CreateDuaListAction $createDuaList,
+        OnboardingVerificationService $verification,
+    ): RedirectResponse {
+        if (! in_array($step, OnboardingState::STEPS, true)) {
+            return redirect()->route('onboarding.start');
+        }
+
+        if (! in_array($step, $state->steps(), true)) {
+            return redirect()->route('onboarding.show', $state->currentStep());
+        }
+
+        if ($redirect = $this->guardStep($step, $state)) {
+            return $redirect;
+        }
+
+        return match ($step) {
+            'account' => $this->storeAccount($request, $state, $registerUser, $verification),
+            'list' => $this->storeList($request, $state),
+            'dates' => $this->storeDates($request, $state),
+            'image' => $this->storeImage($request, $state, $createDuaList),
+            'fundraising' => $this->storeFundraising($request, $state, $createDuaList),
+            'verify' => $this->storeVerification($request, $state, $createDuaList, $verification),
+            default => redirect()->route('onboarding.show', $state->currentStep()),
+        };
+    }
+
+    public function resend(OnboardingState $state, OnboardingVerificationService $verification): RedirectResponse
+    {
+        $user = User::query()->findOrFail($state->get('user_id'));
+        $verification->send($user);
+
+        return redirect()
+            ->route('onboarding.show', 'verify')
+            ->with('resend_status', 'A new verification code has been sent to your email.');
+    }
+
+    private function redirectToFirstStep(
+        OnboardingState $state,
+        UserEntitlementService $entitlements,
+        OnboardingVerificationService $verification,
+        bool $creatorMode,
+    ): RedirectResponse {
         if (Auth::check()) {
             if (! $entitlements->canCreateList(Auth::user())) {
                 return redirect()
@@ -59,66 +159,42 @@ class CreateListOnboardingController extends Controller
         return redirect()->route('onboarding.show', 'account');
     }
 
-    public function show(string $step, OnboardingState $state): View|RedirectResponse
+    private function prefillCreatorStateFromQuery(Request $request, OnboardingState $state): void
     {
-        if (! in_array($step, OnboardingState::STEPS, true)) {
-            return redirect()->route('onboarding.start');
+        $fieldMap = [
+            'FirstName' => 'account.first_name',
+            'lastName' => 'account.last_name',
+            'email' => 'account.email',
+            'gender' => 'account.gender',
+            'List_Name' => 'list.title',
+            'Category_name' => 'list.occasion',
+            'startDate' => 'dates.start_date',
+            'endDate' => 'dates.end_date',
+        ];
+
+        $prefill = [];
+
+        foreach ($fieldMap as $queryKey => $stateKey) {
+            $value = $request->query($queryKey);
+
+            if (! is_string($value) || $value === '') {
+                continue;
+            }
+
+            if ($queryKey === 'Category_name') {
+                $value = strtolower($value);
+            }
+
+            if ($queryKey === 'gender') {
+                $value = strtolower($value);
+            }
+
+            data_set($prefill, $stateKey, $value);
         }
 
-        if ($redirect = $this->guardStep($step, $state)) {
-            return $redirect;
+        if ($prefill !== []) {
+            $state->merge($prefill);
         }
-
-        $duaList = $this->completedList($state);
-
-        return view("onboarding.{$step}", [
-            'step' => $step,
-            'stepIndex' => $state->stepIndex($step) + 1,
-            'totalSteps' => $state->displayStepCount(),
-            'previousStep' => $state->previousStep($step),
-            'state' => $state->all(),
-            'duaList' => $duaList,
-            'shareUrl' => $duaList ? $duaList->publicUrl() : null,
-            'coverImageUrl' => $state->get('image.cover_image_path')
-                ? Storage::disk('public')->url($state->get('image.cover_image_path'))
-                : null,
-        ]);
-    }
-
-    public function store(
-        Request $request,
-        string $step,
-        OnboardingState $state,
-        RegisterUserAction $registerUser,
-        CreateDuaListAction $createDuaList,
-        OnboardingVerificationService $verification,
-    ): RedirectResponse {
-        if (! in_array($step, OnboardingState::STEPS, true)) {
-            return redirect()->route('onboarding.start');
-        }
-
-        if ($redirect = $this->guardStep($step, $state)) {
-            return $redirect;
-        }
-
-        return match ($step) {
-            'account' => $this->storeAccount($request, $state, $registerUser, $verification),
-            'list' => $this->storeList($request, $state),
-            'dates' => $this->storeDates($request, $state),
-            'image' => $this->storeImage($request, $state, $createDuaList),
-            'verify' => $this->storeVerification($request, $state, $createDuaList, $verification),
-            default => redirect()->route('onboarding.show', $state->currentStep()),
-        };
-    }
-
-    public function resend(OnboardingState $state, OnboardingVerificationService $verification): RedirectResponse
-    {
-        $user = User::query()->findOrFail($state->get('user_id'));
-        $verification->send($user);
-
-        return redirect()
-            ->route('onboarding.show', 'verify')
-            ->with('resend_status', 'A new verification code has been sent to your email.');
     }
 
     private function storeAccount(
@@ -217,20 +293,63 @@ class CreateListOnboardingController extends Controller
 
         $state->merge([
             'image' => ['cover_image_path' => $path],
-            'current_step' => $state->get('requires_verification', true) ? 'verify' : 'success',
         ]);
 
-        if (! $state->get('requires_verification', true)) {
-            $duaList = $this->createListFromState($state, $createDuaList);
+        if ($state->isCreatorMode()) {
+            $state->merge(['current_step' => 'fundraising']);
 
-            $state->merge([
-                'dua_list_id' => $duaList->id,
-            ]);
-
-            return redirect()->route('onboarding.show', 'success');
+            return redirect()->route('onboarding.show', 'fundraising');
         }
 
-        return redirect()->route('onboarding.show', 'verify');
+        return $this->finalizeOnboardingAfterImage($state, $createDuaList);
+    }
+
+    private function storeFundraising(
+        Request $request,
+        OnboardingState $state,
+        CreateDuaListAction $createDuaList,
+    ): RedirectResponse {
+        $data = $request->validate([
+            'donation_link' => CreatorMode::donationLinkRules(),
+            'donation_note' => ['required', 'string', 'max:500'],
+        ]);
+
+        $state->merge([
+            'fundraising' => $data,
+        ]);
+
+        if ($state->get('requires_verification', true)) {
+            $state->merge(['current_step' => 'verify']);
+
+            return redirect()->route('onboarding.show', 'verify');
+        }
+
+        $duaList = $this->createListFromState($state, $createDuaList);
+
+        $state->merge([
+            'dua_list_id' => $duaList->id,
+            'current_step' => 'success',
+        ]);
+
+        return redirect()->route('onboarding.show', 'success');
+    }
+
+    private function finalizeOnboardingAfterImage(OnboardingState $state, CreateDuaListAction $createDuaList): RedirectResponse
+    {
+        if ($state->get('requires_verification', true)) {
+            $state->merge(['current_step' => 'verify']);
+
+            return redirect()->route('onboarding.show', 'verify');
+        }
+
+        $duaList = $this->createListFromState($state, $createDuaList);
+
+        $state->merge([
+            'dua_list_id' => $duaList->id,
+            'current_step' => 'success',
+        ]);
+
+        return redirect()->route('onboarding.show', 'success');
     }
 
     private function storeVerification(
@@ -286,7 +405,8 @@ class CreateListOnboardingController extends Controller
         $requirements = [
             'dates' => 'list',
             'image' => 'dates',
-            'verify' => 'image',
+            'fundraising' => 'image',
+            'verify' => $state->isCreatorMode() ? 'fundraising' : 'image',
         ];
 
         $required = $requirements[$step] ?? null;
@@ -317,12 +437,20 @@ class CreateListOnboardingController extends Controller
     {
         $user = User::query()->findOrFail($state->get('user_id'));
 
-        return $createDuaList($user, [
+        $payload = [
             'title' => $state->get('list.title'),
             'occasion' => $state->get('list.occasion'),
             'start_date' => $state->get('dates.start_date'),
             'end_date' => $state->get('dates.end_date'),
             'cover_image_path' => $state->get('image.cover_image_path'),
-        ]);
+        ];
+
+        if ($state->isCreatorMode()) {
+            $payload['list_mode'] = CreatorMode::MODE_CREATOR;
+            $payload['donation_link'] = $state->get('fundraising.donation_link');
+            $payload['donation_note'] = $state->get('fundraising.donation_note');
+        }
+
+        return $createDuaList($user, $payload);
     }
 }

@@ -3,7 +3,10 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Pages\Auth\Login;
+use App\Http\Controllers\Admin\AdminExportDownloadController;
+use App\Http\Controllers\Admin\AdminMediaServeController;
 use App\Filament\Widgets\CategoryTrendsChart;
+use App\Support\Impersonation;
 use App\Filament\Widgets\EmailHealthWidget;
 use App\Filament\Widgets\PlatformStatsOverview;
 use App\Filament\Widgets\RecentSubmissionsTable;
@@ -16,8 +19,10 @@ use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
+use Filament\Navigation\MenuItem;
 use Filament\Support\Colors\Color;
 use Filament\Widgets;
+use Illuminate\Support\Facades\Route;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -58,6 +63,22 @@ class AdminPanelProvider extends PanelProvider
             ], isPersistent: true)
             ->authMiddleware([
                 Authenticate::class,
-            ]);
+            ])
+            ->userMenuItems([
+                'stop-impersonating' => MenuItem::make()
+                    ->label('Stop impersonating')
+                    ->icon('heroicon-o-arrow-left-on-rectangle')
+                    ->url(fn (): string => route('impersonate.leave'))
+                    ->visible(fn (): bool => Impersonation::isActive()),
+            ])
+            ->authenticatedRoutes(function (): void {
+                Route::get('/exports/{export}/download', AdminExportDownloadController::class)
+                    ->middleware('signed')
+                    ->name('exports.download');
+
+                Route::get('/media/{media}/preview/{conversion?}', AdminMediaServeController::class)
+                    ->middleware('signed')
+                    ->name('media.preview');
+            });
     }
 }

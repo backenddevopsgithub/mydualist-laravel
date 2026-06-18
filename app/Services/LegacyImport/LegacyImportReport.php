@@ -34,6 +34,16 @@ class LegacyImportReport
     public array $missingImages = [];
 
     /**
+     * @var array<string, mixed>
+     */
+    public array $reconciliation = [];
+
+    /**
+     * @var array<string, mixed>
+     */
+    public array $validation = [];
+
+    /**
      * @param  array<string, mixed>  $summary
      */
     public function addImported(array $summary): void
@@ -90,6 +100,8 @@ class LegacyImportReport
             'failed' => $this->failed,
             'skipped' => $this->skipped,
             'missing_images' => $this->missingImages,
+            'reconciliation' => $this->reconciliation !== [] ? $this->reconciliation : null,
+            'validation' => $this->validation !== [] ? $this->validation : null,
         ];
     }
 }

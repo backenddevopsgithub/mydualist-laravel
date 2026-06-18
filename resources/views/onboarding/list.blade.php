@@ -16,6 +16,7 @@
         x-data="{
             title: @js(old('title', data_get($state, 'list.title', ''))),
             occasion: @js($selected ?? ''),
+            showCreatorModal: false,
             get canSubmit() {
                 return this.title.trim() !== '' && this.occasion !== '';
             },
@@ -57,8 +58,53 @@
                 <span class="font-bold">Pro Tip:</span>
                 Choose a simple name your friends and family will recognise.
             </div>
+
+            @if (($creatorModeEnabled ?? false) && ! ($creatorMode ?? false))
+                <div class="flex justify-end">
+                    <button
+                        type="button"
+                        class="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-emerald-700"
+                        x-on:click="showCreatorModal = true"
+                    >
+                        Explore Creator Mode
+                    </button>
+                </div>
+            @endif
+
+            @if ($creatorMode ?? false)
+                <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
+                    Using Creator Mode
+                </div>
+            @endif
         </div>
 
         <x-onboarding.actions back="account" submit="Next" />
+
+        @if ($creatorModeEnabled ?? false)
+            <div
+                x-cloak
+                x-show="showCreatorModal"
+                class="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/50 p-4 backdrop-blur-sm"
+            >
+                <div class="w-full max-w-lg rounded-[2rem] bg-white p-6 shadow-2xl sm:p-8">
+                    <h3 class="text-2xl font-extrabold text-stone-950">Switch to creator mode?</h3>
+                    <p class="mt-4 text-sm leading-7 text-stone-600">
+                        Creator mode is a paid option built for content creators, influencers and fundraisers in mind.
+                    </p>
+                    <ol class="mt-4 list-decimal space-y-2 pl-5 text-sm leading-7 text-stone-700">
+                        <li>All the great features in MyDuaList</li>
+                        <li>Add your own fundraising link and collect donations</li>
+                        <li>See views, clicks and insights</li>
+                    </ol>
+                    <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                        <button type="button" class="rounded-2xl px-5 py-3 text-sm font-bold text-stone-700" x-on:click="showCreatorModal = false">Cancel</button>
+                        <a
+                            :href="`{{ route('onboarding.creator.start') }}?List_Name=${encodeURIComponent(title)}&Category_name=${encodeURIComponent(occasion)}`"
+                            class="inline-flex items-center justify-center rounded-2xl bg-emerald-900 px-5 py-3 text-sm font-extrabold text-white"
+                        >Use Creator Mode</a>
+                    </div>
+                </div>
+            </div>
+        @endif
     </form>
 </x-onboarding.layout>

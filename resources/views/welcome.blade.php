@@ -50,9 +50,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="description" content="The easiest way to collect dua requests for Hajj, Umrah, and every occasion.">
-
-        <title>My Dua List - The easiest way to collect dua requests</title>
+        <x-seo.meta :seo="$seo" />
 
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700,800,900&display=swap" rel="stylesheet" />

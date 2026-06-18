@@ -53,6 +53,45 @@
                 </form>
             </x-ui.card>
 
+            @if ($creatorLists->isNotEmpty())
+                <x-ui.card>
+                    <form method="POST" action="{{ route('dashboard.profile.creator-mode') }}">
+                        @csrf
+                        @method('PATCH')
+
+                        <h2 class="text-xl font-extrabold">Creator Mode Settings</h2>
+                        <p class="mt-2 text-sm leading-6 text-stone-600">Update the donation link and note shown to submitters on creator lists.</p>
+
+                        <div class="mt-6 space-y-5">
+                            <x-ui.select name="dua_list_id" label="Creator list" class="sm:col-span-2" required>
+                                @foreach ($creatorLists as $list)
+                                    <option value="{{ $list->id }}" @selected(old('dua_list_id', $creatorLists->first()->id) == $list->id)>
+                                        {{ $list->title }}
+                                    </option>
+                                @endforeach
+                            </x-ui.select>
+
+                            <x-ui.input
+                                name="donation_link"
+                                label="Donation link URL"
+                                type="url"
+                                :value="old('donation_link', $creatorLists->first()->donation_link)"
+                                placeholder="https://www.launchgood.com/your-campaign"
+                            />
+
+                            <x-ui.input
+                                name="donation_note"
+                                label="Donation note"
+                                :value="old('donation_note', $creatorLists->first()->donation_note)"
+                                placeholder="Enter text"
+                            />
+                        </div>
+
+                        <x-ui.button type="submit" variant="primary" class="mt-7 sm:w-auto">Save Creator Mode settings</x-ui.button>
+                    </form>
+                </x-ui.card>
+            @endif
+
             <div class="grid gap-6 lg:grid-cols-2">
                 <x-ui.card>
                     <form method="GET" action="{{ route('dashboard.profile.submissions.download') }}">

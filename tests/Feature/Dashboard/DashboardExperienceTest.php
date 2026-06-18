@@ -202,12 +202,13 @@ test('help and support page stores validated requests', function () {
     expect(SupportTicket::query()->where('user_id', $user->id)->where('reason', 'bug')->exists())->toBeTrue();
 });
 
-test('authenticated users are redirected away from homepage', function () {
+test('authenticated users can access the homepage', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)
         ->get(route('home'))
-        ->assertRedirect(route('dashboard'));
+        ->assertOk()
+        ->assertSee('The easiest way to collect dua requests');
 });
 
 test('upgrade and my submissions foundations render', function () {

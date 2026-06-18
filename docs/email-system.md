@@ -25,7 +25,7 @@ Salawat completion emails use salawat-specific copy (conveying salam to the Prop
 
 WordPress injects a per-list creator fundraising block into standard completion emails when `listMode = creator` and both `donationLink` and `donationNote` are set on the list.
 
-Laravel does **not** store per-list donation links or notes on `dua_lists`, so this block is intentionally omitted. Standard completion emails instead link to the global Donorbox and Trustpilot URLs. Salawat completion emails never included `{fundraising_content}` in the WordPress template either.
+Laravel mirrors this when `CREATOR_MODE_ENABLED=true` via `dua_lists.list_mode`, `donation_link`, and `donation_note`. When Creator Mode is disabled globally, those fields remain in the database but fundraising UI and email blocks are hidden; standard completion emails fall back to the global Donorbox and Trustpilot URLs. Salawat completion emails never include fundraising content in WordPress or Laravel.
 
 ## Notification flow
 

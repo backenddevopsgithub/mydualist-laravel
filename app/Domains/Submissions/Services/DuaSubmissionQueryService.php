@@ -54,13 +54,7 @@ class DuaSubmissionQueryService extends Service
      */
     public function statusCounts(DuaList $duaList): array
     {
-        return [
-            DuaSubmissionStatus::Pending->value => $duaList->submissions()->status(DuaSubmissionStatus::Pending)->count(),
-            DuaSubmissionStatus::Completed->value => $duaList->submissions()->status(DuaSubmissionStatus::Completed)->count(),
-            DuaSubmissionStatus::Hidden->value => $duaList->submissions()->status(DuaSubmissionStatus::Hidden)->count(),
-            DuaSubmissionStatus::Archived->value => $duaList->submissions()->status(DuaSubmissionStatus::Archived)->count(),
-            DuaSubmissionStatus::Reported->value => $duaList->submissions()->status(DuaSubmissionStatus::Reported)->count(),
-        ];
+        return $duaList->fresh()->statusCountMap();
     }
 
     /**

@@ -4,11 +4,14 @@ namespace App\Models;
 
 use App\Enums\DuaSubmissionStatus;
 use App\Enums\SubmissionLockReason;
+use App\Enums\UserRole;
+use App\Services\AnalyticsQueryService;
 use Database\Factories\DuaSubmissionFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class DuaSubmission extends Model
@@ -30,6 +33,7 @@ class DuaSubmission extends Model
      * @var list<string>
      */
     protected $fillable = [
+        'wp_post_id',
         'dua_list_id',
         'user_id',
         'first_name',
@@ -57,6 +61,12 @@ class DuaSubmission extends Model
         'reported_at',
         'report_reason',
         'report_note',
+        'report_count',
+        'status_before_report',
+        'moderated_by',
+        'moderated_at',
+        'moderation_action',
+        'moderation_notes',
     ];
 
     /**
@@ -79,6 +89,8 @@ class DuaSubmission extends Model
             'hidden_at' => 'datetime',
             'archived_at' => 'datetime',
             'reported_at' => 'datetime',
+            'report_count' => 'integer',
+            'moderated_at' => 'datetime',
         ];
     }
 
@@ -104,6 +116,27 @@ class DuaSubmission extends Model
     public function unlockPurchase(): BelongsTo
     {
         return $this->belongsTo(BillingPurchase::class, 'unlock_purchase_id');
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function moderatedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'moderated_by');
+    }
+
+    /**
+     * @return HasMany<DuaSubmissionModerationLog, $this>
+     */
+    public function moderationLogs(): HasMany
+    {
+        return $this->hasMany(DuaSubmissionModerationLog::class)->latest('created_at');
+    }
+
+    public function isReported(): bool
+    {
+        return $this->reported_at !== null;
     }
 
     public function isQuotaLocked(): bool
@@ -154,6 +187,51 @@ class DuaSubmission extends Model
         return $query
             ->whereNull('digest_sent_at')
             ->where('is_personal_dua', false);
+    }
+
+    /**
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
+    public function scopeReported(Builder $query): Builder
+    {
+        return $query->whereNotNull('reported_at');
+    }
+
+    /**
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
+    public function scopeAdminTest(Builder $query): Builder
+    {
+        $adminEmails = app(AnalyticsQueryService::class)->adminEmails();
+
+        return $query->where(function (Builder $inner) use ($adminEmails): void {
+            $inner->where('is_personal_dua', true)
+                ->orWhereHas('user', fn (Builder $userQuery) => $userQuery->where('role', UserRole::Admin));
+
+            if ($adminEmails->isNotEmpty()) {
+                $inner->orWhereIn('email', $adminEmails->all());
+            }
+        });
+    }
+
+    /**
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
+    public function scopeWhereNotAdminTest(Builder $query): Builder
+    {
+        $adminEmails = app(AnalyticsQueryService::class)->adminEmails();
+
+        return $query->where(function (Builder $inner) use ($adminEmails): void {
+            $inner->where('is_personal_dua', false)
+                ->whereDoesntHave('user', fn (Builder $userQuery) => $userQuery->where('role', UserRole::Admin));
+
+            if ($adminEmails->isNotEmpty()) {
+                $inner->whereNotIn('email', $adminEmails->all());
+            }
+        });
     }
 
     public function displayName(): string

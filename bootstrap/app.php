@@ -18,11 +18,13 @@ use App\Http\Middleware\EnsureEmailIsVerified;
 use App\Http\Middleware\EnsureUserHasRole;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\VerifyCsrfToken;
+use App\Support\ExceptionSanitizer;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -57,5 +59,25 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($request->is('api/*') || $request->expectsJson()) {
                 return $exception->render($request);
             }
+        });
+
+        $exceptions->render(function (\Throwable $exception, Request $request) {
+            if (app()->hasDebugModeEnabled() || $request->expectsJson() || $request->is('api/*')) {
+                return null;
+            }
+
+            if ($exception instanceof HttpExceptionInterface) {
+                return null;
+            }
+
+            report($exception);
+
+            if ($request->is('admin', 'admin/*')) {
+                return response()->view('errors.admin', [
+                    'message' => ExceptionSanitizer::forUser($exception),
+                ], 500);
+            }
+
+            return null;
         });
     })->create();

@@ -69,6 +69,23 @@
                         <div class="mb-6 rounded-2xl bg-emerald-50 px-5 py-4 text-sm font-bold text-emerald-900 ring-1 ring-emerald-900/10">
                             {{ session('submission_status') }}
                         </div>
+
+                        @if ($duaList->showsCreatorFeatures())
+                            <div id="creator" class="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-6 text-center">
+                                <h3 class="text-lg font-extrabold text-stone-950">Donate to {{ trim($duaList->user->first_name ?? 'the list owner') }}’s Cause</h3>
+                                @if (filled($duaList->donation_note))
+                                    <p class="mt-3 text-sm leading-7 text-stone-700">{{ $duaList->donation_note }}</p>
+                                @endif
+                                @if (filled($duaList->donation_link))
+                                    <a
+                                        href="{{ $duaList->trackableDonationUrl() }}"
+                                        class="mt-5 inline-flex items-center justify-center rounded-full bg-emerald-900 px-8 py-3 text-sm font-extrabold text-white transition hover:bg-emerald-800"
+                                    >
+                                        Support Now
+                                    </a>
+                                @endif
+                            </div>
+                        @endif
                     @endif
 
                     @if ($acceptsSubmissions)
@@ -350,5 +367,37 @@
         </main>
 
         @include('partials.public-legal-footer')
+
+        @if ($duaList->showsCreatorFeatures() && session('submission_status'))
+            <script>
+                document.addEventListener('DOMContentLoaded', () => {
+                    const target = document.getElementById('creator');
+                    if (! target || target.classList.contains('tracked')) {
+                        return;
+                    }
+
+                    const observer = new IntersectionObserver((entries) => {
+                        entries.forEach((entry) => {
+                            if (! entry.isIntersecting) {
+                                return;
+                            }
+
+                            observer.unobserve(target);
+                            target.classList.add('tracked');
+
+                            fetch(@js(route('fundraising.track-view', $duaList)), {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+                                    'Accept': 'application/json',
+                                },
+                            });
+                        });
+                    }, { threshold: 0.5 });
+
+                    observer.observe(target);
+                });
+            </script>
+        @endif
     </body>
 </html>

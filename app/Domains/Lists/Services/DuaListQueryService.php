@@ -12,22 +12,10 @@ use Illuminate\Support\Collection;
 
 class DuaListQueryService extends Service
 {
-    /**
-     * @return array<int, string>
-     */
-    private function submissionCountRelations(): array
-    {
-        return [
-            'submissions as submissions_count',
-            'submissions as completed_submissions_count' => fn ($query) => $query->where('status', DuaSubmissionStatus::Completed->value),
-        ];
-    }
-
     public function paginateForUser(User $user, string $status, int $perPage): LengthAwarePaginator
     {
         return $user->duaLists()
             ->where('status', $status)
-            ->withCount($this->submissionCountRelations())
             ->latest()
             ->paginate($perPage)
             ->withQueryString();
@@ -36,7 +24,6 @@ class DuaListQueryService extends Service
     public function findOwnedForUser(User $user, int $listId): DuaList
     {
         return $user->duaLists()
-            ->withCount($this->submissionCountRelations())
             ->whereKey($listId)
             ->firstOrFail();
     }
@@ -46,7 +33,6 @@ class DuaListQueryService extends Service
         return DuaList::query()
             ->where('slug', $slug)
             ->with('user')
-            ->withCount($this->submissionCountRelations())
             ->firstOrFail();
     }
 
@@ -56,6 +42,18 @@ class DuaListQueryService extends Service
     public function listsForProfile(User $user): Collection
     {
         return $user->duaLists()->latest()->get();
+    }
+
+    /**
+     * @return Collection<int, DuaList>
+     */
+    public function creatorListsForProfile(User $user): Collection
+    {
+        return $user->duaLists()
+            ->where('list_mode', \App\Support\CreatorMode::MODE_CREATOR)
+            ->where('status', DuaList::STATUS_ACTIVE)
+            ->latest()
+            ->get();
     }
 
     /**

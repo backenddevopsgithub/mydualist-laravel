@@ -72,9 +72,11 @@ class SendWhatsAppCompletionNotificationJob implements ShouldQueue
             ? (string) $owner->first_name
             : 'Someone';
 
-        $templateSid = $submission->duaList?->occasion === 'salawat'
-            ? (string) config('services.twilio.salawat_template_sid')
-            : (string) config('services.twilio.completion_template_sid');
+        $templateSid = match (true) {
+            $submission->duaList?->showsCreatorFeatures() => (string) config('services.twilio.creator_completion_template_sid'),
+            $submission->duaList?->occasion === 'salawat' => (string) config('services.twilio.salawat_template_sid'),
+            default => (string) config('services.twilio.completion_template_sid'),
+        };
 
         if ($templateSid === '') {
             Cache::forget($cacheKey);
@@ -83,10 +85,18 @@ class SendWhatsAppCompletionNotificationJob implements ShouldQueue
         }
 
         try {
-            $twilio->sendCompletion($normalizedPhone, $templateSid, [
-                '1' => $submitterName,
-                '2' => $ownerName,
-            ]);
+            $variables = $submission->duaList?->showsCreatorFeatures()
+                ? [
+                    '1' => $submitterName,
+                    '2' => $ownerName,
+                    '3' => (string) $submission->duaList->donation_link,
+                ]
+                : [
+                    '1' => $submitterName,
+                    '2' => $ownerName,
+                ];
+
+            $twilio->sendCompletion($normalizedPhone, $templateSid, $variables);
         } catch (Throwable $exception) {
             Cache::forget($cacheKey);
 

@@ -10,6 +10,7 @@ use App\Models\DuaSubmission;
 use App\Models\User;
 use App\Models\UserEntitlement;
 use App\Services\Service;
+use App\Support\Impersonation;
 
 class UserEntitlementService extends Service
 {
@@ -104,6 +105,8 @@ class UserEntitlementService extends Service
      */
     public function grantPremium(User $user, string $source, string $reference, array $metadata = []): UserEntitlement
     {
+        Impersonation::ensureSensitiveActionAllowed();
+
         return UserEntitlement::query()->updateOrCreate(
             [
                 'key' => UserEntitlement::KEY_PREMIUM,

@@ -44,6 +44,16 @@ class SqlDumpReader
      */
     private array $taxonomyIdsByPostId = [];
 
+    /**
+     * @var array<int, list<array{order_item_id: int, order_item_type: string}>>
+     */
+    private array $orderItemsByOrderId = [];
+
+    /**
+     * @var array<int, array<string, string>>
+     */
+    private array $orderItemMetaByItemId = [];
+
     public function __construct(
         private readonly string $path,
         private readonly string $prefix = 'wp_',
@@ -66,6 +76,10 @@ class SqlDumpReader
             SqlInsertParser::parseTableRows($sql, $this->prefix.'terms'),
             SqlInsertParser::parseTableRows($sql, $this->prefix.'term_taxonomy'),
             SqlInsertParser::parseTableRows($sql, $this->prefix.'term_relationships'),
+        );
+        $this->indexWooCommerce(
+            SqlInsertParser::parseTableRows($sql, $this->prefix.'woocommerce_order_items'),
+            SqlInsertParser::parseTableRows($sql, $this->prefix.'woocommerce_order_itemmeta'),
         );
     }
 
@@ -121,6 +135,22 @@ class SqlDumpReader
         }
 
         return null;
+    }
+
+    /**
+     * @return list<array{order_item_id: int, order_item_type: string}>
+     */
+    public function orderItemsForOrder(int $orderId): array
+    {
+        return $this->orderItemsByOrderId[$orderId] ?? [];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function orderItemMeta(int $orderItemId): array
+    {
+        return $this->orderItemMetaByItemId[$orderItemId] ?? [];
     }
 
     /**
@@ -288,6 +318,45 @@ class SqlDumpReader
             }
 
             $this->taxonomyIdsByPostId[$objectId][] = $taxonomyId;
+        }
+    }
+
+    /**
+     * @param  list<array<string, string|null>|list<string|null>>  $itemRows
+     * @param  list<array<string, string|null>|list<string|null>>  $itemMetaRows
+     */
+    private function indexWooCommerce(array $itemRows, array $itemMetaRows): void
+    {
+        foreach ($itemRows as $row) {
+            if (isset($row['order_id'], $row['order_item_id'])) {
+                $orderId = (int) $row['order_id'];
+                $this->orderItemsByOrderId[$orderId][] = [
+                    'order_item_id' => (int) $row['order_item_id'],
+                    'order_item_type' => (string) ($row['order_item_type'] ?? 'line_item'),
+                ];
+
+                continue;
+            }
+
+            if (isset($row[0], $row[1])) {
+                $orderId = (int) $row[1];
+                $this->orderItemsByOrderId[$orderId][] = [
+                    'order_item_id' => (int) $row[0],
+                    'order_item_type' => (string) ($row[2] ?? 'line_item'),
+                ];
+            }
+        }
+
+        foreach ($itemMetaRows as $row) {
+            if (isset($row['order_item_id'], $row['meta_key'])) {
+                $this->orderItemMetaByItemId[(int) $row['order_item_id']][(string) $row['meta_key']] = (string) ($row['meta_value'] ?? '');
+
+                continue;
+            }
+
+            if (isset($row[1], $row[2])) {
+                $this->orderItemMetaByItemId[(int) $row[1]][(string) $row[2]] = (string) ($row[3] ?? '');
+            }
         }
     }
 }

@@ -36,6 +36,17 @@ class DuaSubmissionFactory extends Factory
         ];
     }
 
+    public function reported(): static
+    {
+        return $this->state(fn (): array => [
+            'status' => DuaSubmission::STATUS_REPORTED,
+            'reported_at' => now(),
+            'report_reason' => 'spam',
+            'report_count' => 1,
+            'status_before_report' => DuaSubmission::STATUS_PENDING,
+        ]);
+    }
+
     public function personal(): static
     {
         return $this->state(fn (): array => [

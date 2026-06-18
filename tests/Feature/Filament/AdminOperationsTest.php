@@ -33,11 +33,14 @@ test('admin operations resources render core management pages', function () {
         '/admin/users',
         '/admin/dua-lists',
         '/admin/dua-submissions',
+        '/admin/reported-duas',
         '/admin/cms-pages',
         '/admin/seo-metadatas',
         '/admin/dua-suggestions',
         '/admin/support-tickets',
         '/admin/stripe-payments',
+        '/admin/billing-purchases',
+        '/admin/entitlement-grants',
         '/admin/community-duas',
     ];
 

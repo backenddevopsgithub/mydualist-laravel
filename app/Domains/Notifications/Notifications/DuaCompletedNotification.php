@@ -4,6 +4,7 @@ namespace App\Domains\Notifications\Notifications;
 
 use App\Domains\Notifications\Support\EmailPresentation;
 use App\Models\DuaSubmission;
+use App\Support\TrackableDonationLink;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -51,6 +52,13 @@ class DuaCompletedNotification extends Notification implements ShouldQueue
         if (! $isSalawat) {
             $viewData['occasionLabel'] = $duaList->occasionLabel();
             $viewData['duaMessage'] = $this->submission->content;
+
+            if ($duaList->hasFundraisingContent()) {
+                $viewData['fundraisingContent'] = [
+                    'note' => (string) $duaList->donation_note,
+                    'url' => TrackableDonationLink::forList($duaList, (string) $duaList->donation_link),
+                ];
+            }
         }
 
         return (new MailMessage)

@@ -48,8 +48,16 @@ return [
         'whatsapp_from' => env('TWILIO_WHATSAPP_FROM'),
         'otp_template_sid' => env('TWILIO_OTP_TEMPLATE_SID'),
         'completion_template_sid' => env('TWILIO_COMPLETION_TEMPLATE_SID'),
+        'creator_completion_template_sid' => env('TWILIO_CREATOR_COMPLETION_TEMPLATE_SID'),
         'salawat_template_sid' => env('TWILIO_SALAWAT_TEMPLATE_SID'),
         'test_otp' => env('TWILIO_TEST_OTP'),
+    ],
+
+    'mailchimp' => [
+        'enabled' => env('MAILCHIMP_ENABLED', false),
+        'api_key' => env('MAILCHIMP_API_KEY'),
+        'server_prefix' => env('MAILCHIMP_SERVER_PREFIX'),
+        'audience_id' => env('MAILCHIMP_AUDIENCE_ID'),
     ],
 
 ];

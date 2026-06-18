@@ -9,6 +9,7 @@ use App\Domains\Billing\Services\StripeCheckoutService;
 use App\Http\Requests\Community\StoreCommunityDuaRequest;
 use App\Models\BillingPurchase;
 use App\Models\StripePayment;
+use App\Support\Seo\SeoPresenter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -22,6 +23,11 @@ class CommunityDuaController extends Controller
         return view('community-dua.create', [
             'communityDuaPrice' => config('mydualist.billing.community_dua_price', '10.00'),
             'currency' => strtoupper((string) config('mydualist.billing.premium_currency', 'gbp')),
+            'seo' => SeoPresenter::forRoute(
+                'community-dua.create',
+                'Submit a Community Dua',
+                'Share a community dua request with pilgrims on My Dua List.',
+            ),
         ]);
     }
 

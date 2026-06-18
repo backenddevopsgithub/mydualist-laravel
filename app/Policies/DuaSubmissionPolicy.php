@@ -35,4 +35,14 @@ class DuaSubmissionPolicy
     {
         return $this->manage($user, $submission);
     }
+
+    public function moderateAny(User $user): bool
+    {
+        return $user->isAdmin();
+    }
+
+    public function moderate(User $user, DuaSubmission $submission): bool
+    {
+        return $user->isAdmin();
+    }
 }

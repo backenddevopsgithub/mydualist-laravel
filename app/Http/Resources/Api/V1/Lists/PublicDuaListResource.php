@@ -26,8 +26,8 @@ class PublicDuaListResource extends DuaListResource
             'public_url' => $this->publicUrl(),
             'accepts_submissions' => $this->acceptsSubmissions(),
             'closed_reason' => $this->closedReason(),
-            'submissions_count' => $this->submissions_count ?? $this->submissions()->count(),
-            'completed_submissions_count' => $this->completed_submissions_count ?? 0,
+            'submissions_count' => (int) $this->submissions_count,
+            'completed_submissions_count' => (int) $this->completed_submissions_count,
             'owner' => [
                 'name' => $this->user?->name,
             ],

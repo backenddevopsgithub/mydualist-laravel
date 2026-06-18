@@ -3,8 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="description" content="Browse dua resources, guides, and reminders from My Dua List.">
-        <title>Dua Resources - My Dua List</title>
+        <x-seo.meta :seo="$seo" />
         @if ($posts->previousPageUrl())
             <link rel="prev" href="{{ $posts->previousPageUrl() }}">
         @endif

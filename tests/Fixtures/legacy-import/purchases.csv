@@ -1,0 +1,4 @@
+wp_order_id,product_external_id,customer_wp_legacy_id,list_wp_post_id,order_total,currency,created_at
+5001,728,42,301,2.00,gbp,2024-02-01 10:00:00
+5002,914,42,,7.99,gbp,2024-02-02 11:00:00
+5003,3211,,,10.00,gbp,2024-02-03 12:00:00

@@ -3,18 +3,22 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Domains\Billing\Services\UserEntitlementService;
+use App\Support\CreatorMode;
 use App\Domains\Lists\Services\DuaListQueryService;
 use App\Domains\Profile\Actions\ChangeUserPasswordAction;
 use App\Domains\Profile\Actions\ExportDuaSubmissionsAction;
+use App\Domains\Profile\Actions\UpdateCreatorModeSettingsAction;
 use App\Domains\Profile\Actions\UpdateListSettingsAction;
 use App\Domains\Profile\Actions\UpdateUserProfileAction;
 use App\Domains\Profile\Actions\UploadListImageAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Profile\DownloadSubmissionsRequest;
+use App\Http\Requests\Profile\UpdateCreatorModeSettingsRequest;
 use App\Http\Requests\Profile\UpdateListSettingsRequest;
 use App\Http\Requests\Profile\UpdatePasswordRequest;
 use App\Http\Requests\Profile\UpdateProfileRequest;
 use App\Http\Requests\Profile\UploadListImageRequest;
+use App\Support\Impersonation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -31,6 +35,9 @@ class ProfileController extends Controller
             'user' => $user,
             'currentPlan' => $entitlements->planName($user),
             'duaLists' => $lists->listsForProfile($user),
+            'creatorLists' => CreatorMode::enabled()
+                ? $lists->creatorListsForProfile($user)
+                : collect(),
         ]);
     }
 
@@ -43,6 +50,8 @@ class ProfileController extends Controller
 
     public function password(UpdatePasswordRequest $request, ChangeUserPasswordAction $action): RedirectResponse
     {
+        Impersonation::ensureSensitiveActionAllowed();
+
         ($action)($request->user(), $request->validated());
 
         return redirect()->route('dashboard.profile')->with('status', 'Password changed successfully.');
@@ -55,6 +64,17 @@ class ProfileController extends Controller
         return redirect()
             ->route('dashboard.profile', ['tab' => 'list-settings'])
             ->with('status', 'List settings updated successfully.');
+    }
+
+    public function creatorModeSettings(
+        UpdateCreatorModeSettingsRequest $request,
+        UpdateCreatorModeSettingsAction $action,
+    ): RedirectResponse {
+        ($action)($request->user(), $request->validated());
+
+        return redirect()
+            ->route('dashboard.profile', ['tab' => 'list-settings'])
+            ->with('status', 'Creator Mode settings updated successfully.');
     }
 
     public function listImage(UploadListImageRequest $request, UploadListImageAction $action): RedirectResponse

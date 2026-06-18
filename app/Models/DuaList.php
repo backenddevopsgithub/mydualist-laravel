@@ -2,7 +2,10 @@
 
 namespace App\Models;
 
+use App\Enums\DuaSubmissionStatus;
 use App\Support\DuaListOccasions;
+use App\Support\CreatorMode;
+use App\Support\TrackableDonationLink;
 use Database\Factories\DuaListFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -34,6 +37,11 @@ class DuaList extends Model
         'start_date',
         'end_date',
         'cover_image_path',
+        'list_mode',
+        'donation_link',
+        'donation_note',
+        'insights_views',
+        'insights_clicks',
         'dua_limit_per_person',
         'display_order',
         'email_frequency',
@@ -62,7 +70,54 @@ class DuaList extends Model
             'no_activity_reminder_sent_at' => 'datetime',
             'closing_soon_reminder_sent_at' => 'datetime',
             'list_image_reminder_sent_at' => 'datetime',
+            'insights_views' => 'integer',
+            'insights_clicks' => 'integer',
+            'submissions_count' => 'integer',
+            'pending_submissions_count' => 'integer',
+            'completed_submissions_count' => 'integer',
+            'hidden_submissions_count' => 'integer',
+            'archived_submissions_count' => 'integer',
+            'reported_submissions_count' => 'integer',
+            'non_personal_submissions_count' => 'integer',
         ];
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    public function statusCountMap(): array
+    {
+        return [
+            DuaSubmissionStatus::Pending->value => (int) $this->pending_submissions_count,
+            DuaSubmissionStatus::Completed->value => (int) $this->completed_submissions_count,
+            DuaSubmissionStatus::Hidden->value => (int) $this->hidden_submissions_count,
+            DuaSubmissionStatus::Archived->value => (int) $this->archived_submissions_count,
+            DuaSubmissionStatus::Reported->value => (int) $this->reported_submissions_count,
+        ];
+    }
+
+    public function isCreatorList(): bool
+    {
+        return CreatorMode::isCreatorList($this);
+    }
+
+    public function showsCreatorFeatures(): bool
+    {
+        return CreatorMode::showsCreatorFeatures($this);
+    }
+
+    public function hasFundraisingContent(): bool
+    {
+        return CreatorMode::hasFundraisingContent($this);
+    }
+
+    public function trackableDonationUrl(): ?string
+    {
+        if (! filled($this->donation_link)) {
+            return null;
+        }
+
+        return TrackableDonationLink::forList($this, (string) $this->donation_link);
     }
 
     /**

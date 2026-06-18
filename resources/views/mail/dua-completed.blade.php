@@ -22,10 +22,20 @@
         <p style="margin-bottom: 0;">{{ $duaMessage }}</p>
     </div>
 
-    <p class="muted" style="text-align: center;">Help us facilitate more duas by making a donation or leaving a review.</p>
+    @if (! empty($fundraisingContent))
+        <div class="panel" style="text-align: center;">
+            <h5 style="margin-top: 0;">Why not show thanks by donating to {{ $duaAuthor }}’s latest cause?</h5>
+            <p><strong>Note from {{ $duaAuthor }}:</strong> {{ $fundraisingContent['note'] }}</p>
+            <p style="margin-bottom: 0;">
+                <a href="{{ $fundraisingContent['url'] }}" class="button">Support Now</a>
+            </p>
+        </div>
+    @else
+        <p class="muted" style="text-align: center;">Help us facilitate more duas by making a donation or leaving a review.</p>
 
-    <p style="text-align: center;">
-        <a href="https://donorbox.org/pilgrim-2?default_interval=m" class="button">Make a donation</a>
-        <a href="https://www.trustpilot.com/evaluate/mydualist.com" class="button button-secondary">Leave a review</a>
-    </p>
+        <p style="text-align: center;">
+            <a href="https://donorbox.org/pilgrim-2?default_interval=m" class="button">Make a donation</a>
+            <a href="https://www.trustpilot.com/evaluate/mydualist.com" class="button button-secondary">Leave a review</a>
+        </p>
+    @endif
 @endsection

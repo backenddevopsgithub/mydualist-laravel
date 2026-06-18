@@ -21,9 +21,9 @@ class CommunityDuaResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-users';
 
-    protected static ?string $navigationGroup = 'Moderation';
+    protected static ?string $navigationGroup = 'Operations';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 6;
 
     protected static ?string $navigationLabel = 'Community Duas';
 

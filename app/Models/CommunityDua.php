@@ -21,6 +21,7 @@ class CommunityDua extends Model
      * @var list<string>
      */
     protected $fillable = [
+        'wp_post_id',
         'first_name',
         'last_name',
         'email',

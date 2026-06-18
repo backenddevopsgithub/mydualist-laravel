@@ -8,10 +8,13 @@
     "require": {
         "php": "^8.2",
         "filament/filament": "^3.2",
+        "filament/spatie-laravel-media-library-plugin": "^3.3",
         "hautelook/phpass": "^0.3.6",
+        "lab404/laravel-impersonate": "^1.7",
         "laravel/framework": "^11.31",
         "laravel/sanctum": "^4.3",
         "laravel/tinker": "^2.9",
+        "spatie/laravel-medialibrary": "^11.23",
         "stripe/stripe-php": "^20.2"
     },
     "require-dev": {

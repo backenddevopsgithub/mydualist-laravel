@@ -22,6 +22,11 @@ readonly class WordPressListRecord
         public ?Carbon $publishedAt,
         public bool $isTrashed,
         public array $ownerPreferences,
+        public ?string $listMode = null,
+        public ?string $donationLink = null,
+        public ?string $donationNote = null,
+        public int $insightsViews = 0,
+        public int $insightsClicks = 0,
         public ?Carbon $createdAt,
         public ?Carbon $updatedAt,
     ) {}

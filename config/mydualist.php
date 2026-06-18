@@ -34,6 +34,29 @@ return [
         'test_otp' => env('MYDUALIST_TEST_OTP', '0000'),
     ],
 
+    'creator_mode' => [
+        'enabled' => env('CREATOR_MODE_ENABLED', false),
+    ],
+
+    'moderation' => [
+        'auto_hide_threshold' => env('MYDUALIST_MODERATION_AUTO_HIDE_THRESHOLD') !== null
+            ? (int) env('MYDUALIST_MODERATION_AUTO_HIDE_THRESHOLD')
+            : null,
+    ],
+
+    'admin_exports' => [
+        'pending_timeout_minutes' => (int) env('ADMIN_EXPORT_PENDING_TIMEOUT_MINUTES', 15),
+        'processing_timeout_minutes' => (int) env('ADMIN_EXPORT_PROCESSING_TIMEOUT_MINUTES', 35),
+        'retention_days' => (int) env('ADMIN_EXPORT_RETENTION_DAYS', 7),
+        'rate_limit_per_hour' => (int) env('ADMIN_EXPORT_RATE_LIMIT_PER_HOUR', 10),
+        'download_url_ttl_days' => (int) env('ADMIN_EXPORT_DOWNLOAD_URL_TTL_DAYS', 7),
+    ],
+
+    'super_admin_emails' => array_values(array_filter(array_map(
+        static fn (string $email): string => mb_strtolower(trim($email)),
+        explode(',', (string) env('MYDUALIST_SUPER_ADMIN_EMAILS', '')),
+    ))),
+
     'notifications' => [
         'daily_digest_at' => env('MYDUALIST_DAILY_DIGEST_AT', '23:59'),
         'daily_digest_list_chunk' => 50,
@@ -49,6 +72,10 @@ return [
             'users_report_path' => storage_path('app/legacy-import-users-report.json'),
             'suggestions_report_path' => storage_path('app/legacy-import-suggestions-report.json'),
             'lists_report_path' => storage_path('app/legacy-import-lists-report.json'),
+            'purchases_report_path' => storage_path('app/legacy-import-purchases-report.json'),
+            'submissions_report_path' => storage_path('app/legacy-import-submissions-report.json'),
+            'community_duas_report_path' => storage_path('app/legacy-import-community-duas-report.json'),
+            'validate_report_path' => storage_path('app/legacy-import-validate-report.json'),
         ],
     ],
 

@@ -57,6 +57,8 @@ class SqlListImportSource implements ListImportSource
         $isActive = ($meta['status'] ?? '1') === '1';
         $postDate = WordPressValueMapper::parseDateTime($post['post_date'] ?? null);
 
+        $listMode = WordPressValueMapper::nullableString($meta['listMode'] ?? null);
+
         return new WordPressListRecord(
             wpPostId: $postId,
             ownerWpLegacyId: (int) $meta['user'],
@@ -70,6 +72,11 @@ class SqlListImportSource implements ListImportSource
             publishedAt: $isActive ? ($postDate ?? now()) : null,
             isTrashed: ($post['post_status'] ?? '') === 'trash',
             ownerPreferences: WordPressValueMapper::ownerListPreferences($ownerMeta),
+            listMode: $listMode === 'creator' ? 'creator' : null,
+            donationLink: WordPressValueMapper::nullableString($meta['donationLink'] ?? null),
+            donationNote: WordPressValueMapper::nullableString($meta['donationNote'] ?? null),
+            insightsViews: (int) ($meta['_insights_views'] ?? 0),
+            insightsClicks: (int) ($meta['_insights_clicks'] ?? 0),
             createdAt: $postDate,
             updatedAt: WordPressValueMapper::parseDateTime($post['post_modified'] ?? null),
         );
