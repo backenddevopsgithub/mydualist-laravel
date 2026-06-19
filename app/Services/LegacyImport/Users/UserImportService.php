@@ -53,64 +53,140 @@ class UserImportService extends Service
         $existingByLegacy = User::query()->where('wp_legacy_id', $record->wpLegacyId)->first();
         $existingByEmail = User::query()->where('email', $record->email)->first();
 
-        if (
-            $existingByEmail !== null
-            && $existingByEmail->wp_legacy_id !== null
-            && $existingByEmail->wp_legacy_id !== $record->wpLegacyId
-        ) {
+        if ($this->hasConflict($record, $existingByLegacy, $existingByEmail)) {
             $report->addFailed($record->summary(), 'Email already belongs to a different wp_legacy_id.');
 
             return;
         }
 
+        $existingUser = $existingByLegacy ?? $existingByEmail;
+        $isNew = $existingUser === null;
+        $isEmailReconciliation = ! $isNew && $existingByLegacy === null;
+
         if ($dryRun) {
-            if ($existingByLegacy !== null || $existingByEmail !== null) {
-                $report->addUpdated($record->summary());
-            } else {
+            if ($isNew) {
                 $report->addImported($record->summary());
+            } elseif ($isEmailReconciliation) {
+                $report->addReconciled($record->summary());
+            } else {
+                $report->addUpdated($record->summary());
             }
 
             return;
         }
 
-        DB::transaction(function () use ($record, $report, $existingByLegacy, $existingByEmail): void {
-            $name = trim(implode(' ', array_filter([$record->firstName, $record->lastName])));
-
-            if ($name === '') {
-                $name = $record->displayName ?: $record->email;
-            }
-
-            $attributes = [
-                'email' => $record->email,
-                'name' => $name,
-                'first_name' => $record->firstName,
-                'last_name' => $record->lastName,
-                'gender' => $record->gender,
-                'role' => $record->role,
-                'status' => UserStatus::Active,
-                'wp_password_hash' => $record->wpPasswordHash,
-                'email_verified_at' => $record->emailVerifiedAt,
-            ];
-
-            if ($existingByLegacy === null && $existingByEmail === null) {
-                $attributes['password'] = Str::password(32);
-            }
-
-            if ($record->registeredAt !== null) {
-                $attributes['created_at'] = $record->registeredAt;
-                $attributes['updated_at'] = $record->registeredAt;
-            }
-
-            User::query()->updateOrCreate(
-                ['wp_legacy_id' => $record->wpLegacyId],
-                $attributes,
-            );
-
-            if ($existingByLegacy === null && $existingByEmail === null) {
+        DB::transaction(function () use ($record, $report, $existingUser, $isNew, $isEmailReconciliation): void {
+            if ($isNew) {
+                User::query()->create($this->attributesForNewUser($record));
                 $report->addImported($record->summary());
+
+                return;
+            }
+
+            $this->applyImportToExistingUser($existingUser, $record);
+
+            if ($isEmailReconciliation) {
+                $report->addReconciled($record->summary());
             } else {
                 $report->addUpdated($record->summary());
             }
         });
+    }
+
+    private function hasConflict(
+        WordPressUserRecord $record,
+        ?User $existingByLegacy,
+        ?User $existingByEmail,
+    ): bool {
+        if (
+            $existingByLegacy !== null
+            && $existingByEmail !== null
+            && $existingByLegacy->id !== $existingByEmail->id
+        ) {
+            return true;
+        }
+
+        return $existingByEmail !== null
+            && $existingByEmail->wp_legacy_id !== null
+            && $existingByEmail->wp_legacy_id !== $record->wpLegacyId
+            && ($existingByLegacy === null || $existingByLegacy->id !== $existingByEmail->id);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function attributesForNewUser(WordPressUserRecord $record): array
+    {
+        $attributes = [
+            'email' => $record->email,
+            'wp_legacy_id' => $record->wpLegacyId,
+            'wp_password_hash' => $record->wpPasswordHash,
+            'first_name' => $record->firstName,
+            'last_name' => $record->lastName,
+            'gender' => $record->gender,
+            'role' => $record->role,
+            'status' => UserStatus::Active,
+            'name' => $this->resolveName($record),
+            'email_verified_at' => $record->emailVerifiedAt,
+            'password' => Str::password(32),
+        ];
+
+        if ($record->registeredAt !== null) {
+            $attributes['created_at'] = $record->registeredAt;
+            $attributes['updated_at'] = $record->registeredAt;
+        }
+
+        return $attributes;
+    }
+
+    private function applyImportToExistingUser(User $user, WordPressUserRecord $record): void
+    {
+        $attributes = [
+            'email' => $record->email,
+            'wp_legacy_id' => $record->wpLegacyId,
+            'wp_password_hash' => $record->wpPasswordHash,
+        ];
+
+        if ($this->shouldOverrideRoleOnReconcile()) {
+            $attributes['role'] = $record->role;
+        }
+
+        if (blank($user->first_name) && filled($record->firstName)) {
+            $attributes['first_name'] = $record->firstName;
+        }
+
+        if (blank($user->last_name) && filled($record->lastName)) {
+            $attributes['last_name'] = $record->lastName;
+        }
+
+        if (blank($user->gender) && filled($record->gender)) {
+            $attributes['gender'] = $record->gender;
+        }
+
+        if (blank($user->name)) {
+            $attributes['name'] = $this->resolveName($record);
+        }
+
+        if ($user->email_verified_at === null && $record->emailVerifiedAt !== null) {
+            $attributes['email_verified_at'] = $record->emailVerifiedAt;
+        }
+
+        $user->fill($attributes)->save();
+    }
+
+    private function resolveName(WordPressUserRecord $record): string
+    {
+        $name = trim(implode(' ', array_filter([$record->firstName, $record->lastName])));
+
+        if ($name === '') {
+            $name = $record->displayName ?: $record->email;
+        }
+
+        return $name;
+    }
+
+    private function shouldOverrideRoleOnReconcile(): bool
+    {
+        return (bool) config('mydualist.legacy.import.override_roles_on_reconcile', false);
     }
 }

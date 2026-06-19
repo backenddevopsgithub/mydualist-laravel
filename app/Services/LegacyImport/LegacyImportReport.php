@@ -21,6 +21,11 @@ class LegacyImportReport
     /**
      * @var list<array<string, mixed>>
      */
+    public array $reconciled = [];
+
+    /**
+     * @var list<array<string, mixed>>
+     */
     public array $failed = [];
 
     /**
@@ -59,6 +64,14 @@ class LegacyImportReport
         $this->updated[] = $summary;
     }
 
+    /**
+     * @param  array<string, mixed>  $summary
+     */
+    public function addReconciled(array $summary): void
+    {
+        $this->reconciled[] = $summary;
+    }
+
     public function addFailed(?array $summary, string $reason): void
     {
         $this->failed[] = array_merge($summary ?? [], ['reason' => $reason]);
@@ -91,12 +104,14 @@ class LegacyImportReport
             'counts' => [
                 'imported' => count($this->imported),
                 'updated' => count($this->updated),
+                'reconciled' => count($this->reconciled),
                 'failed' => count($this->failed),
                 'skipped' => count($this->skipped),
                 'missing_images' => count($this->missingImages),
             ],
             'imported' => $this->imported,
             'updated' => $this->updated,
+            'reconciled' => $this->reconciled,
             'failed' => $this->failed,
             'skipped' => $this->skipped,
             'missing_images' => $this->missingImages,

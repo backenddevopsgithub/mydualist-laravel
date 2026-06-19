@@ -109,6 +109,10 @@ return [
             'submissions_report_path' => storage_path('app/legacy-import-submissions-report.json'),
             'community_duas_report_path' => storage_path('app/legacy-import-community-duas-report.json'),
             'validate_report_path' => storage_path('app/legacy-import-validate-report.json'),
+            'override_roles_on_reconcile' => filter_var(
+                env('LEGACY_IMPORT_OVERRIDE_ROLES_ON_RECONCILE', false),
+                FILTER_VALIDATE_BOOL,
+            ),
         ],
     ],
 
