@@ -4,18 +4,18 @@ namespace App\Services\LegacyImport\Support;
 
 class LegacyWhatsAppPhoneParser
 {
+    public const WHATSAPP_COUNTRY_CODE_MAX_LENGTH = 6;
+
+    public const WHATSAPP_PHONE_MAX_LENGTH = 30;
+
     /**
      * @return array{whatsapp_country_code: ?string, whatsapp_phone: ?string, is_valid: bool}
      */
-    public static function parse(?string $rawPhone): array
+    public static function parse(mixed $rawPhone): array
     {
+        $rawPhone = WordPressValueMapper::legacyPhone($rawPhone);
+
         if ($rawPhone === null) {
-            return self::empty();
-        }
-
-        $rawPhone = trim($rawPhone);
-
-        if ($rawPhone === '' || strtolower($rawPhone) === 'null') {
             return self::empty();
         }
 
@@ -26,13 +26,36 @@ class LegacyWhatsAppPhoneParser
         }
 
         if (str_starts_with($rawPhone, '+') || strlen($digits) > 10) {
-            return self::fromE164Digits($digits);
+            $parsed = self::fromE164Digits($digits);
+
+            if ($parsed['whatsapp_phone'] !== null || $parsed['whatsapp_country_code'] !== null) {
+                return self::normalizeParsed($parsed);
+            }
+        } else {
+            return self::normalizeParsed([
+                'whatsapp_country_code' => null,
+                'whatsapp_phone' => $digits,
+                'is_valid' => strlen($digits) >= 8,
+            ]);
         }
 
-        return [
+        return self::normalizeParsed([
             'whatsapp_country_code' => null,
             'whatsapp_phone' => $digits,
-            'is_valid' => strlen($digits) >= 8,
+            'is_valid' => false,
+        ]);
+    }
+
+    /**
+     * @param  array{whatsapp_country_code: ?string, whatsapp_phone: ?string, is_valid: bool}  $parsed
+     * @return array{whatsapp_country_code: ?string, whatsapp_phone: ?string, is_valid: bool}
+     */
+    private static function normalizeParsed(array $parsed): array
+    {
+        return [
+            'whatsapp_country_code' => self::truncate($parsed['whatsapp_country_code'], self::WHATSAPP_COUNTRY_CODE_MAX_LENGTH),
+            'whatsapp_phone' => self::truncate($parsed['whatsapp_phone'], self::WHATSAPP_PHONE_MAX_LENGTH),
+            'is_valid' => $parsed['is_valid'],
         ];
     }
 
@@ -83,6 +106,15 @@ class LegacyWhatsAppPhoneParser
         }
 
         return self::empty();
+    }
+
+    private static function truncate(?string $value, int $maxLength): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return strlen($value) > $maxLength ? substr($value, 0, $maxLength) : $value;
     }
 
     /**

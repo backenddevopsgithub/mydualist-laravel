@@ -86,7 +86,7 @@ class CsvSubmissionImportSource implements SubmissionImportSource
             visibility: (string) ($data['visibility'] ?? $data['_visibility'] ?? 'visible'),
             status: $data['status'] ?? $data['_status'] ?? 0,
             completedAt: $data['completed_at'] ?? $data['_completed_at'] ?? null,
-            rawPhone: WordPressValueMapper::nullableString($data['phone'] ?? $data['_phone'] ?? null),
+            rawPhone: WordPressValueMapper::legacyPhone($data['phone'] ?? $data['_phone'] ?? null),
             createdAt: WordPressValueMapper::parseDateTime($data['created_at'] ?? $data['post_date'] ?? null),
             fromLegacyArray: WordPressSubmissionStatusMapper::isTruthy($data['from_legacy_array'] ?? false),
         );

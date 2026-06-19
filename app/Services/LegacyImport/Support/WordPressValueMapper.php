@@ -134,6 +134,29 @@ class WordPressValueMapper
         return $value === '' ? null : $value;
     }
 
+    public static function legacyPhone(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_int($value) || is_float($value)) {
+            $value = sprintf('%.0f', $value);
+        }
+
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $value = trim($value);
+
+        if ($value === '' || strtolower($value) === 'null') {
+            return null;
+        }
+
+        return $value;
+    }
+
     /**
      * @param  array<string, string>  $meta
      * @return array{dua_limit_per_person: ?int, display_order: string, email_frequency: string}

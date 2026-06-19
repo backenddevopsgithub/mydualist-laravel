@@ -97,7 +97,7 @@ class DatabaseSubmissionImportSource implements SubmissionImportSource
             visibility: $meta['_visibility'] ?? 'visible',
             status: $meta['_status'] ?? 0,
             completedAt: $meta['_completed_at'] ?? null,
-            rawPhone: WordPressValueMapper::nullableString($meta['_phone'] ?? null),
+            rawPhone: WordPressValueMapper::legacyPhone($meta['_phone'] ?? null),
             createdAt: WordPressValueMapper::parseDateTime($postDate),
         );
     }

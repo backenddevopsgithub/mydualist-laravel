@@ -43,7 +43,7 @@ class LegacySubmissionArrayMigrator
                 visibility: 'visible',
                 status: $submission['status'] ?? 0,
                 completedAt: null,
-                rawPhone: WordPressValueMapper::nullableString($submission['phone'] ?? null),
+                rawPhone: WordPressValueMapper::legacyPhone($submission['phone'] ?? null),
                 createdAt: null,
                 fromLegacyArray: true,
             );
