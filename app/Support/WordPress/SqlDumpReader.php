@@ -54,6 +54,21 @@ class SqlDumpReader
      */
     private array $orderItemMetaByItemId = [];
 
+    /**
+     * @var array<int, array<string, string|null>>
+     */
+    private array $wcOrdersById = [];
+
+    /**
+     * @var array<int, array<string, string>>
+     */
+    private array $wcOrderMetaByOrderId = [];
+
+    /**
+     * @var array<int, int>
+     */
+    private array $wcProductIdByOrderId = [];
+
     public function __construct(
         private readonly string $path,
         private readonly string $prefix = 'wp_',
@@ -80,6 +95,11 @@ class SqlDumpReader
         $this->indexWooCommerce(
             SqlInsertParser::parseTableRows($sql, $this->prefix.'woocommerce_order_items'),
             SqlInsertParser::parseTableRows($sql, $this->prefix.'woocommerce_order_itemmeta'),
+        );
+        $this->indexHposOrders(
+            SqlInsertParser::parseTableRows($sql, $this->prefix.'wc_orders'),
+            SqlInsertParser::parseTableRows($sql, $this->prefix.'wc_orders_meta'),
+            SqlInsertParser::parseTableRows($sql, $this->prefix.'wc_order_product_lookup'),
         );
     }
 
@@ -151,6 +171,32 @@ class SqlDumpReader
     public function orderItemMeta(int $orderItemId): array
     {
         return $this->orderItemMetaByItemId[$orderItemId] ?? [];
+    }
+
+    public function hasHposOrders(): bool
+    {
+        return $this->wcOrdersById !== [];
+    }
+
+    /**
+     * @return array<int, array<string, string|null>>
+     */
+    public function wcOrdersById(): array
+    {
+        return $this->wcOrdersById;
+    }
+
+    /**
+     * @return array<int, array<string, string>>
+     */
+    public function wcOrderMetaByOrderId(): array
+    {
+        return $this->wcOrderMetaByOrderId;
+    }
+
+    public function wcProductIdForOrder(int $orderId): ?int
+    {
+        return $this->wcProductIdByOrderId[$orderId] ?? null;
     }
 
     /**
@@ -357,6 +403,60 @@ class SqlDumpReader
             if (isset($row[1], $row[2])) {
                 $this->orderItemMetaByItemId[(int) $row[1]][(string) $row[2]] = (string) ($row[3] ?? '');
             }
+        }
+    }
+
+    /**
+     * @param  list<array<string, string|null>|list<string|null>>  $orderRows
+     * @param  list<array<string, string|null>|list<string|null>>  $metaRows
+     * @param  list<array<string, string|null>|list<string|null>>  $lookupRows
+     */
+    private function indexHposOrders(array $orderRows, array $metaRows, array $lookupRows): void
+    {
+        foreach ($orderRows as $row) {
+            if (isset($row['id'])) {
+                $this->wcOrdersById[(int) $row['id']] = $row;
+
+                continue;
+            }
+
+            if (isset($row[0])) {
+                $this->wcOrdersById[(int) $row[0]] = [
+                    'id' => (string) $row[0],
+                    'status' => $row[1] ?? null,
+                    'currency' => $row[2] ?? null,
+                    'type' => $row[3] ?? null,
+                    'tax_amount' => $row[4] ?? null,
+                    'total_amount' => $row[5] ?? null,
+                    'customer_id' => $row[6] ?? null,
+                    'billing_email' => $row[7] ?? null,
+                    'date_created_gmt' => $row[8] ?? null,
+                    'date_updated_gmt' => $row[9] ?? null,
+                ];
+            }
+        }
+
+        foreach ($metaRows as $row) {
+            if (isset($row['order_id'], $row['meta_key'])) {
+                $this->wcOrderMetaByOrderId[(int) $row['order_id']][(string) $row['meta_key']] = (string) ($row['meta_value'] ?? '');
+
+                continue;
+            }
+
+            if (isset($row[1], $row[2])) {
+                $this->wcOrderMetaByOrderId[(int) $row[1]][(string) $row[2]] = (string) ($row[3] ?? '');
+            }
+        }
+
+        foreach ($lookupRows as $row) {
+            $orderId = isset($row['order_id']) ? (int) $row['order_id'] : (isset($row[1]) ? (int) $row[1] : 0);
+            $productId = isset($row['product_id']) ? (int) $row['product_id'] : (isset($row[2]) ? (int) $row[2] : 0);
+
+            if ($orderId <= 0 || $productId <= 0 || isset($this->wcProductIdByOrderId[$orderId])) {
+                continue;
+            }
+
+            $this->wcProductIdByOrderId[$orderId] = $productId;
         }
     }
 }

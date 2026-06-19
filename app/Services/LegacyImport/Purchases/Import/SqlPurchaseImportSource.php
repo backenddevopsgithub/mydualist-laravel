@@ -2,22 +2,13 @@
 
 namespace App\Services\LegacyImport\Purchases\Import;
 
+use App\Services\LegacyImport\Purchases\Support\WordPressHposDetector;
+use App\Services\LegacyImport\Purchases\Support\WordPressPurchaseOrderMapper;
 use App\Services\LegacyImport\Purchases\WordPressOrderRecord;
-use App\Services\LegacyImport\Support\WordPressValueMapper;
 use App\Support\WordPress\SqlDumpReader;
 
 class SqlPurchaseImportSource implements PurchaseImportSource
 {
-    /**
-     * @var list<string>
-     */
-    private array $completedStatuses = ['wc-completed', 'wc-processing'];
-
-    /**
-     * @var list<int>
-     */
-    private array $supportedProducts = [728, 730, 731, 914, 3211];
-
     private SqlDumpReader $reader;
 
     public function __construct(string $path, string $tablePrefix = 'wp_')
@@ -27,40 +18,83 @@ class SqlPurchaseImportSource implements PurchaseImportSource
 
     public function records(): iterable
     {
+        if (WordPressHposDetector::dumpUsesHpos($this->reader)) {
+            yield from $this->hposRecords();
+
+            return;
+        }
+
+        yield from $this->legacyRecords();
+    }
+
+    /**
+     * @return iterable<int, WordPressOrderRecord>
+     */
+    private function legacyRecords(): iterable
+    {
         foreach ($this->reader->postsById() as $orderId => $post) {
             if (($post['post_type'] ?? '') !== 'shop_order') {
                 continue;
             }
 
-            if (! in_array($post['post_status'] ?? '', $this->completedStatuses, true)) {
+            if (! in_array($post['post_status'] ?? '', WordPressPurchaseOrderMapper::IMPORTABLE_STATUSES, true)) {
                 continue;
             }
 
             $meta = $this->reader->postmetaByPostId()[$orderId] ?? [];
-            $productId = $this->resolveProductId($orderId);
+            $productId = $this->resolveLegacyProductId($orderId);
 
-            if ($productId === null || ! in_array($productId, $this->supportedProducts, true)) {
-                continue;
-            }
-
-            $customerId = (int) ($meta['_customer_user'] ?? 0);
-            $listId = (int) ($meta['_list_id'] ?? 0);
-            $total = (float) ($meta['_order_total'] ?? 0);
-
-            yield $orderId => new WordPressOrderRecord(
-                wpOrderId: $orderId,
-                productExternalId: $productId,
-                customerWpLegacyId: $customerId > 0 ? $customerId : null,
-                listWpPostId: $listId > 0 ? $listId : null,
-                amountMinor: (int) round($total * 100),
-                currency: strtolower((string) ($meta['_order_currency'] ?? config('billing.currency', 'gbp'))),
-                status: 'succeeded',
-                createdAt: WordPressValueMapper::parseDateTime($post['post_date'] ?? null),
+            $record = WordPressPurchaseOrderMapper::map(
+                orderId: $orderId,
+                productId: $productId,
+                customerId: (int) ($meta['_customer_user'] ?? 0),
+                listId: (int) ($meta['_list_id'] ?? 0),
+                total: (float) ($meta['_order_total'] ?? 0),
+                currency: (string) ($meta['_order_currency'] ?? config('billing.currency', 'gbp')),
+                createdAt: $post['post_date'] ?? null,
             );
+
+            if ($record !== null) {
+                yield $orderId => $record;
+            }
         }
     }
 
-    private function resolveProductId(int $orderId): ?int
+    /**
+     * @return iterable<int, WordPressOrderRecord>
+     */
+    private function hposRecords(): iterable
+    {
+        foreach ($this->reader->wcOrdersById() as $orderId => $order) {
+            if (($order['type'] ?? 'shop_order') !== 'shop_order') {
+                continue;
+            }
+
+            if (! in_array($order['status'] ?? '', WordPressPurchaseOrderMapper::IMPORTABLE_STATUSES, true)) {
+                continue;
+            }
+
+            $meta = $this->reader->wcOrderMetaByOrderId()[$orderId] ?? [];
+            $productId = $this->reader->wcProductIdForOrder($orderId) ?? $this->resolveLegacyProductId($orderId);
+            $createdAt = $order['date_created_gmt'] ?? $order['date_created'] ?? null;
+
+            $record = WordPressPurchaseOrderMapper::map(
+                orderId: $orderId,
+                productId: $productId,
+                customerId: (int) ($order['customer_id'] ?? $meta['_customer_user'] ?? 0),
+                listId: (int) ($meta['_list_id'] ?? 0),
+                total: (float) ($order['total_amount'] ?? $meta['_order_total'] ?? 0),
+                currency: (string) ($order['currency'] ?? $meta['_order_currency'] ?? config('billing.currency', 'gbp')),
+                createdAt: $createdAt,
+            );
+
+            if ($record !== null) {
+                yield $orderId => $record;
+            }
+        }
+    }
+
+    private function resolveLegacyProductId(int $orderId): ?int
     {
         foreach ($this->reader->orderItemsForOrder($orderId) as $item) {
             if ($item['order_item_type'] !== 'line_item') {
