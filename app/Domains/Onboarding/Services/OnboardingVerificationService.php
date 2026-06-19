@@ -19,11 +19,7 @@ class OnboardingVerificationService extends Service
 
     public function send(User $user): string
     {
-        $code = (string) config('mydualist.onboarding.test_otp', '0000');
-
-        if ($code === '' || $code === 'random') {
-            $code = (string) random_int(1000, 9999);
-        }
+        $code = $this->generateCode();
 
         Cache::put($this->cacheKey($user), $code, now()->addMinutes(self::CACHE_TTL_MINUTES));
 
@@ -49,6 +45,22 @@ class OnboardingVerificationService extends Service
         }
 
         return $this->verifyEmailAction->handle($user);
+    }
+
+    private function generateCode(): string
+    {
+        $testOtp = config('mydualist.onboarding.test_otp');
+
+        if (
+            config('app.env') !== 'production'
+            && is_string($testOtp)
+            && $testOtp !== ''
+            && $testOtp !== 'random'
+        ) {
+            return str_pad($testOtp, 4, '0', STR_PAD_LEFT);
+        }
+
+        return (string) random_int(1000, 9999);
     }
 
     private function cacheKey(User $user): string

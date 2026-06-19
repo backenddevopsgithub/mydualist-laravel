@@ -4,6 +4,7 @@ namespace App\Services\LegacyImport\Submissions;
 
 use App\Domains\Billing\Fulfillment\SubmissionUnlockService;
 use App\Domains\Billing\Services\EntitlementResolverService;
+use App\Domains\Billing\Services\ListSubmissionQuotaService;
 use App\Enums\BillingProductCode;
 use App\Enums\SubmissionLockReason;
 use App\Models\BillingPurchase;
@@ -16,6 +17,7 @@ class SubmissionLockReconciliationService extends Service
 {
     public function __construct(
         private readonly EntitlementResolverService $entitlements,
+        private readonly ListSubmissionQuotaService $quota,
         private readonly SubmissionUnlockService $unlocker,
     ) {}
 
@@ -75,7 +77,6 @@ class SubmissionLockReconciliationService extends Service
 
         $updated = 0;
         $mismatches = [];
-        $visibleRegular = 0;
         $regularRank = 0;
 
         foreach ($submissions as $submission) {
@@ -91,16 +92,11 @@ class SubmissionLockReconciliationService extends Service
                 $expectedLocked = false;
                 $expectedReason = null;
                 $expectedQuota = null;
-                $visibleRegular++;
             } else {
                 $regularRank++;
                 $expectedLocked = $regularRank > $quota;
                 $expectedReason = $expectedLocked ? SubmissionLockReason::VisibleQuotaExhausted : null;
                 $expectedQuota = $expectedLocked ? $quota : null;
-
-                if (! $expectedLocked) {
-                    $visibleRegular++;
-                }
             }
 
             $legacyMismatch = $submission->is_locked !== $expectedLocked
@@ -161,12 +157,14 @@ class SubmissionLockReconciliationService extends Service
 
         $expectedLockedCount = max(0, $submissions->where('is_personal_dua', false)->count() - $quota - $submissions->where('unlocked_at', '!=', null)->count());
 
-        if ($visibleRegular > $quota && ! $hasUnlimited) {
+        $inspection = $this->quota->inspect($owner, $list);
+
+        if ($inspection['exceeds']) {
             $mismatches[] = [
                 'dua_list_id' => $list->id,
                 'type' => 'visible_exceeds_quota',
-                'visible_regular' => $visibleRegular,
-                'quota' => $quota,
+                'visible' => $inspection['visible'],
+                'quota' => $inspection['quota'],
                 'locked_persisted' => $lockedPersisted,
                 'expected_locked_count' => $expectedLockedCount,
             ];

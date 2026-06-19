@@ -31,7 +31,7 @@ return [
     ],
 
     'onboarding' => [
-        'test_otp' => env('MYDUALIST_TEST_OTP', '0000'),
+        'test_otp' => env('MYDUALIST_TEST_OTP'),
     ],
 
     'creator_mode' => [

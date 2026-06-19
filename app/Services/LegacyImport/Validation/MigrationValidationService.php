@@ -3,6 +3,7 @@
 namespace App\Services\LegacyImport\Validation;
 
 use App\Domains\Billing\Services\EntitlementResolverService;
+use App\Domains\Billing\Services\ListSubmissionQuotaService;
 use App\Enums\BillingPurchaseStatus;
 use App\Models\BillingPurchase;
 use App\Models\CommunityDua;
@@ -20,6 +21,7 @@ class MigrationValidationService extends Service
 {
     public function __construct(
         private readonly EntitlementResolverService $entitlements,
+        private readonly ListSubmissionQuotaService $quota,
     ) {}
 
     public function validate(): LegacyImportReport
@@ -117,23 +119,15 @@ class MigrationValidationService extends Service
                         continue;
                     }
 
-                    $quota = $this->entitlements->effectiveVisibleQuota($list->user, $list);
-                    $visible = DuaSubmission::query()
-                        ->where('dua_list_id', $list->id)
-                        ->where('is_personal_dua', false)
-                        ->where(function ($query): void {
-                            $query->where('is_locked', false)
-                                ->orWhereNotNull('unlocked_at');
-                        })
-                        ->count();
+                    $inspection = $this->quota->inspect($list->user, $list);
 
-                    if ($visible > $quota && ! $this->entitlements->hasListUnlimitedOverride($list->user, $list)) {
+                    if ($inspection['exceeds']) {
                         $mismatches[] = [
                             'type' => 'visible_exceeds_quota',
                             'dua_list_id' => $list->id,
                             'wp_post_id' => $list->wp_post_id,
-                            'visible' => $visible,
-                            'quota' => $quota,
+                            'visible' => $inspection['visible'],
+                            'quota' => $inspection['quota'],
                         ];
                     }
 

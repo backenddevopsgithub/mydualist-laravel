@@ -20,23 +20,18 @@ class EntitlementGrantService extends Service
 
     public function quantity(User $user, EntitlementKey|string $key, ?int $duaListId = null): int
     {
+        if ($duaListId !== null) {
+            return $this->listScopedQuantity($user, $key, $duaListId);
+        }
+
         $keyValue = $key instanceof EntitlementKey ? $key->value : $key;
-        $scope = $duaListId ?? 'global';
 
         return $this->memo(
-            "quantity:{$user->id}:{$keyValue}:{$scope}",
-            function () use ($user, $keyValue, $duaListId): int {
-                $query = $this->activeGrantsQuery($user)
-                    ->where('entitlement_key', $keyValue);
-
-                if ($duaListId !== null) {
-                    $query->where('dua_list_id', $duaListId);
-                } else {
-                    $query->whereNull('dua_list_id');
-                }
-
-                return (int) $query->sum('quantity');
-            },
+            "quantity:{$user->id}:{$keyValue}:global",
+            fn (): int => (int) $this->activeGrantsQuery($user)
+                ->where('entitlement_key', $keyValue)
+                ->whereNull('dua_list_id')
+                ->sum('quantity'),
         );
     }
 
@@ -45,12 +40,24 @@ class EntitlementGrantService extends Service
         $keyValue = $key instanceof EntitlementKey ? $key->value : $key;
 
         return $this->memo(
-            "listScopedQuantity:{$user->id}:{$keyValue}:{$duaListId}",
-            fn (): int => (int) $this->activeGrantsQuery($user)
+            "listScopedQuantity:{$duaListId}:{$keyValue}",
+            fn (): int => (int) $this->activeGrantsForListQuery($duaListId)
                 ->where('entitlement_key', $keyValue)
-                ->where('dua_list_id', $duaListId)
                 ->sum('quantity'),
         );
+    }
+
+    /**
+     * @return Builder<EntitlementGrant>
+     */
+    private function activeGrantsForListQuery(int $duaListId): Builder
+    {
+        return EntitlementGrant::query()
+            ->where('dua_list_id', $duaListId)
+            ->where(function (Builder $query): void {
+                $query->whereNull('expires_at')
+                    ->orWhere('expires_at', '>', now());
+            });
     }
 
     /**
