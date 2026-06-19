@@ -3,10 +3,12 @@
 namespace App\Services\LegacyImport\Purchases\Import;
 
 use App\Services\LegacyImport\Purchases\Support\WordPressHposDetector;
+use App\Services\LegacyImport\Purchases\Support\WordPressHposOrderTimestamps;
 use App\Services\LegacyImport\Purchases\Support\WordPressPurchaseOrderMapper;
 use App\Services\LegacyImport\Purchases\WordPressOrderRecord;
 use App\Support\WordPress\WordPressConnection;
 use Illuminate\Database\Connection;
+use Illuminate\Support\Facades\Schema;
 
 class DatabasePurchaseImportSource implements PurchaseImportSource
 {
@@ -59,19 +61,14 @@ class DatabasePurchaseImportSource implements PurchaseImportSource
      */
     private function hposRecords(Connection $connection): iterable
     {
+        $availableColumns = Schema::connection($connection->getName())->getColumnListing('wc_orders');
+        $timestampColumns = WordPressHposOrderTimestamps::forConnection($connection);
+
         $orders = $connection->table('wc_orders')
             ->whereIn('status', WordPressPurchaseOrderMapper::IMPORTABLE_STATUSES)
             ->where('type', 'shop_order')
             ->orderBy('id')
-            ->get([
-                'id',
-                'status',
-                'currency',
-                'total_amount',
-                'customer_id',
-                'date_created_gmt',
-                'date_created',
-            ]);
+            ->get(WordPressHposOrderTimestamps::selectColumns($availableColumns));
 
         $listIdsByOrder = [];
 
@@ -88,7 +85,7 @@ class DatabasePurchaseImportSource implements PurchaseImportSource
         foreach ($orders as $order) {
             $orderId = (int) $order->id;
             $productId = $productIdsByOrder[$orderId] ?? $this->resolveLegacyProductId($connection, $orderId);
-            $createdAt = $order->date_created_gmt ?? $order->date_created ?? null;
+            $createdAt = WordPressHposOrderTimestamps::createdAt($order, $timestampColumns);
 
             $record = WordPressPurchaseOrderMapper::map(
                 orderId: $orderId,

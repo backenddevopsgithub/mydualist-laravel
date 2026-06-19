@@ -69,6 +69,11 @@ class SqlDumpReader
      */
     private array $wcProductIdByOrderId = [];
 
+    /**
+     * @var list<string>
+     */
+    private array $wcOrdersColumns = [];
+
     public function __construct(
         private readonly string $path,
         private readonly string $prefix = 'wp_',
@@ -197,6 +202,14 @@ class SqlDumpReader
     public function wcProductIdForOrder(int $orderId): ?int
     {
         return $this->wcProductIdByOrderId[$orderId] ?? null;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function wcOrdersColumns(): array
+    {
+        return $this->wcOrdersColumns;
     }
 
     /**
@@ -416,11 +429,33 @@ class SqlDumpReader
         foreach ($orderRows as $row) {
             if (isset($row['id'])) {
                 $this->wcOrdersById[(int) $row['id']] = $row;
+                $this->wcOrdersColumns = array_values(array_unique(array_merge(
+                    $this->wcOrdersColumns,
+                    array_keys($row),
+                )));
 
                 continue;
             }
 
             if (isset($row[0])) {
+                $positionalColumns = [
+                    'id',
+                    'status',
+                    'currency',
+                    'type',
+                    'tax_amount',
+                    'total_amount',
+                    'customer_id',
+                    'billing_email',
+                    'date_created_gmt',
+                    'date_updated_gmt',
+                ];
+
+                $this->wcOrdersColumns = array_values(array_unique(array_merge(
+                    $this->wcOrdersColumns,
+                    $positionalColumns,
+                )));
+
                 $this->wcOrdersById[(int) $row[0]] = [
                     'id' => (string) $row[0],
                     'status' => $row[1] ?? null,

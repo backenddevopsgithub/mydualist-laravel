@@ -7,6 +7,7 @@ use App\Models\EntitlementGrant;
 use App\Models\User;
 use App\Services\LegacyImport\Purchases\Import\SqlPurchaseImportSource;
 use App\Services\LegacyImport\Purchases\Support\WordPressHposDetector;
+use App\Services\LegacyImport\Purchases\Support\WordPressHposOrderTimestamps;
 use App\Services\LegacyImport\Purchases\Support\WordPressPurchaseOrderMapper;
 use App\Support\WordPress\SqlDumpReader;
 use Database\Seeders\BillingProductSeeder;
@@ -221,4 +222,110 @@ test('wordpress purchase order mapper ignores unsupported products', function ()
     );
 
     expect($record)->toBeNull();
+});
+
+test('hpos order timestamps resolve gmt-only wc_orders columns', function () {
+    $columns = [
+        'id',
+        'status',
+        'currency',
+        'type',
+        'total_amount',
+        'customer_id',
+        'date_created_gmt',
+        'date_updated_gmt',
+    ];
+
+    $timestampColumns = WordPressHposOrderTimestamps::columns($columns);
+
+    expect($timestampColumns)->toBe([
+        'created' => 'date_created_gmt',
+        'updated' => 'date_updated_gmt',
+    ])
+        ->and(WordPressHposOrderTimestamps::selectColumns($columns))
+        ->toBe(['id', 'status', 'currency', 'total_amount', 'customer_id', 'date_created_gmt'])
+        ->and(WordPressHposOrderTimestamps::createdAt([
+            'date_created_gmt' => '2024-02-01 10:00:00',
+        ], $timestampColumns))
+        ->toBe('2024-02-01 10:00:00');
+});
+
+test('hpos order timestamps prefer local columns when present', function () {
+    $columns = [
+        'id',
+        'status',
+        'currency',
+        'type',
+        'total_amount',
+        'customer_id',
+        'date_created',
+        'date_updated',
+        'date_created_gmt',
+        'date_updated_gmt',
+    ];
+
+    $timestampColumns = WordPressHposOrderTimestamps::columns($columns);
+
+    expect($timestampColumns)->toBe([
+        'created' => 'date_created',
+        'updated' => 'date_updated',
+    ])
+        ->and(WordPressHposOrderTimestamps::selectColumns($columns))
+        ->toBe(['id', 'status', 'currency', 'total_amount', 'customer_id', 'date_created'])
+        ->and(WordPressHposOrderTimestamps::createdAt([
+            'date_created' => '2024-03-01 15:00:00',
+            'date_created_gmt' => '2024-03-01 10:00:00',
+        ], $timestampColumns))
+        ->toBe('2024-03-01 15:00:00');
+});
+
+test('hpos sql import uses gmt timestamps when local columns are absent', function () {
+    $sql = purchaseImportUsersSql().<<<'SQL'
+
+INSERT INTO `wp_wc_orders` (`id`, `status`, `currency`, `type`, `tax_amount`, `total_amount`, `customer_id`, `billing_email`, `date_created_gmt`, `date_updated_gmt`) VALUES
+(8101, 'wc-processing', 'gbp', 'shop_order', 0.00000000, 2.00000000, 42, 'creator@example.com', '2024-02-10 09:30:00', '2024-02-10 09:31:00');
+INSERT INTO `wp_wc_orders_meta` (`id`, `order_id`, `meta_key`, `meta_value`) VALUES
+(1, 8101, '_list_id', '301');
+INSERT INTO `wp_wc_order_product_lookup` (`order_item_id`, `order_id`, `product_id`, `variation_id`, `customer_id`, `date_created`, `product_qty`, `product_net_revenue`, `product_gross_revenue`, `coupon_amount`, `tax_amount`, `shipping_amount`, `shipping_tax_amount`) VALUES
+(1, 8101, 728, 0, 42, '2024-02-10 09:30:00', 1, 2.00000000, 2.00000000, 0.00000000, 0.00000000, 0.00000000, 0.00000000);
+SQL;
+
+    $path = writePurchaseImportSql('testing-hpos-gmt-only-timestamps.sql', $sql);
+    $source = new SqlPurchaseImportSource($path);
+    $record = iterator_to_array($source->records())[8101];
+
+    expect($record->createdAt?->format('Y-m-d H:i:s'))->toBe('2024-02-10 09:30:00');
+});
+
+test('hpos sql import prefers local timestamps when both variants exist', function () {
+    $sql = purchaseImportUsersSql().<<<'SQL'
+
+INSERT INTO `wp_wc_orders` (`id`, `status`, `currency`, `type`, `tax_amount`, `total_amount`, `customer_id`, `billing_email`, `date_created`, `date_updated`, `date_created_gmt`, `date_updated_gmt`) VALUES
+(8201, 'wc-processing', 'gbp', 'shop_order', 0.00000000, 2.00000000, 42, 'creator@example.com', '2024-03-01 15:00:00', '2024-03-01 16:00:00', '2024-03-01 10:00:00', '2024-03-01 11:00:00');
+INSERT INTO `wp_wc_orders_meta` (`id`, `order_id`, `meta_key`, `meta_value`) VALUES
+(1, 8201, '_list_id', '301');
+INSERT INTO `wp_wc_order_product_lookup` (`order_item_id`, `order_id`, `product_id`, `variation_id`, `customer_id`, `date_created`, `product_qty`, `product_net_revenue`, `product_gross_revenue`, `coupon_amount`, `tax_amount`, `shipping_amount`, `shipping_tax_amount`) VALUES
+(1, 8201, 728, 0, 42, '2024-03-01 15:00:00', 1, 2.00000000, 2.00000000, 0.00000000, 0.00000000, 0.00000000, 0.00000000);
+SQL;
+
+    $path = writePurchaseImportSql('testing-hpos-local-and-gmt-timestamps.sql', $sql);
+    $source = new SqlPurchaseImportSource($path);
+    $record = iterator_to_array($source->records())[8201];
+
+    expect($record->createdAt?->format('Y-m-d H:i:s'))->toBe('2024-03-01 15:00:00');
+});
+
+test('sql dump reader tracks hpos timestamp columns from wc_orders inserts', function () {
+    $sql = purchaseImportUsersSql().<<<'SQL'
+
+INSERT INTO `wp_wc_orders` (`id`, `status`, `currency`, `type`, `tax_amount`, `total_amount`, `customer_id`, `billing_email`, `date_created_gmt`, `date_updated_gmt`) VALUES
+(8101, 'wc-processing', 'gbp', 'shop_order', 0.00000000, 2.00000000, 42, 'creator@example.com', '2024-02-10 09:30:00', '2024-02-10 09:31:00');
+SQL;
+
+    $path = writePurchaseImportSql('testing-hpos-reader-gmt-columns.sql', $sql);
+    $reader = new SqlDumpReader($path);
+
+    expect($reader->wcOrdersColumns())->toContain('date_created_gmt')
+        ->and($reader->wcOrdersColumns())->not->toContain('date_created')
+        ->and($reader->wcOrdersById()[8101]['date_created_gmt'] ?? null)->toBe('2024-02-10 09:30:00');
 });

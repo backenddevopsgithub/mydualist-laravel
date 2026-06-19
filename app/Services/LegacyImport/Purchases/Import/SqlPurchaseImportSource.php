@@ -3,6 +3,7 @@
 namespace App\Services\LegacyImport\Purchases\Import;
 
 use App\Services\LegacyImport\Purchases\Support\WordPressHposDetector;
+use App\Services\LegacyImport\Purchases\Support\WordPressHposOrderTimestamps;
 use App\Services\LegacyImport\Purchases\Support\WordPressPurchaseOrderMapper;
 use App\Services\LegacyImport\Purchases\WordPressOrderRecord;
 use App\Support\WordPress\SqlDumpReader;
@@ -65,6 +66,8 @@ class SqlPurchaseImportSource implements PurchaseImportSource
      */
     private function hposRecords(): iterable
     {
+        $timestampColumns = WordPressHposOrderTimestamps::columns($this->reader->wcOrdersColumns());
+
         foreach ($this->reader->wcOrdersById() as $orderId => $order) {
             if (($order['type'] ?? 'shop_order') !== 'shop_order') {
                 continue;
@@ -76,7 +79,7 @@ class SqlPurchaseImportSource implements PurchaseImportSource
 
             $meta = $this->reader->wcOrderMetaByOrderId()[$orderId] ?? [];
             $productId = $this->reader->wcProductIdForOrder($orderId) ?? $this->resolveLegacyProductId($orderId);
-            $createdAt = $order['date_created_gmt'] ?? $order['date_created'] ?? null;
+            $createdAt = WordPressHposOrderTimestamps::createdAt($order, $timestampColumns);
 
             $record = WordPressPurchaseOrderMapper::map(
                 orderId: $orderId,
