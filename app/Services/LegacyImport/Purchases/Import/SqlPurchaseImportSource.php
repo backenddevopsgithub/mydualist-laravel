@@ -4,6 +4,7 @@ namespace App\Services\LegacyImport\Purchases\Import;
 
 use App\Services\LegacyImport\Purchases\Support\WordPressHposDetector;
 use App\Services\LegacyImport\Purchases\Support\WordPressHposOrderTimestamps;
+use App\Services\LegacyImport\Purchases\Support\WordPressOrderBillingEmailResolver;
 use App\Services\LegacyImport\Purchases\Support\WordPressPurchaseOrderMapper;
 use App\Services\LegacyImport\Purchases\WordPressOrderRecord;
 use App\Support\WordPress\SqlDumpReader;
@@ -53,6 +54,7 @@ class SqlPurchaseImportSource implements PurchaseImportSource
                 total: (float) ($meta['_order_total'] ?? 0),
                 currency: (string) ($meta['_order_currency'] ?? config('billing.currency', 'gbp')),
                 createdAt: $post['post_date'] ?? null,
+                billingEmail: WordPressOrderBillingEmailResolver::fromLegacyMeta($meta),
             );
 
             if ($record !== null) {
@@ -89,6 +91,11 @@ class SqlPurchaseImportSource implements PurchaseImportSource
                 total: (float) ($order['total_amount'] ?? $meta['_order_total'] ?? 0),
                 currency: (string) ($order['currency'] ?? $meta['_order_currency'] ?? config('billing.currency', 'gbp')),
                 createdAt: $createdAt,
+                billingEmail: WordPressOrderBillingEmailResolver::fromHposOrder(
+                    $order,
+                    $meta,
+                    $this->reader->wcBillingEmailForOrder($orderId),
+                ),
             );
 
             if ($record !== null) {

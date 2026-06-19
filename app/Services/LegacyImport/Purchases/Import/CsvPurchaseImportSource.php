@@ -86,6 +86,7 @@ class CsvPurchaseImportSource implements PurchaseImportSource
             currency: strtolower((string) ($data['currency'] ?? config('billing.currency', 'gbp'))),
             status: 'succeeded',
             createdAt: WordPressValueMapper::parseDateTime($data['created_at'] ?? $data['post_date'] ?? null),
+            billingEmail: $data['billing_email'] ?? $data['customer_email'] ?? null,
         );
     }
 }

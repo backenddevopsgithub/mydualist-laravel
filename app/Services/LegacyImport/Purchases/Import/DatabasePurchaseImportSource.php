@@ -4,6 +4,7 @@ namespace App\Services\LegacyImport\Purchases\Import;
 
 use App\Services\LegacyImport\Purchases\Support\WordPressHposDetector;
 use App\Services\LegacyImport\Purchases\Support\WordPressHposOrderTimestamps;
+use App\Services\LegacyImport\Purchases\Support\WordPressOrderBillingEmailResolver;
 use App\Services\LegacyImport\Purchases\Support\WordPressPurchaseOrderMapper;
 use App\Services\LegacyImport\Purchases\WordPressOrderRecord;
 use App\Support\WordPress\WordPressConnection;
@@ -48,6 +49,7 @@ class DatabasePurchaseImportSource implements PurchaseImportSource
                 total: (float) ($meta['_order_total'] ?? 0),
                 currency: (string) ($meta['_order_currency'] ?? config('billing.currency', 'gbp')),
                 createdAt: $order->post_date,
+                billingEmail: WordPressOrderBillingEmailResolver::fromLegacyMeta($meta),
             );
 
             if ($record !== null) {
@@ -68,7 +70,7 @@ class DatabasePurchaseImportSource implements PurchaseImportSource
             ->whereIn('status', WordPressPurchaseOrderMapper::IMPORTABLE_STATUSES)
             ->where('type', 'shop_order')
             ->orderBy('id')
-            ->get(WordPressHposOrderTimestamps::selectColumns($availableColumns));
+            ->get($this->hposSelectColumns($availableColumns));
 
         $listIdsByOrder = [];
 
@@ -81,11 +83,18 @@ class DatabasePurchaseImportSource implements PurchaseImportSource
         }
 
         $productIdsByOrder = $this->productIdsFromLookup($connection);
+        $billingEmailsByOrder = $this->billingEmailsByOrder($connection, $availableColumns);
+        $billingMetaEmailsByOrder = $this->billingMetaEmailsByOrder($connection);
 
         foreach ($orders as $order) {
             $orderId = (int) $order->id;
             $productId = $productIdsByOrder[$orderId] ?? $this->resolveLegacyProductId($connection, $orderId);
             $createdAt = WordPressHposOrderTimestamps::createdAt($order, $timestampColumns);
+            $billingEmail = WordPressOrderBillingEmailResolver::fromHposOrder(
+                (array) $order,
+                [],
+                $billingEmailsByOrder[$orderId] ?? $billingMetaEmailsByOrder[$orderId] ?? null,
+            );
 
             $record = WordPressPurchaseOrderMapper::map(
                 orderId: $orderId,
@@ -95,6 +104,7 @@ class DatabasePurchaseImportSource implements PurchaseImportSource
                 total: (float) ($order->total_amount ?? 0),
                 currency: (string) ($order->currency ?? config('billing.currency', 'gbp')),
                 createdAt: $createdAt,
+                billingEmail: $billingEmail,
             );
 
             if ($record !== null) {
@@ -160,5 +170,56 @@ class DatabasePurchaseImportSource implements PurchaseImportSource
             ->value('meta_value');
 
         return $productId !== null ? (int) $productId : null;
+    }
+
+    /**
+     * @param  list<string>  $availableColumns
+     * @return list<string>
+     */
+    private function hposSelectColumns(array $availableColumns): array
+    {
+        $select = WordPressHposOrderTimestamps::selectColumns($availableColumns);
+
+        if (in_array('billing_email', $availableColumns, true) && ! in_array('billing_email', $select, true)) {
+            $select[] = 'billing_email';
+        }
+
+        return $select;
+    }
+
+    /**
+     * @param  list<string>  $availableColumns
+     * @return array<int, string>
+     */
+    private function billingEmailsByOrder(Connection $connection, array $availableColumns): array
+    {
+        if (! $connection->getSchemaBuilder()->hasTable('wc_order_addresses')) {
+            return [];
+        }
+
+        return $connection->table('wc_order_addresses')
+            ->where('address_type', 'billing')
+            ->whereNotNull('email')
+            ->pluck('email', 'order_id')
+            ->map(fn ($email): ?string => WordPressOrderBillingEmailResolver::normalize((string) $email))
+            ->filter()
+            ->all();
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function billingMetaEmailsByOrder(Connection $connection): array
+    {
+        if (! $connection->getSchemaBuilder()->hasTable('wc_orders_meta')) {
+            return [];
+        }
+
+        return $connection->table('wc_orders_meta')
+            ->where('meta_key', '_billing_email')
+            ->pluck('meta_value', 'order_id')
+            ->map(fn ($email): ?string => WordPressOrderBillingEmailResolver::normalize((string) $email))
+            ->filter()
+            ->all();
     }
 }

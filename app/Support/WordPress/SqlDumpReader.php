@@ -70,6 +70,11 @@ class SqlDumpReader
     private array $wcProductIdByOrderId = [];
 
     /**
+     * @var array<int, string>
+     */
+    private array $wcBillingEmailByOrderId = [];
+
+    /**
      * @var list<string>
      */
     private array $wcOrdersColumns = [];
@@ -105,6 +110,7 @@ class SqlDumpReader
             SqlInsertParser::parseTableRows($sql, $this->prefix.'wc_orders'),
             SqlInsertParser::parseTableRows($sql, $this->prefix.'wc_orders_meta'),
             SqlInsertParser::parseTableRows($sql, $this->prefix.'wc_order_product_lookup'),
+            SqlInsertParser::parseTableRows($sql, $this->prefix.'wc_order_addresses'),
         );
     }
 
@@ -202,6 +208,11 @@ class SqlDumpReader
     public function wcProductIdForOrder(int $orderId): ?int
     {
         return $this->wcProductIdByOrderId[$orderId] ?? null;
+    }
+
+    public function wcBillingEmailForOrder(int $orderId): ?string
+    {
+        return $this->wcBillingEmailByOrderId[$orderId] ?? null;
     }
 
     /**
@@ -423,8 +434,9 @@ class SqlDumpReader
      * @param  list<array<string, string|null>|list<string|null>>  $orderRows
      * @param  list<array<string, string|null>|list<string|null>>  $metaRows
      * @param  list<array<string, string|null>|list<string|null>>  $lookupRows
+     * @param  list<array<string, string|null>|list<string|null>>  $addressRows
      */
-    private function indexHposOrders(array $orderRows, array $metaRows, array $lookupRows): void
+    private function indexHposOrders(array $orderRows, array $metaRows, array $lookupRows, array $addressRows = []): void
     {
         foreach ($orderRows as $row) {
             if (isset($row['id'])) {
@@ -492,6 +504,32 @@ class SqlDumpReader
             }
 
             $this->wcProductIdByOrderId[$orderId] = $productId;
+        }
+
+        foreach ($addressRows as $row) {
+            if (isset($row['order_id'], $row['address_type'], $row['email'])) {
+                if ((string) $row['address_type'] !== 'billing') {
+                    continue;
+                }
+
+                $orderId = (int) $row['order_id'];
+                $email = trim((string) ($row['email'] ?? ''));
+
+                if ($orderId > 0 && $email !== '' && ! isset($this->wcBillingEmailByOrderId[$orderId])) {
+                    $this->wcBillingEmailByOrderId[$orderId] = $email;
+                }
+
+                continue;
+            }
+
+            if (isset($row[1], $row[2], $row[5]) && (string) $row[2] === 'billing') {
+                $orderId = (int) $row[1];
+                $email = trim((string) ($row[5] ?? ''));
+
+                if ($orderId > 0 && $email !== '' && ! isset($this->wcBillingEmailByOrderId[$orderId])) {
+                    $this->wcBillingEmailByOrderId[$orderId] = $email;
+                }
+            }
         }
     }
 }

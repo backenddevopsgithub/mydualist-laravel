@@ -7,10 +7,12 @@ use App\Enums\BillingProductCode;
 use App\Enums\BillingPurchaseStatus;
 use App\Models\BillingProduct;
 use App\Models\BillingPurchase;
+use App\Models\CommunityDua;
 use App\Models\DuaList;
-use App\Models\User;
 use App\Services\LegacyImport\LegacyImportReport;
 use App\Services\LegacyImport\Purchases\Import\PurchaseImportSource;
+use App\Services\LegacyImport\Purchases\Support\PurchaseCustomerResolver;
+use App\Services\LegacyImport\Purchases\Support\WordPressOrderBillingEmailResolver;
 use App\Services\Service;
 use Illuminate\Support\Facades\DB;
 
@@ -18,6 +20,7 @@ class PurchaseImportService extends Service
 {
     public function __construct(
         private readonly PurchaseFulfillmentService $fulfillmentService,
+        private readonly PurchaseCustomerResolver $customerResolver,
     ) {}
 
     public function import(PurchaseImportSource $source, bool $dryRun = false): LegacyImportReport
@@ -68,17 +71,27 @@ class PurchaseImportService extends Service
             return;
         }
 
-        $user = $record->customerWpLegacyId !== null
-            ? User::query()->where('wp_legacy_id', $record->customerWpLegacyId)->first()
-            : null;
+        $user = $this->customerResolver->resolve($record, $report, $dryRun);
 
         $productCode = BillingProductCode::tryFrom((string) $product->code);
         $requiresUser = $productCode !== BillingProductCode::CommunityDuaPaid;
 
         if ($requiresUser && $user === null) {
-            $report->addFailed($record->summary(), "Customer wp_legacy_id {$record->customerWpLegacyId} not found.");
+            if ($dryRun && $this->customerResolver->canSatisfyUserRequirement($record)) {
+                // Guest checkout with a resolvable billing email can be imported on dry-run.
+            } elseif ($record->customerWpLegacyId !== null) {
+                $report->addFailed($record->summary(), "Customer wp_legacy_id {$record->customerWpLegacyId} not found.");
 
-            return;
+                return;
+            } elseif (WordPressOrderBillingEmailResolver::normalize($record->billingEmail) === null) {
+                $report->addFailed($record->summary(), 'Guest order missing billing email.');
+
+                return;
+            } else {
+                $report->addFailed($record->summary(), 'Guest order customer could not be resolved.');
+
+                return;
+            }
         }
 
         $duaList = null;
@@ -110,6 +123,16 @@ class PurchaseImportService extends Service
         }
 
         DB::transaction(function () use ($record, $report, $existing, $product, $user, $duaList, $communityDua, $productCode): void {
+            $metadata = [
+                'wp_order_id' => $record->wpOrderId,
+                'product_external_id' => $record->productExternalId,
+            ];
+
+            if ($record->customerWpLegacyId === null && $record->billingEmail !== null) {
+                $metadata['guest_checkout'] = true;
+                $metadata['billing_email'] = $record->billingEmail;
+            }
+
             $attributes = [
                 'billing_product_id' => $product->id,
                 'user_id' => $user?->id,
@@ -120,10 +143,7 @@ class PurchaseImportService extends Service
                 'amount_minor' => $record->amountMinor,
                 'currency' => $record->currency,
                 'idempotency_key' => 'wp-order:'.$record->wpOrderId,
-                'metadata' => [
-                    'wp_order_id' => $record->wpOrderId,
-                    'product_external_id' => $record->productExternalId,
-                ],
+                'metadata' => $metadata,
             ];
 
             if ($record->createdAt !== null) {

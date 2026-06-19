@@ -15,6 +15,7 @@ readonly class WordPressOrderRecord
         public string $currency,
         public string $status,
         public ?Carbon $createdAt,
+        public ?string $billingEmail = null,
     ) {}
 
     /**

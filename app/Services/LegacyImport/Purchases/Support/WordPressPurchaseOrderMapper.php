@@ -4,6 +4,7 @@ namespace App\Services\LegacyImport\Purchases\Support;
 
 use App\Services\LegacyImport\Purchases\WordPressOrderRecord;
 use App\Services\LegacyImport\Support\WordPressValueMapper;
+use App\Services\LegacyImport\Purchases\Support\WordPressOrderBillingEmailResolver;
 
 class WordPressPurchaseOrderMapper
 {
@@ -25,6 +26,7 @@ class WordPressPurchaseOrderMapper
         float $total,
         string $currency,
         mixed $createdAt,
+        ?string $billingEmail = null,
     ): ?WordPressOrderRecord {
         if ($productId === null || ! in_array($productId, self::SUPPORTED_PRODUCTS, true)) {
             return null;
@@ -39,6 +41,7 @@ class WordPressPurchaseOrderMapper
             currency: strtolower($currency !== '' ? $currency : (string) config('billing.currency', 'gbp')),
             status: 'succeeded',
             createdAt: WordPressValueMapper::parseDateTime($createdAt),
+            billingEmail: WordPressOrderBillingEmailResolver::normalize($billingEmail),
         );
     }
 }
