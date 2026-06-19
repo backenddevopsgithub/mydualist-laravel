@@ -4,6 +4,7 @@ namespace App\Services\LegacyImport\Lists\Import;
 
 use App\Models\DuaList;
 use App\Services\LegacyImport\Lists\WordPressListRecord;
+use App\Services\LegacyImport\Support\WordPressListOwnerResolver;
 use App\Services\LegacyImport\Support\WordPressValueMapper;
 use App\Support\WordPress\SqlDumpReader;
 
@@ -28,16 +29,20 @@ class SqlListImportSource implements ListImportSource
             }
 
             $meta = $this->reader->postmetaByPostId()[$postId] ?? [];
-            $ownerWpId = (int) ($meta['user'] ?? 0);
+            $ownership = WordPressListOwnerResolver::resolve(
+                $postId,
+                (int) ($post['post_author'] ?? 0),
+                $meta,
+            );
 
-            if ($ownerWpId <= 0) {
+            if ($ownership['owner_wp_id'] === null) {
                 continue;
             }
 
-            $ownerMeta = $this->reader->usermetaByUserId()[$ownerWpId] ?? [];
+            $ownerMeta = $this->reader->usermetaByUserId()[$ownership['owner_wp_id']] ?? [];
             $coverImageUrl = $this->resolveCoverImageUrl($meta);
 
-            yield $postId => $this->mapPost($postId, $post, $meta, $ownerMeta, $coverImageUrl);
+            yield $postId => $this->mapPost($postId, $post, $meta, $ownerMeta, $coverImageUrl, $ownership['owner_wp_id']);
         }
     }
 
@@ -46,7 +51,7 @@ class SqlListImportSource implements ListImportSource
      * @param  array<string, string>  $meta
      * @param  array<string, string>  $ownerMeta
      */
-    private function mapPost(int $postId, array $post, array $meta, array $ownerMeta, ?string $coverImageUrl): WordPressListRecord
+    private function mapPost(int $postId, array $post, array $meta, array $ownerMeta, ?string $coverImageUrl, int $ownerWpId): WordPressListRecord
     {
         $slug = trim((string) ($post['post_name'] ?? ''));
 
@@ -61,7 +66,7 @@ class SqlListImportSource implements ListImportSource
 
         return new WordPressListRecord(
             wpPostId: $postId,
-            ownerWpLegacyId: (int) $meta['user'],
+            ownerWpLegacyId: $ownerWpId,
             title: (string) ($post['post_title'] ?? 'Untitled List'),
             slug: $slug,
             occasion: WordPressValueMapper::normalizeOccasion($meta['category'] ?? null),

@@ -4,6 +4,7 @@ namespace App\Services\LegacyImport\Lists\Import;
 
 use App\Models\DuaList;
 use App\Services\LegacyImport\Lists\WordPressListRecord;
+use App\Services\LegacyImport\Support\WordPressListOwnerResolver;
 use App\Services\LegacyImport\Support\WordPressValueMapper;
 use App\Support\WordPress\WordPressConnection;
 use Illuminate\Database\Connection;
@@ -20,6 +21,7 @@ class DatabaseListImportSource implements ListImportSource
             ->orderBy('ID')
             ->get([
                 'ID',
+                'post_author',
                 'post_title',
                 'post_name',
                 'post_date',
@@ -30,16 +32,20 @@ class DatabaseListImportSource implements ListImportSource
         foreach ($posts as $post) {
             $postId = (int) $post->ID;
             $meta = $this->postMeta($connection, $postId);
-            $ownerWpId = (int) ($meta['user'] ?? 0);
+            $ownership = WordPressListOwnerResolver::resolve(
+                $postId,
+                (int) ($post->post_author ?? 0),
+                $meta,
+            );
 
-            if ($ownerWpId <= 0) {
+            if ($ownership['owner_wp_id'] === null) {
                 continue;
             }
 
-            $ownerMeta = $this->userMeta($connection, $ownerWpId);
+            $ownerMeta = $this->userMeta($connection, $ownership['owner_wp_id']);
             $coverImageUrl = $this->resolveCoverImageUrl($connection, $meta);
 
-            yield $postId => $this->mapPost($post, $meta, $ownerMeta, $coverImageUrl);
+            yield $postId => $this->mapPost($post, $meta, $ownerMeta, $coverImageUrl, $ownership['owner_wp_id']);
         }
     }
 
@@ -90,7 +96,7 @@ class DatabaseListImportSource implements ListImportSource
      * @param  array<string, string>  $meta
      * @param  array<string, string>  $ownerMeta
      */
-    private function mapPost(object $post, array $meta, array $ownerMeta, ?string $coverImageUrl): WordPressListRecord
+    private function mapPost(object $post, array $meta, array $ownerMeta, ?string $coverImageUrl, int $ownerWpId): WordPressListRecord
     {
         $postId = (int) $post->ID;
         $slug = trim((string) $post->post_name);
@@ -100,7 +106,7 @@ class DatabaseListImportSource implements ListImportSource
 
         return new WordPressListRecord(
             wpPostId: $postId,
-            ownerWpLegacyId: (int) $meta['user'],
+            ownerWpLegacyId: $ownerWpId,
             title: (string) $post->post_title,
             slug: $slug,
             occasion: WordPressValueMapper::normalizeOccasion($meta['category'] ?? null),
