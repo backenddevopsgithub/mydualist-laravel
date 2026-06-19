@@ -3,18 +3,17 @@
 namespace App\Services\Blog\Import;
 
 use App\Services\Blog\WordPressPostRecord;
+use App\Support\WordPress\WordPressConnection;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
-use RuntimeException;
+use Illuminate\Database\Connection;
 
 class DatabaseBlogImportSource implements BlogImportSource
 {
     public function records(): iterable
     {
-        $connection = $this->connection();
-        $prefix = $this->tablePrefix();
+        $connection = WordPressConnection::connection();
 
-        $posts = $connection->table("{$prefix}posts")
+        $posts = $connection->table('posts')
             ->where('post_type', 'post')
             ->where('post_status', 'publish')
             ->orderBy('ID')
@@ -29,9 +28,9 @@ class DatabaseBlogImportSource implements BlogImportSource
 
         foreach ($posts as $post) {
             $postId = (int) $post->ID;
-            $meta = $this->postMeta($connection, $prefix, $postId);
-            $category = $this->primaryCategory($connection, $prefix, $postId);
-            $featuredImageUrl = $this->featuredImageUrl($connection, $prefix, $meta);
+            $meta = $this->postMeta($connection, $postId);
+            $category = $this->primaryCategory($connection, $postId);
+            $featuredImageUrl = $this->featuredImageUrl($connection, $meta);
 
             yield $postId => new WordPressPostRecord(
                 wpPostId: $postId,
@@ -50,26 +49,12 @@ class DatabaseBlogImportSource implements BlogImportSource
         }
     }
 
-    private function connection(): \Illuminate\Database\Connection
-    {
-        if (blank(env('WP_DB_DATABASE'))) {
-            throw new RuntimeException('WordPress database is not configured. Set WP_DB_* environment variables.');
-        }
-
-        return DB::connection('wordpress');
-    }
-
-    private function tablePrefix(): string
-    {
-        return (string) config('database.connections.wordpress.prefix', 'wp_');
-    }
-
     /**
      * @return array<string, string>
      */
-    private function postMeta(\Illuminate\Database\Connection $connection, string $prefix, int $postId): array
+    private function postMeta(Connection $connection, int $postId): array
     {
-        return $connection->table("{$prefix}postmeta")
+        return $connection->table('postmeta')
             ->where('post_id', $postId)
             ->pluck('meta_value', 'meta_key')
             ->map(fn ($value): string => (string) $value)
@@ -79,11 +64,11 @@ class DatabaseBlogImportSource implements BlogImportSource
     /**
      * @return array{name: string, slug: string}|null
      */
-    private function primaryCategory(\Illuminate\Database\Connection $connection, string $prefix, int $postId): ?array
+    private function primaryCategory(Connection $connection, int $postId): ?array
     {
-        $term = $connection->table("{$prefix}term_relationships as tr")
-            ->join("{$prefix}term_taxonomy as tt", 'tt.term_taxonomy_id', '=', 'tr.term_taxonomy_id')
-            ->join("{$prefix}terms as t", 't.term_id', '=', 'tt.term_id')
+        $term = $connection->table('term_relationships as tr')
+            ->join('term_taxonomy as tt', 'tt.term_taxonomy_id', '=', 'tr.term_taxonomy_id')
+            ->join('terms as t', 't.term_id', '=', 'tt.term_id')
             ->where('tr.object_id', $postId)
             ->where('tt.taxonomy', 'category')
             ->orderBy('tt.term_id')
@@ -103,7 +88,7 @@ class DatabaseBlogImportSource implements BlogImportSource
     /**
      * @param  array<string, string>  $meta
      */
-    private function featuredImageUrl(\Illuminate\Database\Connection $connection, string $prefix, array $meta): ?string
+    private function featuredImageUrl(Connection $connection, array $meta): ?string
     {
         $thumbnailId = (int) ($meta['_thumbnail_id'] ?? 0);
 
@@ -111,7 +96,7 @@ class DatabaseBlogImportSource implements BlogImportSource
             return null;
         }
 
-        $guid = $connection->table("{$prefix}posts")
+        $guid = $connection->table('posts')
             ->where('ID', $thumbnailId)
             ->value('guid');
 

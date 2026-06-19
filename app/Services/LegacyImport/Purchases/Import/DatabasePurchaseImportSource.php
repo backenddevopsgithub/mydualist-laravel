@@ -22,9 +22,8 @@ class DatabasePurchaseImportSource implements PurchaseImportSource
     public function records(): iterable
     {
         $connection = WordPressConnection::connection();
-        $prefix = WordPressConnection::prefix();
 
-        $orders = $connection->table("{$prefix}posts")
+        $orders = $connection->table('posts')
             ->where('post_type', 'shop_order')
             ->whereIn('post_status', $this->completedStatuses)
             ->orderBy('ID')
@@ -32,8 +31,8 @@ class DatabasePurchaseImportSource implements PurchaseImportSource
 
         foreach ($orders as $order) {
             $orderId = (int) $order->ID;
-            $meta = $this->postMeta($connection, $prefix, $orderId);
-            $record = $this->mapOrder($orderId, $meta, $connection, $prefix, $order->post_date);
+            $meta = $this->postMeta($connection, $orderId);
+            $record = $this->mapOrder($orderId, $meta, $connection, $order->post_date);
 
             if ($record !== null) {
                 yield $orderId => $record;
@@ -44,9 +43,9 @@ class DatabasePurchaseImportSource implements PurchaseImportSource
     /**
      * @return array<string, string>
      */
-    private function postMeta(Connection $connection, string $prefix, int $postId): array
+    private function postMeta(Connection $connection, int $postId): array
     {
-        return $connection->table("{$prefix}postmeta")
+        return $connection->table('postmeta')
             ->where('post_id', $postId)
             ->pluck('meta_value', 'meta_key')
             ->map(fn ($value): string => (string) $value)
@@ -60,10 +59,9 @@ class DatabasePurchaseImportSource implements PurchaseImportSource
         int $orderId,
         array $meta,
         Connection $connection,
-        string $prefix,
         mixed $postDate,
     ): ?WordPressOrderRecord {
-        $productId = $this->resolveProductId($connection, $prefix, $orderId);
+        $productId = $this->resolveProductId($connection, $orderId);
 
         if ($productId === null || ! in_array($productId, $this->supportedProducts, true)) {
             return null;
@@ -87,10 +85,9 @@ class DatabasePurchaseImportSource implements PurchaseImportSource
 
     private function resolveProductId(
         Connection $connection,
-        string $prefix,
         int $orderId,
     ): ?int {
-        $item = $connection->table("{$prefix}woocommerce_order_items")
+        $item = $connection->table('woocommerce_order_items')
             ->where('order_id', $orderId)
             ->where('order_item_type', 'line_item')
             ->orderBy('order_item_id')
@@ -100,7 +97,7 @@ class DatabasePurchaseImportSource implements PurchaseImportSource
             return null;
         }
 
-        $productId = $connection->table("{$prefix}woocommerce_order_itemmeta")
+        $productId = $connection->table('woocommerce_order_itemmeta')
             ->where('order_item_id', $item->order_item_id)
             ->where('meta_key', '_product_id')
             ->value('meta_value');

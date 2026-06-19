@@ -6,15 +6,15 @@ use App\Models\DuaList;
 use App\Services\LegacyImport\Lists\WordPressListRecord;
 use App\Services\LegacyImport\Support\WordPressValueMapper;
 use App\Support\WordPress\WordPressConnection;
+use Illuminate\Database\Connection;
 
 class DatabaseListImportSource implements ListImportSource
 {
     public function records(): iterable
     {
         $connection = WordPressConnection::connection();
-        $prefix = WordPressConnection::prefix();
 
-        $posts = $connection->table("{$prefix}posts")
+        $posts = $connection->table('posts')
             ->where('post_type', 'dua_list')
             ->whereIn('post_status', ['publish', 'trash'])
             ->orderBy('ID')
@@ -29,15 +29,15 @@ class DatabaseListImportSource implements ListImportSource
 
         foreach ($posts as $post) {
             $postId = (int) $post->ID;
-            $meta = $this->postMeta($connection, $prefix, $postId);
+            $meta = $this->postMeta($connection, $postId);
             $ownerWpId = (int) ($meta['user'] ?? 0);
 
             if ($ownerWpId <= 0) {
                 continue;
             }
 
-            $ownerMeta = $this->userMeta($connection, $prefix, $ownerWpId);
-            $coverImageUrl = $this->resolveCoverImageUrl($connection, $prefix, $meta);
+            $ownerMeta = $this->userMeta($connection, $ownerWpId);
+            $coverImageUrl = $this->resolveCoverImageUrl($connection, $meta);
 
             yield $postId => $this->mapPost($post, $meta, $ownerMeta, $coverImageUrl);
         }
@@ -46,9 +46,9 @@ class DatabaseListImportSource implements ListImportSource
     /**
      * @return array<string, string>
      */
-    private function postMeta(\Illuminate\Database\Connection $connection, string $prefix, int $postId): array
+    private function postMeta(Connection $connection, int $postId): array
     {
-        return $connection->table("{$prefix}postmeta")
+        return $connection->table('postmeta')
             ->where('post_id', $postId)
             ->pluck('meta_value', 'meta_key')
             ->map(fn ($value): string => (string) $value)
@@ -58,9 +58,9 @@ class DatabaseListImportSource implements ListImportSource
     /**
      * @return array<string, string>
      */
-    private function userMeta(\Illuminate\Database\Connection $connection, string $prefix, int $userId): array
+    private function userMeta(Connection $connection, int $userId): array
     {
-        return $connection->table("{$prefix}usermeta")
+        return $connection->table('usermeta')
             ->where('user_id', $userId)
             ->pluck('meta_value', 'meta_key')
             ->map(fn ($value): string => (string) $value)
@@ -70,7 +70,7 @@ class DatabaseListImportSource implements ListImportSource
     /**
      * @param  array<string, string>  $meta
      */
-    private function resolveCoverImageUrl(\Illuminate\Database\Connection $connection, string $prefix, array $meta): ?string
+    private function resolveCoverImageUrl(Connection $connection, array $meta): ?string
     {
         $attachmentId = (int) ($meta['listImage'] ?? 0);
 
@@ -78,7 +78,7 @@ class DatabaseListImportSource implements ListImportSource
             return null;
         }
 
-        $guid = $connection->table("{$prefix}posts")
+        $guid = $connection->table('posts')
             ->where('ID', $attachmentId)
             ->value('guid');
 

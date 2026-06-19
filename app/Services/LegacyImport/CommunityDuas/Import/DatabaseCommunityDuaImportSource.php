@@ -16,9 +16,8 @@ class DatabaseCommunityDuaImportSource implements CommunityDuaImportSource
     public function duaRecords(): iterable
     {
         $connection = WordPressConnection::connection();
-        $prefix = WordPressConnection::prefix();
 
-        $posts = $connection->table("{$prefix}posts")
+        $posts = $connection->table('posts')
             ->where('post_type', 'community_dua')
             ->where('post_status', 'publish')
             ->orderBy('ID')
@@ -26,7 +25,7 @@ class DatabaseCommunityDuaImportSource implements CommunityDuaImportSource
 
         foreach ($posts as $post) {
             $postId = (int) $post->ID;
-            $meta = $this->postMeta($connection, $prefix, $postId);
+            $meta = $this->postMeta($connection, $postId);
 
             yield $postId => $this->mapDua($postId, (string) $post->post_content, $post->post_date, $meta);
         }
@@ -35,16 +34,15 @@ class DatabaseCommunityDuaImportSource implements CommunityDuaImportSource
     public function queueRecords(): iterable
     {
         $connection = WordPressConnection::connection();
-        $prefix = WordPressConnection::prefix();
 
-        $userIds = $connection->table("{$prefix}usermeta")
+        $userIds = $connection->table('usermeta')
             ->whereIn('meta_key', ['_seeing_now', '_showing', '_pattern', '_completed_community_duas', '_seen_duas'])
             ->distinct()
             ->pluck('user_id');
 
         foreach ($userIds as $userId) {
             $userId = (int) $userId;
-            $meta = $this->userMeta($connection, $prefix, $userId);
+            $meta = $this->userMeta($connection, $userId);
 
             if ($meta === []) {
                 continue;
@@ -69,9 +67,9 @@ class DatabaseCommunityDuaImportSource implements CommunityDuaImportSource
     /**
      * @return array<string, string>
      */
-    private function postMeta(Connection $connection, string $prefix, int $postId): array
+    private function postMeta(Connection $connection, int $postId): array
     {
-        return $connection->table("{$prefix}postmeta")
+        return $connection->table('postmeta')
             ->where('post_id', $postId)
             ->pluck('meta_value', 'meta_key')
             ->map(fn ($value): string => (string) $value)
@@ -81,9 +79,9 @@ class DatabaseCommunityDuaImportSource implements CommunityDuaImportSource
     /**
      * @return array<string, string>
      */
-    private function userMeta(Connection $connection, string $prefix, int $userId): array
+    private function userMeta(Connection $connection, int $userId): array
     {
-        return $connection->table("{$prefix}usermeta")
+        return $connection->table('usermeta')
             ->where('user_id', $userId)
             ->whereIn('meta_key', ['_seeing_now', '_showing', '_pattern', '_completed_community_duas', '_seen_duas'])
             ->pluck('meta_value', 'meta_key')

@@ -5,15 +5,15 @@ namespace App\Services\LegacyImport\Users\Import;
 use App\Services\LegacyImport\Support\WordPressValueMapper;
 use App\Services\LegacyImport\Users\WordPressUserRecord;
 use App\Support\WordPress\WordPressConnection;
+use Illuminate\Database\Connection;
 
 class DatabaseUserImportSource implements UserImportSource
 {
     public function records(): iterable
     {
         $connection = WordPressConnection::connection();
-        $prefix = WordPressConnection::prefix();
 
-        $users = $connection->table("{$prefix}users")
+        $users = $connection->table('users')
             ->orderBy('ID')
             ->get([
                 'ID',
@@ -25,7 +25,7 @@ class DatabaseUserImportSource implements UserImportSource
 
         foreach ($users as $user) {
             $userId = (int) $user->ID;
-            $meta = $this->userMeta($connection, $prefix, $userId);
+            $meta = $this->userMeta($connection, $userId);
 
             $record = $this->mapUser($userId, (array) $user, $meta);
 
@@ -38,9 +38,9 @@ class DatabaseUserImportSource implements UserImportSource
     /**
      * @return array<string, string>
      */
-    private function userMeta(\Illuminate\Database\Connection $connection, string $prefix, int $userId): array
+    private function userMeta(Connection $connection, int $userId): array
     {
-        return $connection->table("{$prefix}usermeta")
+        return $connection->table('usermeta')
             ->where('user_id', $userId)
             ->pluck('meta_value', 'meta_key')
             ->map(fn ($value): string => (string) $value)
@@ -87,6 +87,6 @@ class DatabaseUserImportSource implements UserImportSource
             }
         }
 
-        return 'wp_capabilities';
+        return WordPressConnection::prefix().'capabilities';
     }
 }

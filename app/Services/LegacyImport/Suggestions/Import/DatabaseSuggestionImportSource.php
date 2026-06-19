@@ -5,22 +5,17 @@ namespace App\Services\LegacyImport\Suggestions\Import;
 use App\Services\LegacyImport\Suggestions\WordPressSuggestionRecord;
 use App\Services\LegacyImport\Support\WordPressValueMapper;
 use App\Support\WordPress\WordPressConnection;
+use Illuminate\Database\Connection;
 use Illuminate\Support\Str;
 
 class DatabaseSuggestionImportSource implements SuggestionImportSource
 {
-    /**
-     * @var list<string>
-     */
-    private array $postTypes = ['quransunnahduas', 'suggestedduas'];
-
     public function records(): iterable
     {
         $connection = WordPressConnection::connection();
-        $prefix = WordPressConnection::prefix();
 
-        $posts = $connection->table("{$prefix}posts")
-            ->whereIn('post_type', $this->postTypes)
+        $posts = $connection->table('posts')
+            ->whereIn('post_type', ['quransunnahduas', 'suggestedduas'])
             ->where('post_status', 'publish')
             ->orderBy('ID')
             ->get([
@@ -32,8 +27,8 @@ class DatabaseSuggestionImportSource implements SuggestionImportSource
 
         foreach ($posts as $post) {
             $postId = (int) $post->ID;
-            $meta = $this->postMeta($connection, $prefix, $postId);
-            $category = $this->primaryCategory($connection, $prefix, $postId);
+            $meta = $this->postMeta($connection, $postId);
+            $category = $this->primaryCategory($connection, $postId);
 
             yield $postId => $this->mapPost(
                 $postId,
@@ -49,9 +44,9 @@ class DatabaseSuggestionImportSource implements SuggestionImportSource
     /**
      * @return array<string, string>
      */
-    private function postMeta(\Illuminate\Database\Connection $connection, string $prefix, int $postId): array
+    private function postMeta(Connection $connection, int $postId): array
     {
-        return $connection->table("{$prefix}postmeta")
+        return $connection->table('postmeta')
             ->where('post_id', $postId)
             ->pluck('meta_value', 'meta_key')
             ->map(fn ($value): string => (string) $value)
@@ -61,11 +56,11 @@ class DatabaseSuggestionImportSource implements SuggestionImportSource
     /**
      * @return array{name: string, slug: string}|null
      */
-    private function primaryCategory(\Illuminate\Database\Connection $connection, string $prefix, int $postId): ?array
+    private function primaryCategory(Connection $connection, int $postId): ?array
     {
-        $term = $connection->table("{$prefix}term_relationships as tr")
-            ->join("{$prefix}term_taxonomy as tt", 'tt.term_taxonomy_id', '=', 'tr.term_taxonomy_id')
-            ->join("{$prefix}terms as t", 't.term_id', '=', 'tt.term_id')
+        $term = $connection->table('term_relationships as tr')
+            ->join('term_taxonomy as tt', 'tt.term_taxonomy_id', '=', 'tr.term_taxonomy_id')
+            ->join('terms as t', 't.term_id', '=', 'tt.term_id')
             ->where('tr.object_id', $postId)
             ->where('tt.taxonomy', 'dua_category')
             ->orderBy('tt.term_id')

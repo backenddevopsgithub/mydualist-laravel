@@ -68,9 +68,10 @@ class ImportBlogCommand extends Command
         }
 
         if (isset($sources['sql'])) {
-            $prefix = (string) config('database.connections.wordpress.prefix', 'wp_');
-
-            return new SqlDumpBlogImportSource((string) $sources['sql'], $prefix);
+            return new SqlDumpBlogImportSource(
+                (string) $sources['sql'],
+                (string) config('database.connections.wordpress.prefix', ''),
+            );
         }
 
         return new DatabaseBlogImportSource;

@@ -17,8 +17,14 @@ class WordPressConnection
         return DB::connection('wordpress');
     }
 
+    /**
+     * Table prefix for raw SQL and SQL dump parsing only.
+     *
+     * The wordpress connection query builder applies the configured prefix
+     * automatically — pass unprefixed table names to ->table().
+     */
     public static function prefix(): string
     {
-        return (string) config('database.connections.wordpress.prefix', 'wp_');
+        return static::connection()->getTablePrefix();
     }
 }

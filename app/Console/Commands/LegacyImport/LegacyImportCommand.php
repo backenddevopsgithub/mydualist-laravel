@@ -54,8 +54,13 @@ abstract class LegacyImportCommand extends Command
         }
     }
 
+    /**
+     * Prefix for SQL dump file parsing (--sql mode only).
+     *
+     * Not used for --database mode; the connection applies this prefix automatically.
+     */
     protected function tablePrefix(): string
     {
-        return (string) config('database.connections.wordpress.prefix', 'wp_');
+        return (string) config('database.connections.wordpress.prefix', '');
     }
 }

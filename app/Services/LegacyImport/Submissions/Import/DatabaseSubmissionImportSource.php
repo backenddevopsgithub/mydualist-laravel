@@ -18,24 +18,23 @@ class DatabaseSubmissionImportSource implements SubmissionImportSource
     public function records(): iterable
     {
         $connection = WordPressConnection::connection();
-        $prefix = WordPressConnection::prefix();
 
-        $lists = $connection->table("{$prefix}posts")
+        $lists = $connection->table('posts')
             ->where('post_type', 'dua_list')
             ->orderBy('ID')
             ->pluck('ID');
 
         foreach ($lists as $listId) {
             $listId = (int) $listId;
-            $listMeta = $this->postMeta($connection, $prefix, $listId);
+            $listMeta = $this->postMeta($connection, $listId);
             $migrated = WordPressSubmissionStatusMapper::isTruthy($listMeta['migrated'] ?? false);
 
             foreach ($this->legacyMigrator->expand($listId, $listMeta['dua_submissions'] ?? null, $migrated) as $record) {
                 yield $record->wpPostId ?? spl_object_id($record) => $record;
             }
 
-            $submissions = $connection->table("{$prefix}posts as p")
-                ->join("{$prefix}postmeta as pm", function ($join): void {
+            $submissions = $connection->table('posts as p')
+                ->join('postmeta as pm', function ($join): void {
                     $join->on('pm.post_id', '=', 'p.ID')->where('pm.meta_key', '_list_id');
                 })
                 ->where('p.post_type', 'submission')
@@ -46,7 +45,7 @@ class DatabaseSubmissionImportSource implements SubmissionImportSource
 
             foreach ($submissions as $submission) {
                 $postId = (int) $submission->ID;
-                $meta = $this->postMeta($connection, $prefix, $postId);
+                $meta = $this->postMeta($connection, $postId);
 
                 yield $postId => $this->mapSubmission(
                     $postId,
@@ -62,9 +61,9 @@ class DatabaseSubmissionImportSource implements SubmissionImportSource
     /**
      * @return array<string, string>
      */
-    private function postMeta(Connection $connection, string $prefix, int $postId): array
+    private function postMeta(Connection $connection, int $postId): array
     {
-        return $connection->table("{$prefix}postmeta")
+        return $connection->table('postmeta')
             ->where('post_id', $postId)
             ->pluck('meta_value', 'meta_key')
             ->map(fn ($value): string => (string) $value)
