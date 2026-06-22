@@ -20,8 +20,21 @@
         </x-filament::section>
     </div>
 
+    @if (! empty($status['live_totals']))
+        <x-filament::section heading="Live Database Counts" class="mb-6">
+            <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                @foreach ($status['live_totals'] as $metric => $count)
+                    <div class="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+                        <p class="text-xs uppercase tracking-wide text-gray-500">{{ str_replace('_', ' ', $metric) }}</p>
+                        <p class="text-lg font-semibold">{{ number_format($count) }}</p>
+                    </div>
+                @endforeach
+            </div>
+        </x-filament::section>
+    @endif
+
     @if (! empty($status['totals']))
-        <x-filament::section heading="Entity Totals" class="mb-6">
+        <x-filament::section heading="Cached Validation Totals" class="mb-6">
             <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 @foreach ($status['totals'] as $metric => $count)
                     <div class="rounded-lg border border-gray-200 p-3 dark:border-gray-700">

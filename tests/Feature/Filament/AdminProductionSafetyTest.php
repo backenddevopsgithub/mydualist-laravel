@@ -146,6 +146,7 @@ test('migration status service does not run validation when report file is missi
 
     expect($status['report_exists'])->toBeFalse()
         ->and($status['totals'])->toBe([])
+        ->and($status['live_totals'])->toBeArray()
         ->and($status['failures'])->toBe([]);
 });
 

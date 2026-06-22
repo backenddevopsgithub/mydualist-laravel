@@ -8,6 +8,7 @@ use App\Models\DuaList;
 use App\Models\DuaSubmission;
 use App\Services\LegacyImport\LegacyImportReport;
 use App\Services\LegacyImport\Submissions\Import\SubmissionImportSource;
+use App\Services\LegacyImport\Support\LegacyImportTimestamps;
 use App\Services\LegacyImport\Support\LegacyWhatsAppPhoneParser;
 use App\Services\LegacyImport\Support\WordPressSubmissionStatusMapper;
 use App\Services\Service;
@@ -145,14 +146,12 @@ class SubmissionImportService extends Service
                 $attributes['locked_reason'] = null;
             }
 
-            if ($record->createdAt !== null) {
-                $attributes['created_at'] = $record->createdAt;
-            }
-
             $submission = DuaSubmission::withTrashed()->updateOrCreate(
                 ['wp_post_id' => $record->wpPostId],
                 $attributes,
             );
+
+            LegacyImportTimestamps::apply($submission, $record->createdAt);
 
             if ($existing === null) {
                 $report->addImported($record->summary());

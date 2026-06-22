@@ -2,16 +2,26 @@
 
 namespace App\Services;
 
+use App\Services\LegacyImport\Validation\LegacyDateBackfillService;
 use Illuminate\Support\Facades\File;
 
 class MigrationStatusService extends Service
 {
     /**
-     * @return array{passed: bool, totals: array<string, int>, failures: list<array<string, mixed>>, warnings: list<array<string, mixed>>, report_path: string|null, report_exists: bool}
+     * @return array{
+     *     passed: bool,
+     *     totals: array<string, int>,
+     *     live_totals: array<string, int>,
+     *     failures: list<array<string, mixed>>,
+     *     warnings: list<array<string, mixed>>,
+     *     report_path: string|null,
+     *     report_exists: bool
+     * }
      */
     public function status(): array
     {
         $reportPath = (string) config('mydualist.legacy.import.validate_report_path');
+        $liveTotals = LegacyDateBackfillService::liveEntityTotals();
 
         if (File::exists($reportPath)) {
             $cached = json_decode(File::get($reportPath), true);
@@ -22,6 +32,7 @@ class MigrationStatusService extends Service
                 return [
                     'passed' => (bool) ($validation['passed'] ?? false),
                     'totals' => $validation['totals'] ?? [],
+                    'live_totals' => $liveTotals,
                     'failures' => $validation['failures'] ?? [],
                     'warnings' => $validation['warnings'] ?? [],
                     'report_path' => $reportPath,
@@ -33,6 +44,7 @@ class MigrationStatusService extends Service
         return [
             'passed' => false,
             'totals' => [],
+            'live_totals' => $liveTotals,
             'failures' => [],
             'warnings' => [],
             'report_path' => $reportPath,

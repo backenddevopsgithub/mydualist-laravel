@@ -5,6 +5,7 @@ namespace App\Services\LegacyImport\Users;
 use App\Enums\UserStatus;
 use App\Models\User;
 use App\Services\LegacyImport\LegacyImportReport;
+use App\Services\LegacyImport\Support\LegacyImportTimestamps;
 use App\Services\LegacyImport\Users\Import\UserImportSource;
 use App\Services\Service;
 use Illuminate\Support\Facades\DB;
@@ -77,13 +78,16 @@ class UserImportService extends Service
 
         DB::transaction(function () use ($record, $report, $existingUser, $isNew, $isEmailReconciliation): void {
             if ($isNew) {
-                User::query()->create($this->attributesForNewUser($record));
+                $user = User::query()->create($this->attributesForNewUser($record));
+                LegacyImportTimestamps::apply($user, $record->registeredAt);
+
                 $report->addImported($record->summary());
 
                 return;
             }
 
             $this->applyImportToExistingUser($existingUser, $record);
+            LegacyImportTimestamps::apply($existingUser->fresh(), $record->registeredAt);
 
             if ($isEmailReconciliation) {
                 $report->addReconciled($record->summary());
@@ -130,11 +134,6 @@ class UserImportService extends Service
             'email_verified_at' => $record->emailVerifiedAt,
             'password' => Str::password(32),
         ];
-
-        if ($record->registeredAt !== null) {
-            $attributes['created_at'] = $record->registeredAt;
-            $attributes['updated_at'] = $record->registeredAt;
-        }
 
         return $attributes;
     }

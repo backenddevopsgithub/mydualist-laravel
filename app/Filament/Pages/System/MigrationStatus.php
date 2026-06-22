@@ -30,7 +30,15 @@ class MigrationStatus extends Page
     }
 
     /**
-     * @return array{passed: bool, totals: array<string, int>, failures: list<array<string, mixed>>, warnings: list<array<string, mixed>>, report_path: string|null, report_exists: bool}
+     * @return array{
+     *     passed: bool,
+     *     totals: array<string, int>,
+     *     live_totals: array<string, int>,
+     *     failures: list<array<string, mixed>>,
+     *     warnings: list<array<string, mixed>>,
+     *     report_path: string|null,
+     *     report_exists: bool
+     * }
      */
     public function getStatus(): array
     {

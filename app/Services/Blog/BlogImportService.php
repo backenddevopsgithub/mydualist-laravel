@@ -6,6 +6,7 @@ use App\Models\BlogCategory;
 use App\Models\BlogPost;
 use App\Models\SeoMetadata;
 use App\Services\Blog\Import\BlogImportSource;
+use App\Services\LegacyImport\Support\LegacyImportTimestamps;
 use App\Services\Service;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -73,10 +74,12 @@ class BlogImportService extends Service
                 'published_at' => $record->publishedAt ?? now(),
             ];
 
-            BlogPost::query()->updateOrCreate(
+            $post = BlogPost::query()->updateOrCreate(
                 ['wp_post_id' => $record->wpPostId],
                 $attributes,
             );
+
+            LegacyImportTimestamps::apply($post, $record->publishedAt);
 
             $this->upsertSeoMetadata($record, $featuredImage);
 

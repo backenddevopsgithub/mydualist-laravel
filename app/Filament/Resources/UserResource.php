@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Domains\Billing\Services\UserEntitlementService;
 use App\Domains\Auth\Actions\ActivateUserAction;
 use App\Domains\Auth\Actions\ResetEmailVerificationAction;
 use App\Domains\Auth\Actions\SuspendUserAction;
@@ -11,7 +12,6 @@ use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Filament\Resources\UserResource\Pages;
 use App\Models\User;
-use App\Models\UserEntitlement;
 use App\Support\Impersonation;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
@@ -85,7 +85,7 @@ class UserResource extends Resource
                 IconColumn::make('premium')
                     ->label('Premium')
                     ->boolean()
-                    ->state(fn (User $record): bool => $record->entitlements->contains(fn (UserEntitlement $entitlement): bool => $entitlement->key === UserEntitlement::KEY_PREMIUM && $entitlement->active)),
+                    ->state(fn (User $record): bool => app(UserEntitlementService::class)->hasPremium($record)),
                 TextColumn::make('created_at')->dateTime()->sortable(),
             ])
             ->filters([

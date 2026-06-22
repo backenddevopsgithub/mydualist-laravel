@@ -47,7 +47,7 @@ class SubmissionAnalytics extends BaseAnalyticsPage
     public function table(Table $table): Table
     {
         return $table
-            ->query(fn (): Builder => DuaSubmission::query()->with(['duaList:id,title']))
+            ->query(fn (): Builder => app(AnalyticsQueryService::class)->submissionAnalyticsQuery([]))
             ->columns([
                 TextColumn::make('content')
                     ->label('Submission Title')

@@ -2,15 +2,18 @@
 
 namespace App\Filament\Widgets;
 
+use App\Enums\BillingPurchaseStatus;
+use App\Enums\EntitlementKey;
+use App\Models\BillingPurchase;
 use App\Models\DuaList;
 use App\Models\DuaSubmission;
-use App\Models\StripePayment;
 use App\Models\SupportTicket;
 use App\Models\User;
 use App\Models\UserEntitlement;
 use App\Services\AdminDashboardCacheService;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
+use Illuminate\Database\Eloquent\Builder;
 
 class PlatformStatsOverview extends StatsOverviewWidget
 {
@@ -66,15 +69,25 @@ class PlatformStatsOverview extends StatsOverviewWidget
             ->first();
 
         return [
-            'premium_users' => UserEntitlement::query()
-                ->where('key', UserEntitlement::KEY_PREMIUM)
-                ->where('active', true)
-                ->distinct('user_id')
-                ->count('user_id'),
+            'premium_users' => User::query()
+                ->where(function (Builder $query): void {
+                    $query->whereHas('entitlementGrants', fn (Builder $grantQuery): Builder => $grantQuery
+                        ->where('entitlement_key', EntitlementKey::UserUnlimitedForever)
+                        ->where(function (Builder $expiryQuery): void {
+                            $expiryQuery->whereNull('expires_at')->orWhere('expires_at', '>', now());
+                        }))
+                        ->orWhereHas('entitlements', fn (Builder $legacyQuery): Builder => $legacyQuery
+                            ->where('key', UserEntitlement::KEY_PREMIUM)
+                            ->where('active', true)
+                            ->where(function (Builder $expiryQuery): void {
+                                $expiryQuery->whereNull('expires_at')->orWhere('expires_at', '>', now());
+                            }));
+                })
+                ->count(),
             'total_users' => User::query()->count(),
-            'paid_revenue' => (int) StripePayment::query()
-                ->where('status', StripePayment::STATUS_PAID)
-                ->sum('amount_total'),
+            'paid_revenue' => (int) BillingPurchase::query()
+                ->where('status', BillingPurchaseStatus::Succeeded)
+                ->sum('amount_minor'),
             'total_lists' => (int) ($listStats->total_lists ?? 0),
             'active_lists' => (int) ($listStats->active_lists ?? 0),
             'archived_lists' => (int) ($listStats->archived_lists ?? 0),
@@ -122,7 +135,7 @@ class PlatformStatsOverview extends StatsOverviewWidget
                 ->description('Reported and hidden duas')
                 ->color('warning'),
             Stat::make('Paid Revenue', '$'.number_format($data['paid_revenue'] / 100, 2))
-                ->description('Stripe paid checkout total')
+                ->description('Succeeded billing purchases')
                 ->color('success'),
             Stat::make('Support Tickets', number_format($data['support_tickets']))
                 ->description($data['support_tickets_last_7_days'].' opened in 7 days'),

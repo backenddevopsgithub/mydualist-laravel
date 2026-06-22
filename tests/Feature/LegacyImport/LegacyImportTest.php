@@ -27,9 +27,11 @@ test('migrate users imports wp users with legacy password hash and role mapping'
         ->and($admin->role)->toBe(UserRole::Admin)
         ->and($admin->wp_password_hash)->toBe('$P$Bexamplehash')
         ->and($admin->email_verified_at)->not->toBeNull()
+        ->and($admin->created_at?->toDateTimeString())->toBe('2024-01-15 10:00:00')
         ->and($subscriber)->not->toBeNull()
         ->and($subscriber->role)->toBe(UserRole::User)
-        ->and($subscriber->email_verified_at)->toBeNull();
+        ->and($subscriber->email_verified_at)->toBeNull()
+        ->and($subscriber->created_at?->toDateTimeString())->toBe('2024-02-01 12:00:00');
 });
 
 test('migrate users is idempotent on repeated runs', function () {
@@ -106,6 +108,7 @@ test('migrate lists preserves slug owner preferences and cover image', function 
         ->and($list->display_order)->toBe('gender')
         ->and($list->email_frequency)->toBe('daily_summary')
         ->and($list->published_at)->not->toBeNull()
+        ->and($list->created_at?->toDateTimeString())->toBe('2024-01-20 09:00:00')
         ->and($list->cover_image_path)->toStartWith('list-covers/301.');
 
     Storage::disk('public')->assertExists($list->cover_image_path);
@@ -162,5 +165,6 @@ SQL;
         ->and($list->occasion)->toBe('hajj')
         ->and($list->dua_limit_per_person)->toBe(4)
         ->and($list->display_order)->toBe('person')
-        ->and($list->email_frequency)->toBe('every_submission');
+        ->and($list->email_frequency)->toBe('every_submission')
+        ->and($list->created_at?->toDateTimeString())->toBe('2024-01-20 09:00:00');
 });

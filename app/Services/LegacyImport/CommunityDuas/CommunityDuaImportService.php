@@ -13,6 +13,7 @@ use App\Models\CommunityDuaSkip;
 use App\Models\User;
 use App\Services\LegacyImport\CommunityDuas\Import\CommunityDuaImportSource;
 use App\Services\LegacyImport\LegacyImportReport;
+use App\Services\LegacyImport\Support\LegacyImportTimestamps;
 use App\Services\Service;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -108,15 +109,12 @@ class CommunityDuaImportService extends Service
                     : null,
             ];
 
-            if ($record->createdAt !== null) {
-                $attributes['created_at'] = $record->createdAt;
-                $attributes['updated_at'] = $record->createdAt;
-            }
-
             $communityDua = CommunityDua::query()->updateOrCreate(
                 ['wp_post_id' => $record->wpPostId],
                 $attributes,
             );
+
+            LegacyImportTimestamps::apply($communityDua, $record->createdAt);
 
             if ($purchase !== null && $purchase->community_dua_id === null) {
                 $purchase->forceFill(['community_dua_id' => $communityDua->id])->save();

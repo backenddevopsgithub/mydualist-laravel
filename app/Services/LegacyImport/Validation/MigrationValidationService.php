@@ -28,18 +28,7 @@ class MigrationValidationService extends Service
     {
         $report = new LegacyImportReport('validate');
 
-        $totals = [
-            'users' => User::query()->count(),
-            'users_with_wp_legacy_id' => User::query()->whereNotNull('wp_legacy_id')->count(),
-            'lists' => DuaList::query()->count(),
-            'lists_with_wp_post_id' => DuaList::query()->whereNotNull('wp_post_id')->count(),
-            'submissions' => DuaSubmission::query()->count(),
-            'submissions_with_wp_post_id' => DuaSubmission::query()->whereNotNull('wp_post_id')->count(),
-            'suggestions' => DuaSuggestion::query()->count(),
-            'community_duas' => CommunityDua::query()->count(),
-            'purchases' => BillingPurchase::query()->count(),
-            'purchases_with_wp_order_id' => BillingPurchase::query()->whereNotNull('wp_order_id')->count(),
-            'entitlement_grants' => EntitlementGrant::query()->count(),
+        $totals = LegacyDateBackfillService::liveEntityTotals() + [
             'locked_submissions' => DuaSubmission::query()->quotaLocked()->count(),
         ];
 

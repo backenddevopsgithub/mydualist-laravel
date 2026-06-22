@@ -113,6 +113,8 @@ class KeywordAnalytics extends BaseAnalyticsPage
             ])
             ->emptyStateHeading('No keywords found')
             ->emptyStateDescription('Try adjusting your date range filters.')
+            ->recordAction(null)
+            ->recordUrl(null)
             ->headerActions([
                 $this->exportTableAction(),
             ]);

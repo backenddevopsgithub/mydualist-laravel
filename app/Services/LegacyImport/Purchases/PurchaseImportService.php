@@ -13,6 +13,7 @@ use App\Services\LegacyImport\LegacyImportReport;
 use App\Services\LegacyImport\Purchases\Import\PurchaseImportSource;
 use App\Services\LegacyImport\Purchases\Support\PurchaseCustomerResolver;
 use App\Services\LegacyImport\Purchases\Support\WordPressOrderBillingEmailResolver;
+use App\Services\LegacyImport\Support\LegacyImportTimestamps;
 use App\Services\Service;
 use Illuminate\Support\Facades\DB;
 
@@ -146,15 +147,12 @@ class PurchaseImportService extends Service
                 'metadata' => $metadata,
             ];
 
-            if ($record->createdAt !== null) {
-                $attributes['created_at'] = $record->createdAt;
-                $attributes['updated_at'] = $record->createdAt;
-            }
-
             $purchase = BillingPurchase::query()->updateOrCreate(
                 ['wp_order_id' => $record->wpOrderId],
                 $attributes,
             );
+
+            LegacyImportTimestamps::apply($purchase, $record->createdAt);
 
             if ($this->canFulfill($purchase, $productCode, $duaList, $communityDua)) {
                 $this->fulfillmentService->fulfill($purchase->fresh(['product', 'user']));

@@ -6,6 +6,7 @@ use App\Models\DuaList;
 use App\Models\User;
 use App\Services\LegacyImport\LegacyImportReport;
 use App\Services\LegacyImport\Lists\Import\ListImportSource;
+use App\Services\LegacyImport\Support\LegacyImportTimestamps;
 use App\Services\Service;
 use Illuminate\Support\Facades\DB;
 
@@ -108,18 +109,12 @@ class ListImportService extends Service
                 'published_at' => $record->publishedAt,
             ];
 
-            if ($record->createdAt !== null) {
-                $attributes['created_at'] = $record->createdAt;
-            }
-
-            if ($record->updatedAt !== null) {
-                $attributes['updated_at'] = $record->updatedAt;
-            }
-
             $duaList = DuaList::withTrashed()->updateOrCreate(
                 ['wp_post_id' => $record->wpPostId],
                 $attributes,
             );
+
+            LegacyImportTimestamps::apply($duaList, $record->createdAt, $record->updatedAt);
 
             if ($record->isTrashed && ! $duaList->trashed()) {
                 $duaList->delete();
