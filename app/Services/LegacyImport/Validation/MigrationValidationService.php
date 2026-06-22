@@ -102,7 +102,7 @@ class MigrationValidationService extends Service
 
         DuaList::query()
             ->with('user')
-            ->chunkById(50, function ($lists) use (&$mismatches): void {
+            ->chunkById(50, function ($lists) use (&$mismatches, &$warnings): void {
                 foreach ($lists as $list) {
                     if ($list->user === null) {
                         continue;
@@ -111,12 +111,13 @@ class MigrationValidationService extends Service
                     $inspection = $this->quota->inspect($list->user, $list);
 
                     if ($inspection['exceeds']) {
-                        $mismatches[] = [
+                        $warnings[] = [
                             'type' => 'visible_exceeds_quota',
                             'dua_list_id' => $list->id,
                             'wp_post_id' => $list->wp_post_id,
                             'visible' => $inspection['visible'],
                             'quota' => $inspection['quota'],
+                            'note' => 'Legacy WordPress may have allowed more visible duas than rank-based quota; review before reconciling locks.',
                         ];
                     }
 

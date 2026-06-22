@@ -100,7 +100,7 @@ test('migration validation does not flag production style mixed lock state withi
         ->firstWhere('wp_post_id', 15912))->toBeNull();
 });
 
-test('migration validation flags visible submissions above base quota only', function () {
+test('migration validation warns when visible submissions exceed quota', function () {
     [$owner, $list] = createOwnedList();
 
     DuaSubmission::factory()->count((int) config('billing.free_visible_submissions_per_list') + 1)->create([
@@ -111,9 +111,11 @@ test('migration validation flags visible submissions above base quota only', fun
 
     $report = app(MigrationValidationService::class)->validate();
 
-    expect(collect($report->validation['mismatches'] ?? [])
-        ->contains(fn (array $mismatch): bool => $mismatch['dua_list_id'] === $list->id
-            && $mismatch['type'] === 'visible_exceeds_quota'))->toBeTrue();
+    expect(collect($report->validation['warnings'] ?? [])
+        ->contains(fn (array $warning): bool => $warning['dua_list_id'] === $list->id
+            && $warning['type'] === 'visible_exceeds_quota'))->toBeTrue()
+        ->and(collect($report->validation['mismatches'] ?? [])
+            ->contains(fn (array $mismatch): bool => ($mismatch['dua_list_id'] ?? null) === $list->id))->toBeFalse();
 });
 
 test('migration validation allows additional request pack quota', function () {
