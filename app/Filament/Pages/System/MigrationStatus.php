@@ -36,6 +36,9 @@ class MigrationStatus extends Page
      *     live_totals: array<string, int>,
      *     failures: list<array<string, mixed>>,
      *     warnings: list<array<string, mixed>>,
+     *     mismatches: list<array<string, mixed>>,
+     *     import_sequence: list<array{command: string, label: string, phase: string}>,
+     *     generated_at: string|null,
      *     report_path: string|null,
      *     report_exists: bool
      * }

@@ -15,4 +15,5 @@ enum BillingPurchaseEventType: string
     case ReconcileAttempt = 'reconcile.attempt';
     case AdminMarkedFulfilled = 'admin.marked_fulfilled';
     case AdminMarkedRefunded = 'admin.marked_refunded';
+    case AdminStripeRefund = 'admin.stripe_refund';
 }

@@ -74,6 +74,28 @@ class StripePaymentIntentService
         return $this->client()->paymentIntents->retrieve($paymentIntentId, []);
     }
 
+    /**
+     * @return array{id: string, amount: int, status: string}
+     */
+    public function refundPaymentIntent(string $paymentIntentId, ?int $amountMinor = null): array
+    {
+        $params = ['payment_intent' => $paymentIntentId];
+
+        if ($amountMinor !== null) {
+            $params['amount'] = $amountMinor;
+        }
+
+        $refund = $this->client()->refunds->create($params, [
+            'idempotency_key' => 'refund:'.$paymentIntentId.':'.($amountMinor ?? 'full'),
+        ]);
+
+        return [
+            'id' => $refund->id,
+            'amount' => (int) $refund->amount,
+            'status' => (string) $refund->status,
+        ];
+    }
+
     public function usesRedirectPaymentMethods(PaymentIntent $intent): bool
     {
         $allowRedirects = (string) data_get(

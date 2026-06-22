@@ -3,9 +3,11 @@
 namespace App\Filament\Pages\Analytics;
 
 use App\Enums\AdminExportType;
+use App\Filament\Resources\DuaSubmissionResource;
 use App\Models\DuaList;
 use App\Models\DuaSubmission;
 use App\Services\AnalyticsQueryService;
+use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Toggle;
 use Filament\Tables\Columns\TextColumn;
@@ -27,6 +29,17 @@ class SubmissionAnalytics extends BaseAnalyticsPage
     protected function analyticsExportType(): AdminExportType
     {
         return AdminExportType::SubmissionAnalytics;
+    }
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('moderateSubmissions')
+                ->label('Moderate submissions')
+                ->icon('heroicon-o-shield-exclamation')
+                ->url(DuaSubmissionResource::getUrl('index'))
+                ->color('gray'),
+        ];
     }
 
     public function getMetricCards(): array

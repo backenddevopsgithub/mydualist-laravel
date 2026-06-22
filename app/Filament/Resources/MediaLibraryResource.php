@@ -91,6 +91,17 @@ class MediaLibraryResource extends Resource
                     ->label('Preview')
                     ->getStateUsing(fn (MediaLibraryItem $record): ?string => $record->signedPreviewUrl('thumb') ?: $record->signedPreviewUrl())
                     ->square(),
+                TextColumn::make('title')
+                    ->label('Title')
+                    ->placeholder('Untitled')
+                    ->searchable(),
+                TextColumn::make('media_url')
+                    ->label('URL')
+                    ->getStateUsing(fn (MediaLibraryItem $record): ?string => $record->signedPreviewUrl())
+                    ->copyable()
+                    ->copyMessage('Media URL copied')
+                    ->limit(40)
+                    ->toggleable(),
                 TextColumn::make('media.file_name')
                     ->label('Filename')
                     ->getStateUsing(fn (MediaLibraryItem $record): string => $record->getFirstMedia()?->file_name ?? '—')
@@ -152,12 +163,23 @@ class MediaLibraryResource extends Resource
                 Action::make('copyUrl')
                     ->label('Copy URL')
                     ->icon('heroicon-o-clipboard')
-                    ->action(function (MediaLibraryItem $record): void {
+                    ->action(function (MediaLibraryItem $record, $livewire): void {
+                        $url = $record->signedPreviewUrl();
+
+                        if ($url === null) {
+                            Notification::make()
+                                ->title('No media URL available')
+                                ->warning()
+                                ->send();
+
+                            return;
+                        }
+
+                        $livewire->js('window.navigator.clipboard.writeText('.json_encode($url).')');
+
                         Notification::make()
-                            ->title('Media URL')
-                            ->body($record->signedPreviewUrl() ?? '—')
+                            ->title('Media URL copied')
                             ->success()
-                            ->persistent()
                             ->send();
                     }),
                 DeleteAction::make(),

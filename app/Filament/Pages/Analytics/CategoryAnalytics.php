@@ -3,9 +3,11 @@
 namespace App\Filament\Pages\Analytics;
 
 use App\Enums\AdminExportType;
+use App\Filament\Resources\DuaListResource;
 use App\Models\DuaList;
 use App\Services\AnalyticsQueryService;
 use App\Support\DuaListOccasions;
+use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
@@ -32,6 +34,22 @@ class CategoryAnalytics extends BaseAnalyticsPage
     protected function analyticsExportType(): AdminExportType
     {
         return AdminExportType::CategoryAnalytics;
+    }
+
+    public function getSubheading(): ?string
+    {
+        return 'Counts all lists by category unless a date range filter is applied, matching legacy WordPress behavior.';
+    }
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('manageLists')
+                ->label('Manage lists')
+                ->icon('heroicon-o-clipboard-document-list')
+                ->url(DuaListResource::getUrl('index'))
+                ->color('gray'),
+        ];
     }
 
     public function loadMetrics(): void
@@ -101,23 +119,38 @@ class CategoryAnalytics extends BaseAnalyticsPage
 
     public function getTableRecordKey($record): string
     {
+        if ($record instanceof DuaList && filled($record->occasion)) {
+            return (string) $record->occasion;
+        }
+
         if (isset($record->occasion) && $record->occasion !== null && $record->occasion !== '') {
             return (string) $record->occasion;
         }
 
-        return md5(json_encode($record->getAttributes()));
+        return md5(json_encode($record instanceof DuaList ? $record->getAttributes() : $record));
     }
 
     public function table(Table $table): Table
     {
         return $table
             ->query(function (): Builder {
-                return DuaList::query()
+                $filters = $this->getAnalyticsFilters();
+                $query = DuaList::query()
                     ->select('occasion')
                     ->selectRaw('COUNT(*) as list_count')
                     ->groupBy('occasion')
                     ->reorder()
                     ->orderByDesc('list_count');
+
+                if (! empty($filters['date_from'])) {
+                    $query->where('created_at', '>=', $filters['date_from']);
+                }
+
+                if (! empty($filters['date_to'])) {
+                    $query->where('created_at', '<=', $filters['date_to'].' 23:59:59');
+                }
+
+                return $query;
             })
             ->columns([
                 TextColumn::make('occasion')
@@ -128,8 +161,11 @@ class CategoryAnalytics extends BaseAnalyticsPage
                 TextColumn::make('percentage')
                     ->label('Percentage of Total')
                     ->state(function (DuaList $record, CategoryAnalytics $livewire): string {
-                        $row = $livewire->categoryTableRows()->firstWhere('occasion', $record->occasion);
-                        $percentage = $row->percentage ?? 0.0;
+                        $totalLists = $livewire->categoryTableRows()->sum('list_count');
+                        $count = (int) ($record->list_count ?? 0);
+                        $percentage = $totalLists > 0
+                            ? round(($count / $totalLists) * 100, 1)
+                            : 0.0;
 
                         return $percentage.'%';
                     }),
@@ -139,22 +175,13 @@ class CategoryAnalytics extends BaseAnalyticsPage
                     ->form([
                         DatePicker::make('date_from')->label('Date From'),
                         DatePicker::make('date_to')->label('Date To'),
-                    ])
-                    ->query(function (Builder $query, array $data): Builder {
-                        if (! empty($data['date_from'])) {
-                            $query->where('created_at', '>=', $data['date_from']);
-                        }
-
-                        if (! empty($data['date_to'])) {
-                            $query->where('created_at', '<=', $data['date_to'].' 23:59:59');
-                        }
-
-                        return $query;
-                    }),
+                    ]),
             ])
             ->paginated(false)
             ->emptyStateHeading('No categories found')
             ->emptyStateDescription('No dua lists match the selected date range.')
+            ->recordAction(null)
+            ->recordUrl(null)
             ->headerActions([
                 $this->exportTableAction(),
             ]);

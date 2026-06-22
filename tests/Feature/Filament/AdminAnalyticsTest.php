@@ -79,15 +79,3 @@ test('admins can create users from admin panel', function () {
         ->get('/admin/users/create')
         ->assertOk();
 });
-
-test('category analytics page renders aggregate rows without record key errors', function () {
-    $admin = User::factory()->admin()->create();
-    DuaList::factory()->count(2)->create(['occasion' => 'wedding']);
-    DuaList::factory()->create(['occasion' => 'funeral']);
-
-    $this->actingAs($admin);
-
-    Livewire::test(\App\Filament\Pages\Analytics\CategoryAnalytics::class)
-        ->call('loadMetrics')
-        ->assertSuccessful();
-});

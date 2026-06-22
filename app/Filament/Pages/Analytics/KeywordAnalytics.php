@@ -101,8 +101,7 @@ class KeywordAnalytics extends BaseAnalyticsPage
                     ->state(fn (object $record): string => $record->keyword ?? ''),
                 TextColumn::make('occurrences')
                     ->label('Occurrences')
-                    ->state(fn (object $record): int => (int) ($record->occurrences ?? 0))
-                    ->sortable(),
+                    ->state(fn (object $record): int => (int) ($record->occurrences ?? 0)),
             ])
             ->filters([
                 Filter::make('date_range')

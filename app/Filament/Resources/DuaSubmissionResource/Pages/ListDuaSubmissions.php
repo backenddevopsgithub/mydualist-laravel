@@ -2,7 +2,9 @@
 
 namespace App\Filament\Resources\DuaSubmissionResource\Pages;
 
+use App\Filament\Pages\Analytics\SubmissionAnalytics;
 use App\Filament\Resources\DuaSubmissionResource;
+use Filament\Actions\Action;
 use Filament\Resources\Pages\ListRecords;
 
 class ListDuaSubmissions extends ListRecords
@@ -11,6 +13,12 @@ class ListDuaSubmissions extends ListRecords
 
     protected function getHeaderActions(): array
     {
-        return [];
+        return [
+            Action::make('viewAnalytics')
+                ->label('View analytics')
+                ->icon('heroicon-o-chart-bar')
+                ->url(SubmissionAnalytics::getUrl())
+                ->color('gray'),
+        ];
     }
 }

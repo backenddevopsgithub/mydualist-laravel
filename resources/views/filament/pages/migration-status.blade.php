@@ -7,11 +7,14 @@
                 <div>
                     <p class="text-sm text-gray-500">Validation Status</p>
                     <p class="text-2xl font-semibold {{ $status['passed'] ? 'text-success-600' : 'text-danger-600' }}">
-                        {{ $status['passed'] ? 'Passed' : 'Failed' }}
+                        {{ $status['passed'] ? 'Passed' : ($status['report_exists'] ? 'Failed' : 'Not validated') }}
                     </p>
+                    @if ($status['generated_at'])
+                        <p class="mt-1 text-xs text-gray-500">Report generated: {{ $status['generated_at'] }}</p>
+                    @endif
                 </div>
                 <x-filament::badge :color="$status['report_exists'] ? 'info' : 'warning'">
-                    {{ $status['report_exists'] ? 'Cached report available' : 'Live validation snapshot' }}
+                    {{ $status['report_exists'] ? 'Cached report' : 'No cached report — use Run Validation' }}
                 </x-filament::badge>
             </div>
             @if ($status['report_path'])
@@ -19,6 +22,23 @@
             @endif
         </x-filament::section>
     </div>
+
+    <x-filament::section heading="Import Sequence" class="mb-6">
+        <p class="mb-3 text-sm text-gray-600 dark:text-gray-400">
+            Run imports in this order during cutover. Use <code class="rounded bg-gray-100 px-1 dark:bg-gray-800">php artisan migrate:suggestions --database</code> after users and before lists.
+        </p>
+        <div class="grid gap-2 md:grid-cols-2">
+            @foreach ($status['import_sequence'] as $step)
+                <div class="flex items-center justify-between rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+                    <div>
+                        <p class="text-xs uppercase tracking-wide text-gray-500">{{ $step['phase'] }}</p>
+                        <p class="font-medium">{{ $step['label'] }}</p>
+                    </div>
+                    <code class="text-xs text-gray-600 dark:text-gray-300">{{ $step['command'] }}</code>
+                </div>
+            @endforeach
+        </div>
+    </x-filament::section>
 
     @if (! empty($status['live_totals']))
         <x-filament::section heading="Live Database Counts" class="mb-6">
@@ -56,11 +76,27 @@
         </x-filament::section>
     @endif
 
+    @if (! empty($status['mismatches']))
+        <x-filament::section heading="Mismatches" class="mb-6">
+            <ul class="space-y-2 text-sm text-danger-600">
+                @foreach ($status['mismatches'] as $mismatch)
+                    <li class="rounded bg-danger-50 p-2 dark:bg-danger-500/10">{{ json_encode($mismatch) }}</li>
+                @endforeach
+            </ul>
+        </x-filament::section>
+    @endif
+
     @if (! empty($status['warnings']))
         <x-filament::section heading="Warnings">
             <ul class="space-y-2 text-sm text-warning-600">
                 @foreach ($status['warnings'] as $warning)
-                    <li class="rounded bg-warning-50 p-2 dark:bg-warning-500/10">{{ json_encode($warning) }}</li>
+                    <li class="rounded bg-warning-50 p-2 dark:bg-warning-500/10">
+                        @if (isset($warning['message']))
+                            {{ $warning['message'] }}
+                        @else
+                            {{ json_encode($warning) }}
+                        @endif
+                    </li>
                 @endforeach
             </ul>
         </x-filament::section>

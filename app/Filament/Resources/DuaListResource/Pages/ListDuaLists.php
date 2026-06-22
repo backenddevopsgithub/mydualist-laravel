@@ -2,7 +2,9 @@
 
 namespace App\Filament\Resources\DuaListResource\Pages;
 
+use App\Filament\Pages\Analytics\DuaListAnalytics;
 use App\Filament\Resources\DuaListResource;
+use Filament\Actions\Action;
 use Filament\Resources\Pages\ListRecords;
 
 class ListDuaLists extends ListRecords
@@ -11,6 +13,12 @@ class ListDuaLists extends ListRecords
 
     protected function getHeaderActions(): array
     {
-        return [];
+        return [
+            Action::make('viewAnalytics')
+                ->label('View analytics')
+                ->icon('heroicon-o-chart-bar')
+                ->url(DuaListAnalytics::getUrl())
+                ->color('gray'),
+        ];
     }
 }

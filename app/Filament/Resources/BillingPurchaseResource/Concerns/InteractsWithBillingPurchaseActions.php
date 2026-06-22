@@ -4,6 +4,7 @@ namespace App\Filament\Resources\BillingPurchaseResource\Concerns;
 
 use App\Domains\Billing\Actions\MarkBillingPurchaseFulfilledAction;
 use App\Domains\Billing\Actions\MarkBillingPurchaseRefundedAction;
+use App\Domains\Billing\Actions\RefundBillingPurchaseViaStripeAction;
 use App\Domains\Billing\Actions\RetryBillingPurchaseFulfillmentAction;
 use App\Models\BillingPurchase;
 use App\Models\User;
@@ -24,6 +25,7 @@ trait InteractsWithBillingPurchaseActions
             ViewAction::make(),
             static::retryFulfillmentTableAction(),
             static::markFulfilledTableAction(),
+            static::refundViaStripeTableAction(),
             static::markRefundedTableAction(),
         ];
     }
@@ -65,22 +67,46 @@ trait InteractsWithBillingPurchaseActions
             });
     }
 
+    protected static function refundViaStripeTableAction(): Action
+    {
+        return Action::make('refundViaStripe')
+            ->label('Refund in Stripe')
+            ->icon('heroicon-o-credit-card')
+            ->color('danger')
+            ->visible(fn (BillingPurchase $record): bool => static::canRefundViaStripe($record) && ! Impersonation::isActive())
+            ->authorize('update')
+            ->requiresConfirmation()
+            ->modalHeading('Refund in Stripe')
+            ->modalDescription('Creates a full refund in Stripe for this payment intent and records it locally.')
+            ->action(function (BillingPurchase $record): void {
+                /** @var User $actor */
+                $actor = auth()->user();
+
+                static::runBillingPurchaseAction(
+                    fn () => app(RefundBillingPurchaseViaStripeAction::class)($record, $actor),
+                    'Stripe refund created successfully.',
+                );
+            });
+    }
+
     protected static function markRefundedTableAction(): Action
     {
         return Action::make('markRefunded')
-            ->label('Mark refunded')
+            ->label('Mark refunded (local only)')
             ->icon('heroicon-o-receipt-refund')
-            ->color('danger')
+            ->color('gray')
             ->visible(fn (BillingPurchase $record): bool => static::canMarkRefunded($record) && ! Impersonation::isActive())
             ->authorize('update')
             ->requiresConfirmation()
+            ->modalHeading('Mark refunded (local only)')
+            ->modalDescription('Records a refund in Laravel only. Does not call Stripe or WooCommerce. Use for WooCommerce imports or manual reconciliation.')
             ->action(function (BillingPurchase $record): void {
                 /** @var User $actor */
                 $actor = auth()->user();
 
                 static::runBillingPurchaseAction(
                     fn () => app(MarkBillingPurchaseRefundedAction::class)($record, $actor),
-                    'Purchase marked as refunded.',
+                    'Purchase marked as refunded locally.',
                 );
             });
     }
@@ -98,6 +124,13 @@ trait InteractsWithBillingPurchaseActions
     protected static function canMarkRefunded(BillingPurchase $record): bool
     {
         return ! $record->isRefunded();
+    }
+
+    protected static function canRefundViaStripe(BillingPurchase $record): bool
+    {
+        return ! $record->isRefunded()
+            && $record->isCompleted()
+            && filled($record->payment_intent_id);
     }
 
     /**

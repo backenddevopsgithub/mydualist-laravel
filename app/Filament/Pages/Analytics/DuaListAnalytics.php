@@ -3,9 +3,11 @@
 namespace App\Filament\Pages\Analytics;
 
 use App\Enums\AdminExportType;
+use App\Filament\Resources\DuaListResource;
 use App\Models\DuaList;
 use App\Services\AnalyticsQueryService;
 use App\Support\DuaListOccasions;
+use Filament\Actions\Action;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
@@ -27,6 +29,17 @@ class DuaListAnalytics extends BaseAnalyticsPage
     protected function analyticsExportType(): AdminExportType
     {
         return AdminExportType::DuaListAnalytics;
+    }
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('manageLists')
+                ->label('Manage lists')
+                ->icon('heroicon-o-clipboard-document-list')
+                ->url(DuaListResource::getUrl('index'))
+                ->color('gray'),
+        ];
     }
 
     public function getMetricCards(): array

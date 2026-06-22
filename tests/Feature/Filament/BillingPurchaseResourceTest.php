@@ -2,8 +2,10 @@
 
 use App\Domains\Billing\Actions\MarkBillingPurchaseFulfilledAction;
 use App\Domains\Billing\Actions\MarkBillingPurchaseRefundedAction;
+use App\Domains\Billing\Actions\RefundBillingPurchaseViaStripeAction;
 use App\Domains\Billing\Actions\RetryBillingPurchaseFulfillmentAction;
 use App\Domains\Billing\Services\PurchaseFulfillmentService;
+use App\Domains\Billing\Services\StripePaymentIntentService;
 use App\Enums\BillingProductCode;
 use App\Enums\BillingPurchaseEventType;
 use App\Enums\BillingPurchaseStatus;
@@ -165,7 +167,7 @@ test('admin can mark a succeeded purchase as fulfilled without rerunning handler
             ->exists())->toBeTrue();
 });
 
-test('admin can mark a purchase as refunded from the table', function () {
+test('admin can mark a purchase as refunded locally from the table', function () {
     $admin = User::factory()->admin()->create();
     $purchase = makeAdminBillingPurchase(['fulfilled_at' => now()]);
 
@@ -179,6 +181,35 @@ test('admin can mark a purchase as refunded from the table', function () {
         ->and(BillingPurchaseEvent::query()
             ->where('billing_purchase_id', $purchase->id)
             ->where('event_type', BillingPurchaseEventType::AdminMarkedRefunded)
+            ->exists())->toBeTrue();
+});
+
+test('admin can refund a stripe purchase via stripe action', function () {
+    $admin = User::factory()->admin()->create();
+    $purchase = makeAdminBillingPurchase(['fulfilled_at' => now()]);
+
+    app()->instance(StripePaymentIntentService::class, new class extends StripePaymentIntentService
+    {
+        public function refundPaymentIntent(string $paymentIntentId, ?int $amountMinor = null): array
+        {
+            return [
+                'id' => 're_test_'.fake()->unique()->numerify('######'),
+                'amount' => $amountMinor ?? 799,
+                'status' => 'succeeded',
+            ];
+        }
+    });
+
+    $this->actingAs($admin);
+
+    Livewire::test(ListBillingPurchases::class)
+        ->callTableAction('refundViaStripe', $purchase)
+        ->assertNotified();
+
+    expect($purchase->fresh()->refunded_at)->not->toBeNull()
+        ->and(BillingPurchaseEvent::query()
+            ->where('billing_purchase_id', $purchase->id)
+            ->where('event_type', BillingPurchaseEventType::AdminStripeRefund)
             ->exists())->toBeTrue();
 });
 

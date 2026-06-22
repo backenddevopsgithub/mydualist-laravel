@@ -154,11 +154,13 @@ test('migration status service reads cached validation report without running va
     $reportPath = storage_path('app/testing-migration-status-report.json');
     File::ensureDirectoryExists(dirname($reportPath));
     File::put($reportPath, json_encode([
+        'generated_at' => '2026-06-19T12:00:00+00:00',
         'validation' => [
             'passed' => true,
             'totals' => ['users' => 10],
             'failures' => [],
             'warnings' => [],
+            'mismatches' => [],
         ],
     ]));
 
@@ -172,9 +174,21 @@ test('migration status service reads cached validation report without running va
 
     expect($status['report_exists'])->toBeTrue()
         ->and($status['passed'])->toBeTrue()
-        ->and($status['totals']['users'])->toBe(10);
+        ->and($status['totals']['users'])->toBe(10)
+        ->and($status['generated_at'])->toBe('2026-06-19T12:00:00+00:00')
+        ->and($status['mismatches'])->toBe([])
+        ->and($status['import_sequence'])->not->toBeEmpty();
 
     File::delete($reportPath);
+});
+
+test('migration status service hints when suggestions were not imported', function () {
+    User::factory()->create();
+
+    $status = app(MigrationStatusService::class)->status();
+
+    expect(collect($status['warnings'])
+        ->contains(fn (array $warning): bool => ($warning['type'] ?? null) === 'suggestions_not_imported'))->toBeTrue();
 });
 
 test('keyword analytics reads precomputed cache without dispatching jobs', function () {
