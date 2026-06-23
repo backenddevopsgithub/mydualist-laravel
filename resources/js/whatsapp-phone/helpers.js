@@ -81,7 +81,7 @@ export function partsFromIti(iti) {
     const data = iti.getSelectedCountryData();
     const e164 = iti.getNumber() ?? '';
     const { countryCode, national } = splitE164Parts(e164, data.dialCode);
-    const valid = iti.isValidNumberPrecise?.() ?? iti.isValidNumber() ?? false;
+    const valid = iti.isValidNumber?.() ?? iti.isValidNumberPrecise?.() ?? false;
 
     return {
         countryCode,

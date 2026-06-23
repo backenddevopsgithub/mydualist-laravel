@@ -86,12 +86,22 @@ export function createWhatsAppPhoneField(config = {}) {
                     return;
                 }
 
-                this.$nextTick(() => this.initWhatsAppPhoneInput());
+                this.scheduleWhatsAppPhoneInit();
             });
 
             if (this.whatsapp) {
-                this.$nextTick(() => this.initWhatsAppPhoneInput());
+                this.scheduleWhatsAppPhoneInit();
             }
+        },
+
+        scheduleWhatsAppPhoneInit() {
+            this.$nextTick(() => {
+                this.initWhatsAppPhoneInput();
+
+                if (! this.whatsappPhoneValid) {
+                    window.setTimeout(() => this.initWhatsAppPhoneInput(), 50);
+                }
+            });
         },
     };
 }

@@ -43,6 +43,7 @@ class StorePublicSubmissionRequest extends FormRequest
             'duas.*' => ['required', 'string', 'min:3', 'max:1500'],
             'suggestion_ids' => ['nullable', 'array'],
             'suggestion_ids.*' => ['integer', 'exists:dua_suggestions,id'],
+            'submission_batch_key' => ['nullable', 'string', 'size:36'],
             'website' => ['nullable', 'string', 'max:0'],
         ];
     }

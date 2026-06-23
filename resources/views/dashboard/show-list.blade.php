@@ -108,8 +108,9 @@
                             ]))"
                             x-init="@if($firstErrorIndex !== null) $nextTick(() => document.getElementById('dua-field-{{ $firstErrorIndex }}')?.scrollIntoView({ behavior: 'smooth', block: 'center' })) @endif"
                         >
-                            <form method="POST" action="{{ route('dua-lists.submissions.store', $duaList) }}" class="space-y-5">
+                            <form method="POST" action="{{ route('dua-lists.submissions.store', $duaList) }}" class="space-y-5" x-on:submit="submitForm($event)">
                                 @csrf
+                                <input type="hidden" name="submission_batch_key" x-bind:value="submissionBatchKey">
                                 <div class="hidden" aria-hidden="true">
                                     <input name="website" tabindex="-1" autocomplete="off">
                                 </div>
@@ -155,10 +156,10 @@
                                         <span>Would you like a WhatsApp notification when {{ trim($duaList->user->first_name ?? 'the list owner') }} completes your dua?</span>
                                     </label>
 
-                                    <div x-show="whatsapp" x-cloak class="mt-4 space-y-3 rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4">
+                                    <div x-show="whatsapp" x-cloak class="mt-4 space-y-3 rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4" x-init="whatsapp && scheduleWhatsAppPhoneInit()">
                                         <div x-show="! whatsappVerified">
                                             <div x-show="whatsappOtpStep === 'phone'" class="space-y-3">
-                                                <div class="whatsapp-phone-field">
+                                                <div class="whatsapp-phone-field" x-init="whatsapp && scheduleWhatsAppPhoneInit()">
                                                     <label for="whatsapp_phone_input" class="block text-xs font-bold text-stone-700">WhatsApp number</label>
                                                     <input
                                                         id="whatsapp_phone_input"
@@ -331,8 +332,8 @@
 
                                     @error('duas') <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p> @enderror
 
-                                    <button type="submit" class="mt-7 w-full rounded-2xl bg-emerald-900 px-6 py-4 text-sm font-extrabold text-white shadow-sm transition hover:bg-emerald-800">
-                                        Submit Dua Requests
+                                    <button type="submit" x-bind:disabled="submitting" class="mt-7 w-full rounded-2xl bg-emerald-900 px-6 py-4 text-sm font-extrabold text-white shadow-sm transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-stone-400">
+                                        <span x-text="submitting ? 'Submitting...' : 'Submit Dua Requests'"></span>
                                     </button>
                                 </div>
                             </form>

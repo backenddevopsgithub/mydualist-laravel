@@ -1,9 +1,7 @@
 <?php
 
-use App\Domains\Auth\Notifications\VerifyEmailNotification;
+use App\Domains\Onboarding\Notifications\OnboardingVerificationCodeNotification;
 use App\Models\User;
-use Illuminate\Auth\Events\Registered;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
 
 test('user can register successfully', function () {
@@ -37,7 +35,8 @@ test('user can register successfully', function () {
     ]);
 
     $user = User::query()->where('email', 'arsalan@example.com')->first();
-    Notification::assertSentTo($user, VerifyEmailNotification::class);
+    Notification::assertSentTo($user, OnboardingVerificationCodeNotification::class);
+    Notification::assertSentToTimes($user, OnboardingVerificationCodeNotification::class, 1);
 });
 
 test('registration prevents duplicate emails', function () {

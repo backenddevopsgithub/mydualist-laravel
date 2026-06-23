@@ -92,12 +92,35 @@ class TransactionalEmailService extends Service
 
         if ($this->shouldSendImmediateSubmissionEmails($duaList)) {
             $publicSubmissions->each(
-                fn (DuaSubmission $submission): mixed => $owner->notify(new NewSubmissionNotification($submission))
+                fn (DuaSubmission $submission): mixed => $this->sendOwnerNotificationIfNeeded($submission, $owner)
             );
         }
 
         $nonPersonalCountAfter = $nonPersonalCountBefore + $publicSubmissions->count();
         $this->sendQuotaWarningIfNeeded($duaList, $owner, $nonPersonalCountBefore, $nonPersonalCountAfter);
+    }
+
+    public function sendOwnerNotificationIfNeeded(DuaSubmission $submission, User $owner): void
+    {
+        DB::transaction(function () use ($submission, $owner): void {
+            /** @var DuaSubmission $lockedSubmission */
+            $lockedSubmission = DuaSubmission::query()
+                ->with(['duaList.user'])
+                ->whereKey($submission->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($lockedSubmission->owner_notified_at !== null) {
+                return;
+            }
+
+            if ($lockedSubmission->is_personal_dua) {
+                return;
+            }
+
+            $owner->notify(new NewSubmissionNotification($lockedSubmission));
+            $lockedSubmission->forceFill(['owner_notified_at' => now()])->save();
+        });
     }
 
     public function sendCommunityDuaCompletion(CommunityDua $communityDua, User $completedBy): void

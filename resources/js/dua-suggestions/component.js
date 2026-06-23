@@ -147,6 +147,18 @@ export function createPublicSubmissionForm(config) {
         firstName: config.firstName ?? '',
         lastName: config.lastName ?? '',
         email: config.email ?? '',
+        submissionBatchKey: config.submissionBatchKey ?? (globalThis.crypto?.randomUUID?.() ?? ''),
+        submitting: false,
+
+        submitForm(event) {
+            if (this.submitting) {
+                event.preventDefault();
+
+                return;
+            }
+
+            this.submitting = true;
+        },
 
         get canContinue() {
             return this.firstName.trim() !== ''

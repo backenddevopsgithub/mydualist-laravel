@@ -8,7 +8,6 @@ use App\Domains\Auth\Services\AuthTokenService;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Models\User;
-use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\DB;
 
 class RegisterUserAction extends Action
@@ -36,8 +35,6 @@ class RegisterUserAction extends Action
                 'role' => UserRole::User,
                 'status' => UserStatus::Active,
             ]);
-
-            event(new Registered($user));
 
             return $this->authTokenService->issue(
                 $user,

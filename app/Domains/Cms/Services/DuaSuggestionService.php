@@ -18,7 +18,7 @@ class DuaSuggestionService extends Service
             ->where('is_visible', true)
             ->where(function ($query) use ($list): void {
                 $query
-                    ->where('category', '')
+                    ->whereIn('category', ['', 'general'])
                     ->orWhere('category', $list->occasion);
             })
             ->orderBy('sort_order')

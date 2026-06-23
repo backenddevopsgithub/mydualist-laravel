@@ -10,7 +10,8 @@ test('my submissions requires authentication', function () {
 
 test('authenticated user can list their own submitted duas', function () {
     $user = $this->actingAsUser();
-    $list = DuaList::factory()->create(['user_id' => $user->id, 'title' => 'My List']);
+    $otherOwner = User::factory()->create();
+    $list = DuaList::factory()->create(['user_id' => $otherOwner->id, 'title' => 'My List']);
     DuaSubmission::factory()->create([
         'user_id' => $user->id,
         'dua_list_id' => $list->id,
@@ -37,11 +38,19 @@ test('authenticated user can list their own submitted duas', function () {
 test('my submissions only returns current users records', function () {
     $user = $this->actingAsUser();
     $other = User::factory()->create();
-    $list = DuaList::factory()->create(['user_id' => $other->id]);
+    $ownedList = DuaList::factory()->create(['user_id' => $user->id]);
+    $otherList = DuaList::factory()->create(['user_id' => $other->id]);
 
     DuaSubmission::factory()->create([
         'user_id' => $other->id,
-        'dua_list_id' => $list->id,
+        'dua_list_id' => $otherList->id,
+    ]);
+
+    DuaSubmission::factory()->create([
+        'user_id' => null,
+        'email' => $user->email,
+        'dua_list_id' => $ownedList->id,
+        'content' => 'Received on my list',
     ]);
 
     $this->getJson('/api/v1/my-submissions')

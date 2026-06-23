@@ -56,6 +56,8 @@ class CreateDuaSubmissionAction extends Action
             $email = isset($data['email']) ? mb_strtolower((string) $data['email']) : null;
             $contents = $this->contents($data);
             $whatsappFields = $this->resolveWhatsAppFields($data);
+            $batchKey = isset($data['submission_batch_key']) ? trim((string) $data['submission_batch_key']) : null;
+            $batchKey = $batchKey !== '' ? $batchKey : null;
             $nonPersonalCountBefore = (int) $lockedList->non_personal_submissions_count;
             $regularRank = $nonPersonalCountBefore;
 
@@ -73,9 +75,24 @@ class CreateDuaSubmissionAction extends Action
                 }
             }
 
-            $submissions = SubmissionCounterService::withoutCounterUpdates(function () use ($lockedList, $data, $user, $email, $contents, $whatsappFields, $owner, &$regularRank): Collection {
+            if ($batchKey !== null) {
+                $existingBatchCount = DuaSubmission::query()
+                    ->where('dua_list_id', $lockedList->id)
+                    ->where('submission_batch_key', $batchKey)
+                    ->count();
+
+                if ($existingBatchCount > 0) {
+                    return DuaSubmission::query()
+                        ->where('dua_list_id', $lockedList->id)
+                        ->where('submission_batch_key', $batchKey)
+                        ->orderBy('id')
+                        ->get();
+                }
+            }
+
+            $submissions = SubmissionCounterService::withoutCounterUpdates(function () use ($lockedList, $data, $user, $email, $contents, $whatsappFields, $owner, $batchKey, &$regularRank): Collection {
                 return collect($contents)
-                    ->map(function (string $content) use ($lockedList, $data, $user, $email, $whatsappFields, $owner, &$regularRank): DuaSubmission {
+                    ->map(function (string $content) use ($lockedList, $data, $user, $email, $whatsappFields, $owner, $batchKey, &$regularRank): DuaSubmission {
                         $regularRank++;
                         $lockAttributes = $this->entitlements->lockAttributesForNewRegularSubmission($owner, $lockedList, $regularRank);
 
@@ -93,6 +110,7 @@ class CreateDuaSubmissionAction extends Action
                             'content' => $content,
                             'note' => null,
                             'status' => DuaSubmissionStatus::Pending,
+                            'submission_batch_key' => $batchKey,
                             ...$lockAttributes,
                         ]);
                     });

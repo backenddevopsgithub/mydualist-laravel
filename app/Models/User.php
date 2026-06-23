@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Domains\Auth\Notifications\VerifyEmailNotification;
+use App\Domains\Onboarding\Services\OnboardingVerificationService;
 use App\Domains\Billing\Services\EntitlementGrantService;
 use App\Enums\EntitlementKey;
 use App\Enums\UserRole;
@@ -193,7 +193,11 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
 
     public function sendEmailVerificationNotification(): void
     {
-        $this->notify(new VerifyEmailNotification);
+        if ($this->hasVerifiedEmail()) {
+            return;
+        }
+
+        app(OnboardingVerificationService::class)->sendIfNeeded($this);
     }
 
     public function sendPasswordResetNotification($token): void

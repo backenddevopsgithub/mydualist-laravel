@@ -7,6 +7,7 @@ use App\Domains\Security\Services\PublicSubmissionSpamGuard;
 use App\Domains\Submissions\Actions\CreateDuaSubmissionAction;
 use App\Http\Requests\Submissions\StorePublicSubmissionRequest;
 use App\Models\DuaList;
+use App\Support\PublicSubmissionIdempotency;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Validation\ValidationException;
 
@@ -26,12 +27,29 @@ class PublicDuaSubmissionController extends Controller
         }
 
         $data = $request->validated();
+        $batchKey = (string) ($data['submission_batch_key'] ?? '');
+
+        if ($batchKey !== '') {
+            $existingCount = PublicSubmissionIdempotency::findExistingCount($batchKey, $duaList);
+
+            if ($existingCount !== null) {
+                return redirect()
+                    ->to(route('cms.show', $duaList).'#submit-dua')
+                    ->with('submission_status', $existingCount === 1
+                        ? 'Your dua request has been submitted.'
+                        : "Your {$existingCount} dua requests have been submitted.");
+            }
+        }
 
         $spamGuard->inspect($duaList, $data, $request->ip());
 
         $submissions = $action($duaList, $data, $request->user());
         $suggestions->incrementUsedCounts($data['suggestion_ids'] ?? []);
         $count = $submissions->count();
+
+        if ($batchKey !== '') {
+            PublicSubmissionIdempotency::remember($batchKey, $duaList, $count);
+        }
 
         return redirect()
             ->to(route('cms.show', $duaList).'#submit-dua')

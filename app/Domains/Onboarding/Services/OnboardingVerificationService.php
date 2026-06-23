@@ -17,8 +17,29 @@ class OnboardingVerificationService extends Service
         private readonly VerifyEmailAction $verifyEmailAction,
     ) {}
 
+    public function sendIfNeeded(User $user, bool $force = false): ?string
+    {
+        if ($user->hasVerifiedEmail()) {
+            return null;
+        }
+
+        $cacheKey = $this->cacheKey($user);
+
+        if (! $force && Cache::has($cacheKey)) {
+            return null;
+        }
+
+        return $this->send($user);
+    }
+
     public function send(User $user): string
     {
+        if ($user->hasVerifiedEmail()) {
+            throw ValidationException::withMessages([
+                'email' => 'Email address is already verified.',
+            ]);
+        }
+
         $code = $this->generateCode();
 
         Cache::put($this->cacheKey($user), $code, now()->addMinutes(self::CACHE_TTL_MINUTES));
@@ -26,6 +47,11 @@ class OnboardingVerificationService extends Service
         $user->notify(new OnboardingVerificationCodeNotification($code));
 
         return $code;
+    }
+
+    public function resend(User $user): string
+    {
+        return $this->send($user);
     }
 
     public function verify(User $user, string $code): User

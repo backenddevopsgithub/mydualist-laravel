@@ -13,8 +13,10 @@ use App\Enums\DuaSubmissionStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Submissions\ReportSubmissionRequest;
 use App\Http\Requests\Submissions\StorePersonalDuaRequest;
+use App\Http\Resources\Api\V1\Submissions\DuaSubmissionResource;
 use App\Models\DuaList;
 use App\Models\DuaSubmission;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -82,20 +84,20 @@ class ListSubmissionController extends Controller
         return back()->with('status', 'Personal dua added.');
     }
 
-    public function complete(DuaList $duaList, DuaSubmission $submission, TransitionDuaSubmissionStatusAction $action): RedirectResponse
+    public function complete(DuaList $duaList, DuaSubmission $submission, TransitionDuaSubmissionStatusAction $action): RedirectResponse|JsonResponse
     {
         $this->authorizeSubmission($duaList, $submission);
         $action($submission, DuaSubmissionStatus::Completed);
 
-        return back()->with('status', 'Dua marked as completed.');
+        return $this->statusResponse($submission->fresh(), 'Dua marked as completed.');
     }
 
-    public function undo(DuaList $duaList, DuaSubmission $submission, TransitionDuaSubmissionStatusAction $action): RedirectResponse
+    public function undo(DuaList $duaList, DuaSubmission $submission, TransitionDuaSubmissionStatusAction $action): RedirectResponse|JsonResponse
     {
         $this->authorizeSubmission($duaList, $submission);
         $action($submission, DuaSubmissionStatus::Pending);
 
-        return back()->with('status', 'Dua moved back to incomplete.');
+        return $this->statusResponse($submission->fresh(), 'Dua moved back to incomplete.');
     }
 
     public function hide(DuaList $duaList, DuaSubmission $submission, TransitionDuaSubmissionStatusAction $action): RedirectResponse
@@ -141,5 +143,17 @@ class ListSubmissionController extends Controller
         abort_unless($submission->dua_list_id === $duaList->id, 404);
         $submission->loadMissing('duaList');
         Gate::authorize('manage', $submission);
+    }
+
+    private function statusResponse(DuaSubmission $submission, string $message): RedirectResponse|JsonResponse
+    {
+        if (request()->expectsJson()) {
+            return response()->json([
+                'message' => $message,
+                'data' => (new DuaSubmissionResource($submission))->resolve(),
+            ]);
+        }
+
+        return back()->with('status', $message);
     }
 }

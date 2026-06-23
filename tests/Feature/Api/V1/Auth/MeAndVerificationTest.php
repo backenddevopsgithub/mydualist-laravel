@@ -1,6 +1,6 @@
 <?php
 
-use App\Domains\Auth\Notifications\VerifyEmailNotification;
+use App\Domains\Onboarding\Notifications\OnboardingVerificationCodeNotification;
 use App\Models\User;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\URL;
@@ -75,9 +75,9 @@ test('authenticated user can resend verification notification', function () {
 
     $this->postJson('/api/v1/auth/email/verification-notification')
         ->assertOk()
-        ->assertJsonPath('message', 'Verification link sent.');
+        ->assertJsonPath('message', 'Verification code sent.');
 
-    Notification::assertSentTo($user, VerifyEmailNotification::class);
+    Notification::assertSentTo($user, OnboardingVerificationCodeNotification::class);
 });
 
 test('resend verification fails when already verified', function () {

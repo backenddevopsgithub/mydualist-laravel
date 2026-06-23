@@ -27,6 +27,8 @@ use Filament\Support\Facades\FilamentView;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Auth\Events\Registered;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
@@ -58,6 +60,7 @@ class AppServiceProvider extends ServiceProvider
         $this->configureViewComposers();
         $this->configureAnalyticsCacheInvalidation();
         $this->configureSubmissionCounters();
+        $this->configureAuthEvents();
 
         FilamentView::registerRenderHook(
             PanelsRenderHook::HEAD_END,
@@ -149,6 +152,12 @@ class AppServiceProvider extends ServiceProvider
     private function configureSubmissionCounters(): void
     {
         DuaSubmission::observe(DuaSubmissionCounterObserver::class);
+    }
+
+    private function configureAuthEvents(): void
+    {
+        // OTP via OnboardingVerificationService replaces Laravel's default verification link email.
+        Event::forget(Registered::class);
     }
 
     private function configureViewComposers(): void

@@ -116,7 +116,7 @@ class CreateListOnboardingController extends Controller
     public function resend(OnboardingState $state, OnboardingVerificationService $verification): RedirectResponse
     {
         $user = User::query()->findOrFail($state->get('user_id'));
-        $verification->send($user);
+        $verification->resend($user);
 
         return redirect()
             ->route('onboarding.show', 'verify')
@@ -145,8 +145,10 @@ class CreateListOnboardingController extends Controller
             ];
 
             if ($data['requires_verification']) {
-                $code = $verification->send(Auth::user());
-                $data['verification_code'] = $code;
+                $code = $verification->sendIfNeeded(Auth::user());
+                if ($code !== null) {
+                    $data['verification_code'] = $code;
+                }
             }
 
             $state->merge($data);
@@ -226,13 +228,16 @@ class CreateListOnboardingController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
-        $code = $verification->send($user);
+        $code = $verification->sendIfNeeded($user);
 
         $state->merge([
             'user_id' => $user->id,
-            'verification_code' => $code,
             'current_step' => 'list',
         ]);
+
+        if ($code !== null) {
+            $state->merge(['verification_code' => $code]);
+        }
 
         return redirect()->route('onboarding.show', 'list');
     }

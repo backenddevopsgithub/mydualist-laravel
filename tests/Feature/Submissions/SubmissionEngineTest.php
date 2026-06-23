@@ -193,7 +193,11 @@ test('per email submission limit is enforced per list', function () {
 
     $this->from(route('cms.show', $duaList))
         ->post(route('dua-lists.submissions.store', $duaList), [
+            'first_name' => 'Same',
+            'last_name' => 'Person',
             'email' => 'same@example.com',
+            'gender' => 'female',
+            'terms' => '1',
             'content' => 'A fourth dua request.',
         ])
         ->assertRedirect(route('cms.show', $duaList))
@@ -203,7 +207,10 @@ test('per email submission limit is enforced per list', function () {
 test('owner workspace supports visible tabs pagination and status transitions', function () {
     $owner = User::factory()->create();
     $duaList = DuaList::factory()->create(['user_id' => $owner->id]);
-    DuaSubmission::factory()->count(16)->create(['dua_list_id' => $duaList->id]);
+    DuaSubmission::factory()->count(14)->create([
+        'dua_list_id' => $duaList->id,
+        'is_personal_dua' => false,
+    ]);
 
     $submission = DuaSubmission::factory()->create([
         'dua_list_id' => $duaList->id,

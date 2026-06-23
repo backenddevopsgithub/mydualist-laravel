@@ -62,7 +62,16 @@ class DuaSubmissionQueryService extends Service
      */
     public function paginateForUser(User $user, int $perPage = 12, array $with = ['duaList.user']): LengthAwarePaginator
     {
-        return $user->duaSubmissions()
+        $email = mb_strtolower($user->email);
+
+        return DuaSubmission::query()
+            ->where(function ($query) use ($user, $email): void {
+                $query->where('user_id', $user->id)
+                    ->orWhere(function ($query) use ($email): void {
+                        $query->whereNull('user_id')->where('email', $email);
+                    });
+            })
+            ->whereHas('duaList', fn ($query) => $query->where('user_id', '!=', $user->id))
             ->with($with)
             ->latest()
             ->paginate($perPage)

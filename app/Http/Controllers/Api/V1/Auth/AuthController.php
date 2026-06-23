@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Auth;
 use App\Domains\Auth\Actions\LoginUserAction;
 use App\Domains\Auth\Actions\LogoutUserAction;
 use App\Domains\Auth\Actions\RegisterUserAction;
+use App\Domains\Onboarding\Services\OnboardingVerificationService;
 use App\Http\Controllers\Api\V1\ApiController;
 use App\Http\Requests\Api\V1\Auth\LoginRequest;
 use App\Http\Requests\Api\V1\Auth\RegisterRequest;
@@ -14,9 +15,11 @@ use Illuminate\Http\Request;
 
 class AuthController extends ApiController
 {
-    public function register(RegisterRequest $request, RegisterUserAction $action): JsonResponse
+    public function register(RegisterRequest $request, RegisterUserAction $action, OnboardingVerificationService $verification): JsonResponse
     {
         $authToken = $action->handle($request->validated());
+
+        $verification->sendIfNeeded($authToken->user);
 
         return $this->success(
             (new AuthTokenResource($authToken))->resolve(),
