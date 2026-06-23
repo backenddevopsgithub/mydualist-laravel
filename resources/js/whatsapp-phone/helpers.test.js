@@ -3,6 +3,7 @@ import {
     buildCountryCode,
     initialPhoneNumber,
     iso2FromCountryCode,
+    isWhatsAppPhoneValid,
     partsFromIti,
     splitE164Parts,
     whatsappPhoneCountryLabel,
@@ -54,6 +55,7 @@ describe('whatsapp phone helpers', () => {
             valid: true,
             countryName: 'Pakistan',
             iso2: 'pk',
+            dialCode: '92',
         });
     });
 
@@ -63,5 +65,21 @@ describe('whatsapp phone helpers', () => {
             countryCode: '+92',
             iso2: 'pk',
         })).toBe('Pakistan (+92)');
+    });
+
+    it('accepts plausible national numbers when libphonenumber has not marked them valid yet', () => {
+        expect(isWhatsAppPhoneValid({
+            valid: false,
+            national: '7700900123',
+            dialCode: '44',
+            countryCode: '+44',
+        })).toBe(true);
+
+        expect(isWhatsAppPhoneValid({
+            valid: false,
+            national: '12',
+            dialCode: '44',
+            countryCode: '+44',
+        })).toBe(false);
     });
 });

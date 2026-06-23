@@ -75,6 +75,7 @@ export function partsFromIti(iti) {
             valid: false,
             countryName: '',
             iso2: '',
+            dialCode: '',
         };
     }
 
@@ -90,7 +91,27 @@ export function partsFromIti(iti) {
         valid: Boolean(valid),
         countryName: data.name ?? '',
         iso2: data.iso2 ?? '',
+        dialCode: data.dialCode ?? '',
     };
+}
+
+export function isWhatsAppPhoneValid(parts) {
+    if (! parts) {
+        return false;
+    }
+
+    if (parts.valid) {
+        return true;
+    }
+
+    const nationalDigits = normalizeDigits(parts.national);
+    const dialDigits = normalizeDigits(parts.dialCode || parts.countryCode);
+
+    if (dialDigits === '' || nationalDigits === '') {
+        return false;
+    }
+
+    return nationalDigits.length >= 7 && nationalDigits.length <= 15;
 }
 
 export function whatsappPhoneCountryLabel(parts) {

@@ -156,15 +156,22 @@
                                         <span>Would you like a WhatsApp notification when {{ trim($duaList->user->first_name ?? 'the list owner') }} completes your dua?</span>
                                     </label>
 
-                                    <div x-show="whatsapp" x-cloak class="mt-4 space-y-3 rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4" x-init="whatsapp && scheduleWhatsAppPhoneInit()">
+                                    <div
+                                        x-show="whatsapp"
+                                        x-cloak
+                                        class="mt-4 space-y-3 rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4"
+                                        x-effect="whatsapp && whatsappOtpStep === 'phone' && ! whatsappVerified ? ensureWhatsAppPhoneInputReady() : null"
+                                    >
                                         <div x-show="! whatsappVerified">
                                             <div x-show="whatsappOtpStep === 'phone'" class="space-y-3">
-                                                <div class="whatsapp-phone-field" x-init="whatsapp && scheduleWhatsAppPhoneInit()">
+                                                <div class="whatsapp-phone-field">
                                                     <label for="whatsapp_phone_input" class="block text-xs font-bold text-stone-700">WhatsApp number</label>
                                                     <input
                                                         id="whatsapp_phone_input"
                                                         type="tel"
                                                         x-ref="whatsappPhoneInput"
+                                                        x-on:input="onWhatsAppPhoneInput()"
+                                                        x-on:countrychange="onWhatsAppPhoneInput()"
                                                         inputmode="tel"
                                                         autocomplete="tel"
                                                         class="mt-1 block w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-900 outline-none focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100"
@@ -332,8 +339,13 @@
 
                                     @error('duas') <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p> @enderror
 
-                                    <button type="submit" x-bind:disabled="submitting" class="mt-7 w-full rounded-2xl bg-emerald-900 px-6 py-4 text-sm font-extrabold text-white shadow-sm transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-stone-400">
-                                        <span x-text="submitting ? 'Submitting...' : 'Submit Dua Requests'"></span>
+                                    <button
+                                        type="submit"
+                                        x-bind:disabled="submitting"
+                                        x-bind:aria-busy="submitting ? 'true' : 'false'"
+                                        class="mt-7 w-full rounded-2xl bg-emerald-900 px-6 py-4 text-sm font-extrabold text-white shadow-sm transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-stone-400"
+                                    >
+                                        Submit Dua Requests<span x-show="submitting" x-cloak> — Submitting...</span>
                                     </button>
                                 </div>
                             </form>

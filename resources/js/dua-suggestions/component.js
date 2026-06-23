@@ -127,6 +127,11 @@ export function createSuggestionMixin(slug, initialSelectedIds = []) {
 
 export function createPublicSubmissionForm(config) {
     return {
+        ...createWhatsAppPhoneField({
+            whatsappCountryCode: config.whatsappCountryCode ?? '+44',
+            whatsappPhone: config.whatsappPhone ?? '',
+        }),
+        ...createSuggestionMixin(config.slug, config.selectedSuggestionIds ?? []),
         step: config.step ?? 'info',
         showGuide: false,
         maxDuas: 35,
@@ -282,6 +287,14 @@ export function createPublicSubmissionForm(config) {
             this.whatsappOtpMessage = 'OTP resent!';
         },
 
+        onWhatsAppPhoneInput() {
+            if (this._whatsappIti) {
+                this.syncWhatsAppPhoneFromInput();
+            } else {
+                this.ensureWhatsAppPhoneInputReady();
+            }
+        },
+
         init() {
             this.bindWhatsAppPhoneWatchers();
 
@@ -326,12 +339,6 @@ export function createPublicSubmissionForm(config) {
             this.activeDuaIndex = 0;
             this.$nextTick(() => this.focusDuaField(0));
         },
-
-        ...createSuggestionMixin(config.slug, config.selectedSuggestionIds ?? []),
-        ...createWhatsAppPhoneField({
-            whatsappCountryCode: config.whatsappCountryCode ?? '+44',
-            whatsappPhone: config.whatsappPhone ?? '',
-        }),
     };
 }
 

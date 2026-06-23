@@ -5,7 +5,8 @@ namespace App\Domains\Submissions\Actions;
 use App\Actions\Action;
 use App\Domains\Billing\Services\EntitlementResolverService;
 use App\Enums\DuaSubmissionStatus;
-use App\Events\DuaSubmissionsCreated;
+use App\Enums\SubmissionLockReason;
+use App\Jobs\ProcessDuaSubmissionsCreatedSideEffects;
 use App\Models\DuaList;
 use App\Models\DuaSubmission;
 use App\Models\User;
@@ -16,6 +17,7 @@ use App\Support\WhatsAppPhone;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class CreateDuaSubmissionAction extends Action
@@ -56,8 +58,8 @@ class CreateDuaSubmissionAction extends Action
             $email = isset($data['email']) ? mb_strtolower((string) $data['email']) : null;
             $contents = $this->contents($data);
             $whatsappFields = $this->resolveWhatsAppFields($data);
-            $batchKey = isset($data['submission_batch_key']) ? trim((string) $data['submission_batch_key']) : null;
-            $batchKey = $batchKey !== '' ? $batchKey : null;
+            $clientBatchKey = isset($data['submission_batch_key']) ? trim((string) $data['submission_batch_key']) : '';
+            $batchKey = $clientBatchKey !== '' ? $clientBatchKey : (string) Str::uuid();
             $nonPersonalCountBefore = (int) $lockedList->non_personal_submissions_count;
             $regularRank = $nonPersonalCountBefore;
 
@@ -75,28 +77,53 @@ class CreateDuaSubmissionAction extends Action
                 }
             }
 
-            if ($batchKey !== null) {
-                $existingBatchCount = DuaSubmission::query()
+            $existingBatchCount = DuaSubmission::query()
+                ->where('dua_list_id', $lockedList->id)
+                ->where('submission_batch_key', $batchKey)
+                ->count();
+
+            if ($existingBatchCount > 0) {
+                return DuaSubmission::query()
                     ->where('dua_list_id', $lockedList->id)
                     ->where('submission_batch_key', $batchKey)
-                    ->count();
-
-                if ($existingBatchCount > 0) {
-                    return DuaSubmission::query()
-                        ->where('dua_list_id', $lockedList->id)
-                        ->where('submission_batch_key', $batchKey)
-                        ->orderBy('id')
-                        ->get();
-                }
+                    ->orderBy('id')
+                    ->get();
             }
 
-            $submissions = SubmissionCounterService::withoutCounterUpdates(function () use ($lockedList, $data, $user, $email, $contents, $whatsappFields, $owner, $batchKey, &$regularRank): Collection {
-                return collect($contents)
-                    ->map(function (string $content) use ($lockedList, $data, $user, $email, $whatsappFields, $owner, $batchKey, &$regularRank): DuaSubmission {
-                        $regularRank++;
-                        $lockAttributes = $this->entitlements->lockAttributesForNewRegularSubmission($owner, $lockedList, $regularRank);
+            $hasUnlimited = $this->entitlements->hasListUnlimitedOverride($owner, $lockedList);
+            $visibleQuota = $hasUnlimited ? PHP_INT_MAX : $this->entitlements->effectiveVisibleQuota($owner, $lockedList);
+            $timestamp = now();
 
-                        return DuaSubmission::query()->create([
+            $rows = SubmissionCounterService::withoutCounterUpdates(function () use (
+                $lockedList,
+                $data,
+                $user,
+                $email,
+                $contents,
+                $whatsappFields,
+                $batchKey,
+                $hasUnlimited,
+                $visibleQuota,
+                $timestamp,
+                &$regularRank,
+            ): array {
+                return collect($contents)
+                    ->map(function (string $content) use (
+                        $lockedList,
+                        $data,
+                        $user,
+                        $email,
+                        $whatsappFields,
+                        $batchKey,
+                        $hasUnlimited,
+                        $visibleQuota,
+                        $timestamp,
+                        &$regularRank,
+                    ): array {
+                        $regularRank++;
+                        $shouldLock = ! $hasUnlimited && $regularRank > $visibleQuota;
+
+                        return [
                             'dua_list_id' => $lockedList->id,
                             'user_id' => $user?->id,
                             'first_name' => $data['first_name'] ?? null,
@@ -109,16 +136,51 @@ class CreateDuaSubmissionAction extends Action
                             'whatsapp_verified_at' => $whatsappFields['whatsapp_verified_at'],
                             'content' => $content,
                             'note' => null,
-                            'status' => DuaSubmissionStatus::Pending,
+                            'status' => DuaSubmissionStatus::Pending->value,
                             'submission_batch_key' => $batchKey,
-                            ...$lockAttributes,
-                        ]);
-                    });
+                            'is_locked' => $shouldLock,
+                            'locked_reason' => $shouldLock ? SubmissionLockReason::VisibleQuotaExhausted->value : null,
+                            'locked_at_quota' => $shouldLock ? $visibleQuota : null,
+                            'created_at' => $timestamp,
+                            'updated_at' => $timestamp,
+                        ];
+                    })
+                    ->all();
+            });
+
+            $submissions = DuaSubmission::withoutEvents(function () use ($rows, $lockedList, $batchKey): Collection {
+                DuaSubmission::query()->insert($rows);
+
+                return DuaSubmission::query()
+                    ->where('dua_list_id', $lockedList->id)
+                    ->where('submission_batch_key', $batchKey)
+                    ->orderBy('id')
+                    ->get();
             });
 
             $this->counters->recordBatchCreated($lockedList, $submissions);
 
-            event(new DuaSubmissionsCreated($lockedList, $submissions, $nonPersonalCountBefore));
+            $submissionIds = $submissions->pluck('id')->all();
+
+            DB::afterCommit(function () use ($lockedList, $submissionIds, $nonPersonalCountBefore): void {
+                $job = new ProcessDuaSubmissionsCreatedSideEffects(
+                    $lockedList->id,
+                    $submissionIds,
+                    $nonPersonalCountBefore,
+                );
+
+                if (app()->environment('testing')) {
+                    dispatch_sync($job);
+
+                    return;
+                }
+
+                ProcessDuaSubmissionsCreatedSideEffects::dispatch(
+                    $lockedList->id,
+                    $submissionIds,
+                    $nonPersonalCountBefore,
+                )->afterResponse();
+            });
 
             return $submissions;
         });

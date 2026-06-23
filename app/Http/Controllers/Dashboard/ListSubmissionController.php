@@ -147,7 +147,7 @@ class ListSubmissionController extends Controller
 
     private function statusResponse(DuaSubmission $submission, string $message): RedirectResponse|JsonResponse
     {
-        if (request()->expectsJson()) {
+        if (request()->expectsJson() || request()->ajax()) {
             return response()->json([
                 'message' => $message,
                 'data' => (new DuaSubmissionResource($submission))->resolve(),

@@ -144,6 +144,12 @@ test('duplicate public submission refresh cannot duplicate owner notifications',
 test('submission transactional email listener is queued', function () {
     expect(new \App\Listeners\SendSubmissionTransactionalEmails(app(\App\Domains\Notifications\Services\TransactionalEmailService::class)))
         ->toBeInstanceOf(\Illuminate\Contracts\Queue\ShouldQueue::class);
+
+    expect(new \App\Listeners\SyncMailchimpOnSubmissionsCreated())
+        ->toBeInstanceOf(\Illuminate\Contracts\Queue\ShouldQueue::class);
+
+    expect(new \App\Jobs\ProcessDuaSubmissionsCreatedSideEffects(1, [1], 0))
+        ->toBeInstanceOf(\Illuminate\Contracts\Queue\ShouldQueue::class);
 });
 
 test('my submissions excludes requests received on owned lists', function () {

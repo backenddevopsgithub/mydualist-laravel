@@ -5,6 +5,8 @@ function csrfToken() {
 async function patchSubmissionStatus(url, method = 'PATCH') {
     const response = await fetch(url, {
         method,
+        credentials: 'same-origin',
+        redirect: 'manual',
         headers: {
             Accept: 'application/json',
             'Content-Type': 'application/json',
@@ -12,6 +14,10 @@ async function patchSubmissionStatus(url, method = 'PATCH') {
             'X-CSRF-TOKEN': csrfToken(),
         },
     });
+
+    if (response.type === 'opaqueredirect' || (response.status >= 300 && response.status < 400)) {
+        throw new Error('Unexpected page redirect while updating dua status.');
+    }
 
     const payload = await response.json().catch(() => ({}));
 
@@ -22,40 +28,98 @@ async function patchSubmissionStatus(url, method = 'PATCH') {
     return payload;
 }
 
+function syncSubmissionToggleButtons(card) {
+    const isCompleted = card.dataset.status === 'completed';
+
+    card.querySelectorAll('[data-submission-toggle="complete"]').forEach((button) => {
+        button.classList.toggle('hidden', isCompleted);
+        button.disabled = card.dataset.updating === 'true';
+    });
+
+    card.querySelectorAll('[data-submission-toggle="undo"]').forEach((button) => {
+        button.classList.toggle('hidden', ! isCompleted);
+        button.disabled = card.dataset.updating === 'true';
+    });
+}
+
+async function toggleSubmissionCard(card) {
+    if (card.dataset.updating === 'true') {
+        return;
+    }
+
+    const previousStatus = card.dataset.status;
+    const url = previousStatus === 'completed'
+        ? card.dataset.undoUrl
+        : card.dataset.completeUrl;
+    const optimisticStatus = previousStatus === 'completed' ? 'pending' : 'completed';
+
+    card.dataset.updating = 'true';
+    card.dataset.status = optimisticStatus;
+    syncSubmissionToggleButtons(card);
+
+    try {
+        const payload = await patchSubmissionStatus(url);
+        card.dataset.status = payload?.data?.status ?? optimisticStatus;
+    } catch (error) {
+        card.dataset.status = previousStatus;
+        window.alert(error instanceof Error ? error.message : 'Unable to update dua status.');
+    } finally {
+        card.dataset.updating = 'false';
+        syncSubmissionToggleButtons(card);
+    }
+}
+
+function initListSubmissionToggleDelegation() {
+    document.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-submission-toggle]');
+
+        if (! button) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const card = button.closest('[data-list-submission-card]');
+
+        if (! card) {
+            return;
+        }
+
+        toggleSubmissionCard(card);
+    });
+}
+
 function registerListSubmissionActions(Alpine) {
     Alpine.data('listSubmissionCard', (config) => ({
-        status: config.status,
-        updating: false,
         reportOpen: false,
-        reason: '',
+        reason: config.reason ?? '',
 
-        async toggleCompletion() {
-            if (this.updating) {
+        init() {
+            const card = this.$root;
+
+            if (! card?.hasAttribute('data-list-submission-card')) {
                 return;
             }
 
-            this.updating = true;
-
-            const url = this.status === 'completed'
-                ? config.undoUrl
-                : config.completeUrl;
-
-            try {
-                const payload = await patchSubmissionStatus(url);
-                this.status = payload?.data?.status ?? (this.status === 'completed' ? 'pending' : 'completed');
-            } catch (error) {
-                window.alert(error instanceof Error ? error.message : 'Unable to update dua status.');
-            } finally {
-                this.updating = false;
-            }
+            card.dataset.status = config.status;
+            card.dataset.completeUrl = config.completeUrl;
+            card.dataset.undoUrl = config.undoUrl;
+            syncSubmissionToggleButtons(card);
         },
     }));
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    if (window.Alpine) {
-        registerListSubmissionActions(window.Alpine);
-    }
-});
+if (typeof document !== 'undefined') {
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('[data-list-submission-card]').forEach(syncSubmissionToggleButtons);
+    });
+}
 
-export { patchSubmissionStatus, registerListSubmissionActions };
+export {
+    initListSubmissionToggleDelegation,
+    patchSubmissionStatus,
+    registerListSubmissionActions,
+    syncSubmissionToggleButtons,
+    toggleSubmissionCard,
+};

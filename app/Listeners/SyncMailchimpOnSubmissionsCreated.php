@@ -7,9 +7,10 @@ use App\Jobs\SyncMailchimpMemberToListJob;
 use App\Models\DuaSubmission;
 use App\Support\MailchimpConfiguration;
 use App\Support\MailchimpTag;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Collection;
 
-class SyncMailchimpOnSubmissionsCreated
+class SyncMailchimpOnSubmissionsCreated implements ShouldQueue
 {
     public function handle(DuaSubmissionsCreated $event): void
     {

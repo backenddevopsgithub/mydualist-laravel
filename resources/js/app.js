@@ -3,7 +3,7 @@ import Alpine from 'alpinejs';
 import 'flatpickr/dist/flatpickr.min.css';
 import 'intl-tel-input/dist/css/intlTelInput.css';
 import { registerDuaSuggestionsComponent } from './dua-suggestions/component';
-import { registerListSubmissionActions } from './list-submissions';
+import { registerListSubmissionActions, initListSubmissionToggleDelegation } from './list-submissions';
 import { initInfiniteScroll } from './infinite-scroll';
 import { initOnboardingDatePickers } from './onboarding-dates';
 
@@ -11,6 +11,7 @@ window.Alpine = Alpine;
 
 registerDuaSuggestionsComponent(Alpine);
 registerListSubmissionActions(Alpine);
+initListSubmissionToggleDelegation();
 
 window.copyToClipboard = async (text) => {
     if (navigator.clipboard && window.isSecureContext) {

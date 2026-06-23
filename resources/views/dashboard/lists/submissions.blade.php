@@ -184,6 +184,10 @@
                 @endphp
                 <article
                     class="overflow-hidden rounded-[1.65rem] border border-stone-950/10 bg-[#fffdfb] shadow-[0_14px_45px_rgba(15,23,42,0.07)] sm:rounded-[2rem] sm:shadow-[0_22px_70px_rgba(15,23,42,0.08)]"
+                    data-list-submission-card
+                    data-status="{{ $submission->status->value }}"
+                    data-complete-url="{{ route('dashboard.submissions.complete', [$duaList, $submission]) }}"
+                    data-undo-url="{{ route('dashboard.submissions.undo', [$duaList, $submission]) }}"
                     x-data="listSubmissionCard(@js([
                         'status' => $submission->status->value,
                         'completeUrl' => route('dashboard.submissions.complete', [$duaList, $submission]),
@@ -267,32 +271,32 @@
                         @elseif ($submission->status === App\Enums\DuaSubmissionStatus::Hidden)
                             <span class="text-sm font-extrabold text-emerald-50">Hidden</span>
                         @else
-                            <template x-if="status !== 'completed'">
-                                <button
-                                    type="button"
-                                    x-on:click="toggleCompletion()"
-                                    x-bind:disabled="updating"
-                                    class="shrink-0 flex h-12 w-12 items-center justify-center rounded-full bg-lime-400 text-emerald-950 shadow-[0_14px_32px_rgba(132,204,22,0.38)] ring-4 ring-[#fffdfb] transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60 sm:absolute sm:right-4 sm:-top-5 sm:h-16 sm:w-16 sm:shadow-[0_18px_45px_rgba(132,204,22,0.45)]"
-                                    aria-label="Mark dua complete"
-                                >
-                                    <svg class="h-7 w-7 sm:h-9 sm:w-9" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                        <path d="m5 12.5 4.2 4.2L19.5 6.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-                                    </svg>
-                                </button>
-                            </template>
-                            <template x-if="status === 'completed'">
-                                <button
-                                    type="button"
-                                    x-on:click="toggleCompletion()"
-                                    x-bind:disabled="updating"
-                                    class="shrink-0 flex h-12 w-12 items-center justify-center rounded-full bg-amber-300 text-amber-950 shadow-[0_14px_32px_rgba(251,191,36,0.3)] ring-4 ring-[#fffdfb] transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60 sm:absolute sm:right-4 sm:-top-5 sm:h-16 sm:w-16 sm:shadow-[0_18px_45px_rgba(251,191,36,0.35)]"
-                                    aria-label="Undo completion"
-                                >
-                                    <svg class="h-7 w-7 sm:h-8 sm:w-8" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                        <path d="M7 7h7a5 5 0 1 1 0 10H6M7 7V3M7 7H3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    </svg>
-                                </button>
-                            </template>
+                            <button
+                                type="button"
+                                data-submission-toggle="complete"
+                                @class([
+                                    'shrink-0 flex h-12 w-12 items-center justify-center rounded-full bg-lime-400 text-emerald-950 shadow-[0_14px_32px_rgba(132,204,22,0.38)] ring-4 ring-[#fffdfb] transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60 sm:absolute sm:right-4 sm:-top-5 sm:h-16 sm:w-16 sm:shadow-[0_18px_45px_rgba(132,204,22,0.45)]',
+                                    'hidden' => $submission->status === App\Enums\DuaSubmissionStatus::Completed,
+                                ])
+                                aria-label="Mark dua complete"
+                            >
+                                <svg class="h-7 w-7 sm:h-9 sm:w-9" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="m5 12.5 4.2 4.2L19.5 6.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
+                            <button
+                                type="button"
+                                data-submission-toggle="undo"
+                                @class([
+                                    'shrink-0 flex h-12 w-12 items-center justify-center rounded-full bg-amber-300 text-amber-950 shadow-[0_14px_32px_rgba(251,191,36,0.3)] ring-4 ring-[#fffdfb] transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60 sm:absolute sm:right-4 sm:-top-5 sm:h-16 sm:w-16 sm:shadow-[0_18px_45px_rgba(251,191,36,0.35)]',
+                                    'hidden' => $submission->status !== App\Enums\DuaSubmissionStatus::Completed,
+                                ])
+                                aria-label="Undo completion"
+                            >
+                                <svg class="h-7 w-7 sm:h-8 sm:w-8" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M7 7h7a5 5 0 1 1 0 10H6M7 7V3M7 7H3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
                         @endif
                     </div>
 
