@@ -35,7 +35,9 @@
             />
 
             <div>
-                <p class="block text-[1.075rem] font-bold text-stone-900">Occasion</p>
+                <p class="block text-[1.075rem] font-bold text-stone-900">
+                    Occasion<span class="ui-label-required" aria-hidden="true"> *</span>
+                </p>
                 <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
                     @foreach ($occasions as $value => $label)
                         <label

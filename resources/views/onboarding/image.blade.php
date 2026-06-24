@@ -32,6 +32,12 @@
         <input type="hidden" name="remove_image" value="0" x-ref="removeFlag">
 
         <div class="space-y-6">
+            <div class="space-y-2 text-sm leading-6 text-stone-700">
+                <p>Upload an image that we'll include in confirmation emails when you complete Duas.</p>
+                <p>We can also remind you closer to your start date.</p>
+                <p>This is optional.</p>
+            </div>
+
             <label class="group relative flex min-h-72 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-3xl border-2 border-dashed border-stone-300 bg-stone-50 px-6 py-10 text-center transition hover:border-emerald-400 hover:bg-emerald-50/50">
                 <template x-if="preview">
                     <img :src="preview" alt="Selected list cover preview" class="absolute inset-0 h-full w-full object-cover">
@@ -62,11 +68,6 @@
             @error('cover_image')
                 <p class="text-sm font-medium text-red-600">{{ $message }}</p>
             @enderror
-
-            <div class="rounded-2xl bg-emerald-50 p-4 text-sm leading-6 text-emerald-900 ring-1 ring-emerald-900/5">
-                <span class="font-bold">Pro Tip:</span>
-                Images make your list more engaging and can increase the dua requests you receive.
-            </div>
         </div>
 
         <div class="mt-10 flex items-center justify-between gap-4">

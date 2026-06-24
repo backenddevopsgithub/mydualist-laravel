@@ -5,6 +5,7 @@
     'type' => 'text',
     'value' => null,
     'placeholder' => null,
+    'required' => false,
 ])
 
 @php
@@ -29,6 +30,6 @@
     }
 @endphp
 
-<x-ui.field :name="$name" :label="$label" :description="$description" :for="$name" {{ $attributes->only('class') }}>
+<x-ui.field :name="$name" :label="$label" :description="$description" :for="$name" :required="$required" {{ $attributes->only('class') }}>
     <input {{ $inputAttributes }} />
 </x-ui.field>

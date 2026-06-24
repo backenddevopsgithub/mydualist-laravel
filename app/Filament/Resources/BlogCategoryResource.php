@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\BlogCategoryResource\Pages;
 use App\Models\BlogCategory;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables\Actions\EditAction;
@@ -27,6 +28,9 @@ class BlogCategoryResource extends Resource
             TextInput::make('name')->required()->maxLength(120),
             TextInput::make('slug')->required()->maxLength(120)->unique(ignoreRecord: true),
             TextInput::make('sort_order')->numeric()->default(0)->required(),
+            Toggle::make('show_in_resources_filter')
+                ->label('Show in Dua Resources filters')
+                ->default(true),
         ]);
     }
 
@@ -38,6 +42,7 @@ class BlogCategoryResource extends Resource
                 TextColumn::make('slug')->searchable()->sortable(),
                 TextColumn::make('posts_count')->counts('posts')->label('Posts'),
                 TextColumn::make('sort_order')->sortable(),
+                TextColumn::make('show_in_resources_filter')->label('Filter tab')->boolean(),
             ])
             ->actions([
                 EditAction::make(),

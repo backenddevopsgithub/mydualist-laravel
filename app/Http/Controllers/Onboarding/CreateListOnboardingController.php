@@ -50,8 +50,11 @@ class CreateListOnboardingController extends Controller
         return $this->redirectToFirstStep($state, $entitlements, $verification, creatorMode: true);
     }
 
-    public function show(string $step, OnboardingState $state): View|RedirectResponse
-    {
+    public function show(
+        string $step,
+        OnboardingState $state,
+        OnboardingVerificationService $verification,
+    ): View|RedirectResponse {
         if (! in_array($step, OnboardingState::STEPS, true)) {
             return redirect()->route('onboarding.start');
         }
@@ -62,6 +65,10 @@ class CreateListOnboardingController extends Controller
 
         if ($redirect = $this->guardStep($step, $state)) {
             return $redirect;
+        }
+
+        if ($step === 'verify') {
+            $this->prepareVerification($state, $verification);
         }
 
         $duaList = $this->completedList($state);
@@ -103,7 +110,7 @@ class CreateListOnboardingController extends Controller
         }
 
         return match ($step) {
-            'account' => $this->storeAccount($request, $state, $registerUser, $verification),
+            'account' => $this->storeAccount($request, $state, $registerUser),
             'list' => $this->storeList($request, $state),
             'dates' => $this->storeDates($request, $state),
             'image' => $this->storeImage($request, $state, $createDuaList),
@@ -143,13 +150,6 @@ class CreateListOnboardingController extends Controller
                 'current_step' => 'list',
                 'requires_verification' => ! Auth::user()->hasVerifiedEmail(),
             ];
-
-            if ($data['requires_verification']) {
-                $code = $verification->sendIfNeeded(Auth::user());
-                if ($code !== null) {
-                    $data['verification_code'] = $code;
-                }
-            }
 
             $state->merge($data);
 
@@ -203,7 +203,6 @@ class CreateListOnboardingController extends Controller
         Request $request,
         OnboardingState $state,
         RegisterUserAction $registerUser,
-        OnboardingVerificationService $verification,
     ): RedirectResponse {
         $data = $request->validate([
             'first_name' => ['required', 'string', 'max:60'],
@@ -220,7 +219,7 @@ class CreateListOnboardingController extends Controller
             'gender' => $data['gender'],
             'email' => $data['email'],
             'password' => $data['password'],
-            'device_name' => 'onboarding',
+            'issue_token' => false,
         ]);
 
         /** @var User $user */
@@ -228,16 +227,11 @@ class CreateListOnboardingController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
-        $code = $verification->sendIfNeeded($user);
-
         $state->merge([
             'user_id' => $user->id,
             'current_step' => 'list',
+            'requires_verification' => true,
         ]);
-
-        if ($code !== null) {
-            $state->merge(['verification_code' => $code]);
-        }
 
         return redirect()->route('onboarding.show', 'list');
     }
@@ -324,6 +318,7 @@ class CreateListOnboardingController extends Controller
         ]);
 
         if ($state->get('requires_verification', true)) {
+            $this->prepareVerification($state, app(OnboardingVerificationService::class));
             $state->merge(['current_step' => 'verify']);
 
             return redirect()->route('onboarding.show', 'verify');
@@ -342,6 +337,7 @@ class CreateListOnboardingController extends Controller
     private function finalizeOnboardingAfterImage(OnboardingState $state, CreateDuaListAction $createDuaList): RedirectResponse
     {
         if ($state->get('requires_verification', true)) {
+            $this->prepareVerification($state, app(OnboardingVerificationService::class));
             $state->merge(['current_step' => 'verify']);
 
             return redirect()->route('onboarding.show', 'verify');
@@ -457,5 +453,20 @@ class CreateListOnboardingController extends Controller
         }
 
         return $createDuaList($user, $payload);
+    }
+
+    private function prepareVerification(OnboardingState $state, OnboardingVerificationService $verification): void
+    {
+        $user = User::query()->find($state->get('user_id'));
+
+        if (! $user || $user->hasVerifiedEmail()) {
+            return;
+        }
+
+        $code = $verification->sendIfNeeded($user);
+
+        if ($code !== null) {
+            $state->merge(['verification_code' => $code]);
+        }
     }
 }

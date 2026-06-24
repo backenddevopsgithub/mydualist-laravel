@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 class BlogPost extends Model
 {
@@ -18,6 +19,7 @@ class BlogPost extends Model
         'slug',
         'excerpt',
         'content',
+        'faqs',
         'featured_image',
         'read_time_minutes',
         'is_published',
@@ -33,6 +35,7 @@ class BlogPost extends Model
             'is_published' => 'boolean',
             'published_at' => 'datetime',
             'read_time_minutes' => 'integer',
+            'faqs' => 'array',
         ];
     }
 
@@ -58,18 +61,46 @@ class BlogPost extends Model
 
     public function featuredImageUrl(): string
     {
-        if ($this->featured_image) {
-            if (str_starts_with($this->featured_image, 'http')) {
-                return $this->featured_image;
-            }
+        $fallback = (string) config('mydualist.blog.fallback_featured_image_url', '');
 
-            if (str_starts_with($this->featured_image, 'images/')) {
-                return asset($this->featured_image);
-            }
-
-            return asset('storage/'.$this->featured_image);
+        if (blank($this->featured_image)) {
+            return $fallback !== '' ? $fallback : $this->defaultFeaturedImageUrl();
         }
 
-        return asset('images/blog/pilgrim.png');
+        $image = $this->featured_image;
+
+        if (str_starts_with($image, 'http://') || str_starts_with($image, 'https://')) {
+            return $image;
+        }
+
+        if (str_starts_with($image, 'images/') && is_file(public_path($image))) {
+            return asset($image);
+        }
+
+        if (Storage::disk('public')->exists($image)) {
+            return Storage::disk('public')->url($image);
+        }
+
+        return $fallback !== '' ? $fallback : $this->defaultFeaturedImageUrl();
+    }
+
+    /**
+     * @return list<array{question: string, answer: string}>
+     */
+    public function displayFaqs(): array
+    {
+        return collect($this->faqs ?? [])
+            ->filter(fn (mixed $faq): bool => is_array($faq) && filled($faq['question'] ?? null) && filled($faq['answer'] ?? null))
+            ->map(fn (array $faq): array => [
+                'question' => (string) $faq['question'],
+                'answer' => (string) $faq['answer'],
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function defaultFeaturedImageUrl(): string
+    {
+        return 'https://www.mydualist.com/wp-content/uploads/2024/09/Sheikh-Asim-Khan-Article-Three-3-Key-Insights-from-Pfidas-Shariah-Compliant-Home-Finance-Podcast-with-Sheikh-Asim-Khan-image-1.png-1.png';
     }
 }

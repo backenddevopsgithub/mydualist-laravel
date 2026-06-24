@@ -117,6 +117,10 @@ return [
     ],
 
     'blog' => [
+        'fallback_featured_image_url' => env(
+            'MYDUALIST_BLOG_FALLBACK_IMAGE_URL',
+            'https://www.mydualist.com/wp-content/uploads/2024/09/Sheikh-Asim-Khan-Article-Three-3-Key-Insights-from-Pfidas-Shariah-Compliant-Home-Finance-Podcast-with-Sheikh-Asim-Khan-image-1.png-1.png',
+        ),
         'bismillah_image_url' => env(
             'MYDUALIST_BISMILLAH_IMAGE_URL',
             'https://thepilgrim.co/wp-content/uploads/2024/03/arabic-calligraphy-bismillah-first-verse-600nw-707955160-e1710954419173.webp',

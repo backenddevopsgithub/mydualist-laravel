@@ -7,6 +7,7 @@ use App\Models\BlogCategory;
 use App\Models\BlogPost;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -49,6 +50,20 @@ class BlogPostResource extends Resource
             TextInput::make('slug')->required()->maxLength(255)->unique(ignoreRecord: true),
             Textarea::make('excerpt')->rows(3)->maxLength(500)->columnSpanFull(),
             RichEditor::make('content')->required()->columnSpanFull(),
+            Repeater::make('faqs')
+                ->label('FAQs')
+                ->schema([
+                    TextInput::make('question')
+                        ->required()
+                        ->maxLength(255),
+                    Textarea::make('answer')
+                        ->required()
+                        ->rows(4)
+                        ->columnSpanFull(),
+                ])
+                ->reorderable()
+                ->collapsible()
+                ->columnSpanFull(),
             FileUpload::make('featured_image')
                 ->label('Featured image')
                 ->image()

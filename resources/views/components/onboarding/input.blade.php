@@ -5,6 +5,7 @@
     'placeholder' => '',
     'value' => null,
     'description' => null,
+    'required' => false,
 ])
 
 <x-ui.input
@@ -14,5 +15,6 @@
     :value="$value"
     :description="$description"
     :placeholder="$placeholder"
+    :required="$required"
     {{ $attributes }}
 />

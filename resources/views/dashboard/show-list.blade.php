@@ -160,7 +160,6 @@
                                         x-show="whatsapp"
                                         x-cloak
                                         class="mt-4 space-y-3 rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4"
-                                        x-effect="whatsapp && whatsappOtpStep === 'phone' && ! whatsappVerified ? ensureWhatsAppPhoneInputReady() : null"
                                     >
                                         <div x-show="! whatsappVerified">
                                             <div x-show="whatsappOtpStep === 'phone'" class="space-y-3">
@@ -170,14 +169,13 @@
                                                         id="whatsapp_phone_input"
                                                         type="tel"
                                                         x-ref="whatsappPhoneInput"
-                                                        x-on:input="onWhatsAppPhoneInput()"
-                                                        x-on:countrychange="onWhatsAppPhoneInput()"
-                                                        inputmode="tel"
+                                                        inputmode="numeric"
+                                                        pattern="[0-9]*"
                                                         autocomplete="tel"
                                                         class="mt-1 block w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-900 outline-none focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100"
                                                         aria-describedby="whatsapp_phone_help whatsapp_phone_country"
                                                     >
-                                                    <p id="whatsapp_phone_help" class="mt-2 text-xs text-stone-500">Select your country, then enter your local number. We'll send a verification code on WhatsApp.</p>
+                                                    <p id="whatsapp_phone_help" class="mt-2 text-xs text-stone-500">Select your country, then enter your mobile number without the country code.</p>
                                                     <p id="whatsapp_phone_country" class="sr-only" x-text="whatsappPhoneCountryLabel ? `Selected country: ${whatsappPhoneCountryLabel}` : 'No country selected yet.'"></p>
                                                     <input type="hidden" name="whatsapp_country_code" x-bind:value="whatsappCountryCode">
                                                     <input type="hidden" name="whatsapp_phone" x-bind:value="whatsappPhone">
@@ -213,7 +211,6 @@
 
                                         <p x-show="whatsappOtpError" x-text="whatsappOtpError" class="text-sm font-medium text-red-600"></p>
                                         <p x-show="whatsappOtpMessage" x-text="whatsappOtpMessage" class="text-sm font-semibold text-emerald-700"></p>
-                                        <p x-show="whatsappVerified" class="text-sm font-semibold text-emerald-700">WhatsApp verification completed!</p>
 
                                         <input type="hidden" name="whatsapp_verification_token" x-bind:value="whatsappVerificationToken">
                                         @error('whatsapp_verification_token') <p class="text-sm font-medium text-red-600">{{ $message }}</p> @enderror

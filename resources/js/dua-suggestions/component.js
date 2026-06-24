@@ -287,16 +287,12 @@ export function createPublicSubmissionForm(config) {
             this.whatsappOtpMessage = 'OTP resent!';
         },
 
-        onWhatsAppPhoneInput() {
-            if (this._whatsappIti) {
-                this.syncWhatsAppPhoneFromInput();
-            } else {
-                this.ensureWhatsAppPhoneInputReady();
-            }
-        },
-
         init() {
             this.bindWhatsAppPhoneWatchers();
+
+            if (this.whatsapp && this.whatsappOtpStep === 'phone' && ! this.whatsappVerified) {
+                this.ensureWhatsAppPhoneInputReady();
+            }
 
             if (this.step === 'duas') {
                 this.loadSuggestions();

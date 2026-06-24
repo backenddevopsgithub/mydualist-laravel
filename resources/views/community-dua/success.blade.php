@@ -32,5 +32,7 @@
                 <a href="{{ route('home') }}" class="mt-8 inline-flex rounded-2xl bg-emerald-900 px-5 py-3 text-sm font-extrabold text-white">Back to home</a>
             </div>
         </main>
+
+        @include('partials.marketing-footer')
     </body>
 </html>

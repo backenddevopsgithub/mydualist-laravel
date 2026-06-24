@@ -14,7 +14,18 @@ class BlogCategory extends Model
         'name',
         'slug',
         'sort_order',
+        'show_in_resources_filter',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'show_in_resources_filter' => 'boolean',
+        ];
+    }
 
     /**
      * @return HasMany<BlogPost, $this>
@@ -27,5 +38,10 @@ class BlogCategory extends Model
     public function scopeOrdered($query)
     {
         return $query->orderBy('sort_order')->orderBy('name');
+    }
+
+    public function scopeForResourcesFilter($query)
+    {
+        return $query->where('show_in_resources_filter', true);
     }
 }

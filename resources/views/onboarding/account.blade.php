@@ -17,11 +17,14 @@
             passwordConfirmation: '',
             gender: @js(old('gender', '')),
             terms: @js((bool) old('terms')),
+            passwordMeetsRequirements(value) {
+                return /^(?=.*[A-Z])(?=.*[!@#$%^&*]).{8,}$/.test(value);
+            },
             get canSubmit() {
                 return this.firstName.trim() !== ''
                     && this.lastName.trim() !== ''
                     && this.email.trim() !== ''
-                    && this.password.length >= 8
+                    && this.passwordMeetsRequirements(this.password)
                     && this.password === this.passwordConfirmation
                     && this.gender !== ''
                     && this.terms;
@@ -36,7 +39,9 @@
         </div>
 
         <div>
-            <p class="block text-[1.075rem] font-bold text-stone-900">Gender</p>
+            <p class="block text-[1.075rem] font-bold text-stone-900">
+                Gender<span class="ui-label-required" aria-hidden="true"> *</span>
+            </p>
             <div class="mt-3 grid grid-cols-2 gap-3">
                 @foreach (['male' => 'Male', 'female' => 'Female'] as $value => $label)
                     <label
@@ -54,7 +59,16 @@
         </div>
 
         <x-onboarding.input name="email" label="Email Address" type="email" placeholder="Enter your email address" autocomplete="email" required x-model="email" />
-        <x-onboarding.input name="password" label="Password" type="password" placeholder="Create a strong password" autocomplete="new-password" required x-model="password" />
+        <x-onboarding.input
+            name="password"
+            label="Password"
+            type="password"
+            placeholder="Create a strong password"
+            autocomplete="new-password"
+            description="Password must contain at least 1 capital letter, 1 special character, and be at least 8 characters long."
+            required
+            x-model="password"
+        />
         <x-onboarding.input name="password_confirmation" label="Confirm Password" type="password" placeholder="Confirm your password" autocomplete="new-password" required x-model="passwordConfirmation" />
 
         <label class="group flex cursor-pointer items-start gap-4 rounded-2xl border border-stone-200 bg-white p-4 text-[1.075rem] leading-7 text-stone-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50/40">
@@ -67,7 +81,7 @@
                 required
             >
             <span>
-                I agree to the Terms & Conditions and Privacy Policy.
+                I agree to the terms and conditions, and I consent to the processing of my personal data in accordance with the Privacy Policy, as required by GDPR.
                 @error('terms')
                     <span class="mt-1 block font-medium text-red-600">{{ $message }}</span>
                 @enderror

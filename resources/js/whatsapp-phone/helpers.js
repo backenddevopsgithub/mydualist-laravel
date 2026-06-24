@@ -3,6 +3,7 @@ import allCountries from 'intl-tel-input/data';
 const preferredIso2ByDialCode = {
     44: 'gb',
     1: 'us',
+    92: 'pk',
 };
 
 export function normalizeDigits(value) {
@@ -66,8 +67,86 @@ export function initialPhoneNumber(countryCode, nationalPhone) {
     return `+${dialDigits}${nationalDigits}`;
 }
 
-export function partsFromIti(iti) {
+export function resolveItiFromInput(input) {
+    if (! input?.iti) {
+        return null;
+    }
+
+    return input.iti;
+}
+
+export function selectedCountryFromIti(iti) {
     if (! iti) {
+        return null;
+    }
+
+    if (typeof iti.getSelectedCountry === 'function') {
+        return iti.getSelectedCountry();
+    }
+
+    if (typeof iti.getSelectedCountryData === 'function') {
+        return iti.getSelectedCountryData();
+    }
+
+    return null;
+}
+
+export function numberFromIti(iti) {
+    if (! iti || typeof iti.getNumber !== 'function') {
+        return '';
+    }
+
+    return iti.getNumber() ?? '';
+}
+
+export function isItiNumberValid(iti) {
+    if (! iti) {
+        return false;
+    }
+
+    const precise = iti.isValidNumberPrecise?.();
+    const standard = iti.isValidNumber?.();
+
+    return Boolean(precise ?? standard ?? false);
+}
+
+export function inputElementFromIti(iti, inputOverride = null) {
+    if (inputOverride) {
+        return inputOverride;
+    }
+
+    if (! iti) {
+        return null;
+    }
+
+    return iti.telInput ?? iti.ui?.telInputEl ?? null;
+}
+
+export function buildE164FromInput(dialCode, rawInput, separateDialCode = true) {
+    const dialDigits = normalizeDigits(dialCode);
+    const inputDigits = normalizeDigits(rawInput);
+
+    if (dialDigits === '' || inputDigits === '') {
+        return '';
+    }
+
+    if (separateDialCode) {
+        const national = inputDigits.replace(/^0+/, '');
+
+        return national === '' ? '' : `+${dialDigits}${national}`;
+    }
+
+    if (inputDigits.startsWith(dialDigits)) {
+        return `+${inputDigits}`;
+    }
+
+    return `+${dialDigits}${inputDigits.replace(/^0+/, '')}`;
+}
+
+export function partsFromIti(iti, { separateDialCode = true, input = null } = {}) {
+    const resolvedIti = resolveItiFromInput(input) ?? iti;
+
+    if (! resolvedIti) {
         return {
             countryCode: '',
             national: '',
@@ -79,20 +158,78 @@ export function partsFromIti(iti) {
         };
     }
 
-    const data = iti.getSelectedCountryData();
-    const e164 = iti.getNumber() ?? '';
-    const { countryCode, national } = splitE164Parts(e164, data.dialCode);
-    const valid = iti.isValidNumber?.() ?? iti.isValidNumberPrecise?.() ?? false;
+    const data = selectedCountryFromIti(resolvedIti) ?? {};
+    const dialCode = String(data.dialCode ?? '');
+    const inputEl = inputElementFromIti(resolvedIti, input);
+    const rawInput = inputEl?.value ?? '';
+    let e164 = numberFromIti(resolvedIti);
+
+    if (e164 === '') {
+        e164 = buildE164FromInput(dialCode, rawInput, separateDialCode);
+    }
+
+    const { countryCode, national } = splitE164Parts(e164, dialCode);
+    const resolvedNational = national !== ''
+        ? national
+        : normalizeDigits(rawInput).replace(/^0+/, '');
+    const resolvedE164 = e164 !== ''
+        ? e164
+        : buildE164FromInput(dialCode, rawInput, separateDialCode);
+    const valid = isItiNumberValid(resolvedIti);
 
     return {
-        countryCode,
-        national,
-        e164,
-        valid: Boolean(valid),
+        countryCode: countryCode || buildCountryCode(dialCode),
+        national: resolvedNational,
+        e164: resolvedE164,
+        valid,
         countryName: data.name ?? '',
         iso2: data.iso2 ?? '',
-        dialCode: data.dialCode ?? '',
+        dialCode,
+        rawInput,
     };
+}
+
+export function explainWhatsAppPhoneValidation(parts) {
+    if (! parts) {
+        return 'missing-parts';
+    }
+
+    if (parts.valid) {
+        return 'libphonenumber-valid';
+    }
+
+    const nationalDigits = normalizeDigits(parts.national);
+    const dialDigits = normalizeDigits(parts.dialCode || parts.countryCode);
+
+    if (dialDigits === '') {
+        return 'missing-dial-code';
+    }
+
+    if (nationalDigits === '') {
+        return 'missing-national-number';
+    }
+
+    if (parts.iso2 === 'pk' || dialDigits === '92') {
+        if (nationalDigits.length !== 10) {
+            return `pk-invalid-length-${nationalDigits.length}`;
+        }
+
+        if (! nationalDigits.startsWith('3')) {
+            return 'pk-must-start-with-3';
+        }
+
+        return 'pk-valid';
+    }
+
+    if (nationalDigits.length < 7) {
+        return 'national-too-short';
+    }
+
+    if (nationalDigits.length > 15) {
+        return 'national-too-long';
+    }
+
+    return 'generic-valid';
 }
 
 export function isWhatsAppPhoneValid(parts) {
@@ -104,14 +241,8 @@ export function isWhatsAppPhoneValid(parts) {
         return true;
     }
 
-    const nationalDigits = normalizeDigits(parts.national);
-    const dialDigits = normalizeDigits(parts.dialCode || parts.countryCode);
-
-    if (dialDigits === '' || nationalDigits === '') {
-        return false;
-    }
-
-    return nationalDigits.length >= 7 && nationalDigits.length <= 15;
+    return explainWhatsAppPhoneValidation(parts) === 'pk-valid'
+        || explainWhatsAppPhoneValidation(parts) === 'generic-valid';
 }
 
 export function whatsappPhoneCountryLabel(parts) {

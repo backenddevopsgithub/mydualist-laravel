@@ -34,6 +34,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\Password;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -61,6 +62,7 @@ class AppServiceProvider extends ServiceProvider
         $this->configureAnalyticsCacheInvalidation();
         $this->configureSubmissionCounters();
         $this->configureAuthEvents();
+        $this->configurePasswordDefaults();
 
         FilamentView::registerRenderHook(
             PanelsRenderHook::HEAD_END,
@@ -160,12 +162,33 @@ class AppServiceProvider extends ServiceProvider
         Event::forget(Registered::class);
     }
 
+    private function configurePasswordDefaults(): void
+    {
+        Password::defaults(fn () => Password::min(8)->mixedCase()->symbols());
+    }
+
     private function configureViewComposers(): void
     {
         View::composer(
             ['partials.marketing-footer', 'partials.cms-footer-links', 'partials.public-legal-footer'],
             function ($view): void {
                 $view->with('cmsFooterPages', app(CmsPageQueryService::class)->publishedFooterPages());
+            },
+        );
+
+        View::composer(
+            ['components.dashboard.sidebar', 'components.dashboard.mobile-menu'],
+            function ($view): void {
+                $user = auth()->user();
+
+                if (! $user) {
+                    return;
+                }
+
+                $view->with(
+                    'sidebarLists',
+                    app(\App\Domains\Lists\Services\DuaListQueryService::class)->sidebarListsForUser($user),
+                );
             },
         );
     }

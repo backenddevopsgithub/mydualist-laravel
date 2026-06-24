@@ -50,10 +50,11 @@ test('onboarding creates account and persists state between steps', function () 
     ]);
 
     $user = User::query()->where('email', 'onboarding@example.com')->firstOrFail();
-    Notification::assertSentTo($user, OnboardingVerificationCodeNotification::class);
+    Notification::assertNothingSent();
 
     expect(session(OnboardingState::SESSION_KEY.'.user_id'))->toBe($user->id)
-        ->and(session(OnboardingState::SESSION_KEY.'.verification_code'))->toHaveLength(4);
+        ->and(session(OnboardingState::SESSION_KEY.'.verification_code'))->toBeNull()
+        ->and($user->tokens()->count())->toBe(0);
 });
 
 test('onboarding validates list and date steps', function () {
@@ -102,8 +103,6 @@ test('onboarding completes end to end and creates first list', function () {
         'terms' => '1',
     ])->assertRedirect(route('onboarding.show', 'list'));
 
-    $code = session(OnboardingState::SESSION_KEY.'.verification_code');
-
     $this->post('/create-list/list', [
         'title' => 'Hajj 2027',
         'occasion' => 'hajj',
@@ -122,6 +121,10 @@ test('onboarding completes end to end and creates first list', function () {
     ])
         ->assertRedirect(route('onboarding.show', 'verify'));
 
+    $user = User::query()->where('email', 'creator@example.com')->firstOrFail();
+    Notification::assertSentTo($user, OnboardingVerificationCodeNotification::class);
+
+    $code = session(OnboardingState::SESSION_KEY.'.verification_code');
     $path = session(OnboardingState::SESSION_KEY.'.image.cover_image_path');
     expect($path)->toStartWith('list-covers/');
     Storage::disk('public')->assertExists($path);

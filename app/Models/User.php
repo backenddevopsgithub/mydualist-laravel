@@ -204,4 +204,15 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
     {
         $this->notify(new ResetPasswordNotification($token));
     }
+
+    public function displayName(): string
+    {
+        $fromParts = trim(((string) $this->first_name).' '.((string) $this->last_name));
+
+        if ($fromParts !== '') {
+            return $fromParts;
+        }
+
+        return trim((string) $this->name);
+    }
 }

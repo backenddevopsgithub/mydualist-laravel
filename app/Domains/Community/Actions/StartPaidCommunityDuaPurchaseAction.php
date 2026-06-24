@@ -11,6 +11,7 @@ use App\Enums\CommunityDuaType;
 use App\Models\BillingPurchase;
 use App\Models\CommunityDua;
 use App\Models\User;
+use App\Support\WhatsAppNotificationFieldsResolver;
 use Illuminate\Support\Str;
 
 class StartPaidCommunityDuaPurchaseAction extends Action
@@ -18,10 +19,11 @@ class StartPaidCommunityDuaPurchaseAction extends Action
     public function __construct(
         private readonly PurchaseService $purchases,
         private readonly PurchaseCheckoutRedirectResolver $redirects,
+        private readonly WhatsAppNotificationFieldsResolver $whatsappFields,
     ) {}
 
     /**
-     * @param  array{first_name: string, last_name: string, email: string, gender: string, content: string}  $data
+     * @param  array{first_name: string, last_name: string, email: string, gender: string, content: string, whatsapp_notifications?: bool|null, whatsapp_country_code?: string|null, whatsapp_phone?: string|null, whatsapp_verification_token?: string|null}  $data
      * @return array{purchase: BillingPurchase, community_dua: CommunityDua}
      */
     public function handle(mixed ...$args): mixed
@@ -29,12 +31,16 @@ class StartPaidCommunityDuaPurchaseAction extends Action
         $data = $args[0];
         /** @var User|null $user */
         $user = $args[1] ?? null;
+        $whatsapp = $this->whatsappFields->resolve($data);
 
         $communityDua = CommunityDua::query()->create([
             'first_name' => $data['first_name'],
             'last_name' => $data['last_name'],
             'email' => $data['email'],
             'gender' => $data['gender'],
+            'whatsapp_country_code' => $whatsapp['whatsapp_country_code'],
+            'whatsapp_phone' => $whatsapp['whatsapp_phone'],
+            'whatsapp_verified_at' => $whatsapp['whatsapp_verified_at'],
             'content' => $data['content'],
             'type' => CommunityDuaType::Paid,
             'status' => CommunityDuaStatus::PendingPayment,

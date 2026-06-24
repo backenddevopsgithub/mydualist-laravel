@@ -26,6 +26,9 @@ class CommunityDua extends Model
         'last_name',
         'email',
         'gender',
+        'whatsapp_country_code',
+        'whatsapp_phone',
+        'whatsapp_verified_at',
         'content',
         'type',
         'status',
@@ -51,6 +54,7 @@ class CommunityDua extends Model
             'completion_count' => 'integer',
             'is_visible' => 'boolean',
             'fulfilled_at' => 'datetime',
+            'whatsapp_verified_at' => 'datetime',
             'reported_at' => 'datetime',
         ];
     }

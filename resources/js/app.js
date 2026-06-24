@@ -3,13 +3,16 @@ import Alpine from 'alpinejs';
 import 'flatpickr/dist/flatpickr.min.css';
 import 'intl-tel-input/dist/css/intlTelInput.css';
 import { registerDuaSuggestionsComponent } from './dua-suggestions/component';
+import { registerCommunityDuaForm } from './community-dua/form';
 import { registerListSubmissionActions, initListSubmissionToggleDelegation } from './list-submissions';
 import { initInfiniteScroll } from './infinite-scroll';
 import { initOnboardingDatePickers } from './onboarding-dates';
+import { initBlogFilters } from './blog-filters';
 
 window.Alpine = Alpine;
 
 registerDuaSuggestionsComponent(Alpine);
+registerCommunityDuaForm(Alpine);
 registerListSubmissionActions(Alpine);
 initListSubmissionToggleDelegation();
 
@@ -58,6 +61,7 @@ window.copyToClipboard = async (text) => {
 document.addEventListener('DOMContentLoaded', () => {
     initOnboardingDatePickers();
     initInfiniteScroll();
+    initBlogFilters();
     const revealElements = document.querySelectorAll('.reveal-on-scroll, .feature-fade');
 
     if (! revealElements.length) {

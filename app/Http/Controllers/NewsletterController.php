@@ -15,7 +15,7 @@ class NewsletterController extends Controller
     {
         $subscription = NewsletterSubscription::query()->firstOrCreate(
             ['email' => $request->validated('email')],
-            ['source' => 'homepage'],
+            ['source' => $request->validated('source') ?? 'homepage'],
         );
 
         $message = $subscription->wasRecentlyCreated

@@ -3,10 +3,11 @@
 namespace App\Domains\Onboarding\Notifications;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class OnboardingVerificationCodeNotification extends Notification
+class OnboardingVerificationCodeNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 

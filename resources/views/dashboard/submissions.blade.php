@@ -8,7 +8,7 @@
                 <article class="rounded-[2rem] border border-emerald-950/10 bg-white p-6 shadow-[0_18px_60px_rgba(15,23,42,0.06)]">
                     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <div>
-                            <p class="text-sm font-bold uppercase tracking-[0.14em] text-emerald-700">{{ $submission->duaList->title }}</p>
+                            <p class="text-sm font-bold uppercase tracking-[0.14em] text-emerald-700">{{ $submission->submittedToDisplayName() }}</p>
                             <p class="mt-3 text-base leading-7 text-stone-700">{{ $submission->content }}</p>
                         </div>
                         <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-extrabold text-emerald-800">{{ Illuminate\Support\Str::headline($submission->status->value) }}</span>

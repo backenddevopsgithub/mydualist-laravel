@@ -248,6 +248,17 @@ class DuaSubmission extends Model
         return $name !== '' ? $name : 'Anonymous';
     }
 
+    public function submittedToDisplayName(): string
+    {
+        $ownerName = $this->duaList?->user?->displayName() ?? '';
+
+        if ($ownerName !== '') {
+            return $ownerName;
+        }
+
+        return (string) ($this->duaList?->title ?? 'Unknown list');
+    }
+
     public function isCompleted(): bool
     {
         return $this->status === DuaSubmissionStatus::Completed;

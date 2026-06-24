@@ -154,7 +154,11 @@ test('submission transactional email listener is queued', function () {
 
 test('my submissions excludes requests received on owned lists', function () {
     $owner = User::factory()->create(['email' => 'owner@example.com']);
-    $submitter = User::factory()->create(['email' => 'submitter@example.com']);
+    $submitter = User::factory()->create([
+        'email' => 'submitter@example.com',
+        'first_name' => 'Jane',
+        'last_name' => 'Smith',
+    ]);
     $ownedList = DuaList::factory()->create(['user_id' => $owner->id, 'title' => 'My Hajj List']);
     $otherList = DuaList::factory()->create(['user_id' => $submitter->id, 'title' => 'Friend List']);
 
@@ -175,8 +179,37 @@ test('my submissions excludes requests received on owned lists', function () {
     $this->actingAs($owner)
         ->get(route('dashboard.submissions'))
         ->assertOk()
+        ->assertSee('Jane Smith')
         ->assertSee('Submitted by me elsewhere')
+        ->assertDontSee('Friend List')
         ->assertDontSee('Received on my list');
+});
+
+test('my submissions falls back to list title when owner name is unavailable', function () {
+    $submitter = User::factory()->create([
+        'email' => 'submitter@example.com',
+        'first_name' => null,
+        'last_name' => null,
+        'name' => '',
+    ]);
+    $viewer = User::factory()->create(['email' => 'viewer@example.com']);
+    $list = DuaList::factory()->create([
+        'user_id' => $submitter->id,
+        'title' => 'Hajj 2026 Dua List',
+    ]);
+
+    DuaSubmission::factory()->create([
+        'dua_list_id' => $list->id,
+        'user_id' => $viewer->id,
+        'email' => 'viewer@example.com',
+        'content' => 'Please make dua for my family.',
+    ]);
+
+    $this->actingAs($viewer)
+        ->get(route('dashboard.submissions'))
+        ->assertOk()
+        ->assertSee('Hajj 2026 Dua List')
+        ->assertSee('Please make dua for my family.');
 });
 
 test('dashboard submission completion returns json without full page redirect', function () {

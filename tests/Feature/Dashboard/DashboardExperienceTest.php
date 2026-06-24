@@ -215,7 +215,14 @@ test('authenticated users can access the homepage', function () {
 
 test('upgrade and my submissions foundations render', function () {
     $user = User::factory()->create();
-    $duaList = DuaList::factory()->create(['user_id' => User::factory()->create()->id]);
+    $listOwner = User::factory()->create([
+        'first_name' => 'John',
+        'last_name' => 'Smith',
+    ]);
+    $duaList = DuaList::factory()->create([
+        'user_id' => $listOwner->id,
+        'title' => 'Hajj 2026 Dua List',
+    ]);
     DuaSubmission::factory()->create([
         'user_id' => $user->id,
         'dua_list_id' => $duaList->id,
@@ -234,7 +241,9 @@ test('upgrade and my submissions foundations render', function () {
         ->get(route('dashboard.submissions'))
         ->assertOk()
         ->assertSee('My Submissions')
-        ->assertSee('Please remember my family in your duas.');
+        ->assertSee('John Smith')
+        ->assertSee('Please remember my family in your duas.')
+        ->assertDontSee('Hajj 2026 Dua List');
 });
 
 test('public dua list renders from root slug and old list route redirects', function () {

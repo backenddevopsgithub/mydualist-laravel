@@ -3,6 +3,7 @@
     'label' => null,
     'description' => null,
     'for' => null,
+    'required' => false,
 ])
 
 @php
@@ -11,7 +12,9 @@
 
 <div {{ $attributes->class('ui-field') }}>
     @if ($label)
-        <label @if ($fieldId) for="{{ $fieldId }}" @endif class="ui-label">{{ $label }}</label>
+        <label @if ($fieldId) for="{{ $fieldId }}" @endif class="ui-label">
+            {{ $label }}@if ($required)<span class="ui-label-required" aria-hidden="true"> *</span>@endif
+        </label>
     @endif
 
     @if ($description)

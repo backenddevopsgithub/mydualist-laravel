@@ -11,6 +11,7 @@ use App\Listeners\LogEmailNotificationDelivery;
 use App\Listeners\RecordImpersonationEnded;
 use App\Listeners\RecordImpersonationStarted;
 use App\Listeners\SendCommunityDuaCompletedEmail;
+use App\Listeners\SendCommunityDuaCompletedWhatsApp;
 use App\Listeners\SendDuaCompletedEmail;
 use App\Listeners\SendDuaCompletedWhatsApp;
 use App\Listeners\SendListCreatedEmail;
@@ -49,6 +50,7 @@ class EventServiceProvider extends ServiceProvider
         ],
         CommunityDuaCompletedByPilgrim::class => [
             SendCommunityDuaCompletedEmail::class,
+            SendCommunityDuaCompletedWhatsApp::class,
         ],
         NotificationSent::class => [
             [LogEmailNotificationDelivery::class, 'handleSent'],

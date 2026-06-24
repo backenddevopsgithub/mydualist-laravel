@@ -35,6 +35,10 @@ class StoreCommunityDuaRequest extends FormRequest
             'gender' => ['required', 'string', Rule::in(SubmissionGenders::values())],
             'content' => ['required', 'string', 'min:3', new MaxWords(100)],
             'terms' => ['accepted'],
+            'whatsapp_notifications' => ['nullable', 'boolean'],
+            'whatsapp_country_code' => ['nullable', 'required_if:whatsapp_notifications,1', 'string', 'max:6'],
+            'whatsapp_phone' => ['nullable', 'required_if:whatsapp_notifications,1', 'string', 'max:20'],
+            'whatsapp_verification_token' => ['nullable', 'required_if:whatsapp_notifications,1', 'string', 'size:64'],
         ];
     }
 

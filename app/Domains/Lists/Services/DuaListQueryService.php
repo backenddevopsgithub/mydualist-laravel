@@ -37,6 +37,17 @@ class DuaListQueryService extends Service
     /**
      * @return Collection<int, DuaList>
      */
+    public function sidebarListsForUser(User $user): Collection
+    {
+        return $user->duaLists()
+            ->where('status', DuaList::STATUS_ACTIVE)
+            ->latest()
+            ->get(['id', 'title', 'slug']);
+    }
+
+    /**
+     * @return Collection<int, DuaList>
+     */
     public function listsForProfile(User $user): Collection
     {
         return $user->duaLists()->latest()->get();

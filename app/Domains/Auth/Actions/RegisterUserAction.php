@@ -36,6 +36,10 @@ class RegisterUserAction extends Action
                 'status' => UserStatus::Active,
             ]);
 
+            if (($data['issue_token'] ?? true) === false) {
+                return new AuthTokenData($user, '');
+            }
+
             return $this->authTokenService->issue(
                 $user,
                 $data['device_name'] ?? 'api-token',

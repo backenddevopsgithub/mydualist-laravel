@@ -18,6 +18,16 @@ class BlogController extends Controller
         [$query, $activeCategory, $search] = $this->buildPostsQuery($request);
         $posts = $query->paginate(9)->withQueryString();
 
+        if ($request->header('X-Blog-Filter') === 'category') {
+            return response()
+                ->view('blogs.partials.feed', compact('posts'))
+                ->withHeaders([
+                    'X-Infinite-Scroll-Has-More' => $posts->hasMorePages() ? 'true' : 'false',
+                    'X-Infinite-Scroll-Next-Page' => $posts->nextPageUrl() ?? '',
+                    'X-Infinite-Scroll-Page' => (string) $posts->currentPage(),
+                ]);
+        }
+
         if (PartialHtmlRequest::wants($request)) {
             return response()
                 ->view('blogs.partials.items', compact('posts'))
@@ -29,7 +39,7 @@ class BlogController extends Controller
         }
 
         return view('blogs.index', [
-            'categories' => BlogCategory::query()->ordered()->get(),
+            'categories' => BlogCategory::query()->forResourcesFilter()->ordered()->get(),
             'posts' => $posts,
             'activeCategory' => $activeCategory,
             'search' => $search,
@@ -61,6 +71,8 @@ class BlogController extends Controller
         return view('blogs.show', [
             'post' => $post,
             'relatedPosts' => $relatedPosts,
+            'supportOurCause' => app(\App\Domains\Blog\Services\SupportOurCauseSettings::class)->get(),
+            'supportOurCauseImageUrl' => app(\App\Domains\Blog\Services\SupportOurCauseSettings::class)->imageUrl(),
             'seo' => SeoPresenter::forBlogPost($post),
         ]);
     }

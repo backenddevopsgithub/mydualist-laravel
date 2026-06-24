@@ -9,6 +9,10 @@ use Illuminate\Http\UploadedFile;
 
 class CreateSupportTicketAction extends Action
 {
+    public function __construct(
+        private readonly NotifySupportTicketCreatedAction $notifySupportTicketCreated,
+    ) {}
+
     /**
      * @param  array{reason: string, email: string, first_name: string, surname: string, comments: string}  $data
      */
@@ -22,7 +26,7 @@ class CreateSupportTicketAction extends Action
 
         $imagePath = $image?->store('support-uploads', 'public');
 
-        return SupportTicket::query()->create([
+        $ticket = SupportTicket::query()->create([
             'user_id' => $user->id,
             'reason' => $data['reason'],
             'email' => $data['email'],
@@ -31,5 +35,9 @@ class CreateSupportTicketAction extends Action
             'comments' => $data['comments'],
             'image_path' => $imagePath,
         ]);
+
+        $this->notifySupportTicketCreated->handle($ticket);
+
+        return $ticket;
     }
 }

@@ -59,6 +59,10 @@
 
                         <div class="flex items-center gap-3">
                             <a href="{{ route('dashboard.profile') }}" class="hidden text-xs font-bold text-stone-800 transition hover:text-emerald-900 sm:inline">{{ $user->first_name ?: $user->name }}</a>
+                            <form method="POST" action="{{ route('logout') }}" class="hidden sm:block">
+                                @csrf
+                                <button type="submit" class="rounded-lg px-3 py-2 text-xs font-bold text-stone-800 transition hover:bg-red-50 hover:text-red-700">Log Out</button>
+                            </form>
                             <span class="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 text-xs font-extrabold text-emerald-900 ring-1 ring-emerald-900/5">
                                 {{ $initials ?: 'U' }}
                             </span>

@@ -1,0 +1,112 @@
+.list-submission-card-exit-complete,
+.list-submissions-enter [data-list-submission-card].list-submission-card-exit-complete,
+[data-list-submission-card].list-submission-card-exit-complete {
+    animation: list-submission-exit-complete 0.38s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+    pointer-events: none;
+}
+
+.list-submission-card-exit-undo,
+.list-submissions-enter [data-list-submission-card].list-submission-card-exit-undo,
+[data-list-submission-card].list-submission-card-exit-undo {
+    animation: list-submission-exit-undo 0.38s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+    pointer-events: none;
+}
+
+.list-submission-card--completed {
+    border-color: rgb(52 211 153 / 0.45);
+    box-shadow: 0 22px 70px rgb(16 185 129 / 0.12);
+}
+
+.list-submissions-enter > [data-list-submission-card],
+.list-submissions-enter [data-list-submission-card]:not(.list-submission-card-exit-complete):not(.list-submission-card-exit-undo) {
+    animation: list-submission-enter 0.42s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.list-submissions-enter > [data-list-submission-card]:nth-child(2),
+.list-submissions-enter [data-list-submission-card]:nth-child(2):not(.list-submission-card-exit-complete):not(.list-submission-card-exit-undo) {
+    animation-delay: 40ms;
+}
+
+.list-submissions-enter > [data-list-submission-card]:nth-child(3),
+.list-submissions-enter [data-list-submission-card]:nth-child(3):not(.list-submission-card-exit-complete):not(.list-submission-card-exit-undo) {
+    animation-delay: 80ms;
+}
+
+.submission-toggle-pulse-complete {
+    animation: submission-toggle-pulse-complete 0.45s ease;
+}
+
+.submission-toggle-pulse-undo {
+    animation: submission-toggle-pulse-undo 0.45s ease;
+}
+
+@keyframes list-submission-exit-complete {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateX(2.5rem);
+    }
+}
+
+@keyframes list-submission-exit-undo {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateX(-2.5rem);
+    }
+}
+
+@keyframes list-submission-enter {
+    from {
+        opacity: 0;
+        transform: translateX(var(--list-submission-enter-x, 2rem));
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes submission-toggle-pulse-complete {
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.12);
+        box-shadow: 0 0 0 0.5rem rgb(132 204 22 / 0.35);
+    }
+}
+
+@keyframes submission-toggle-pulse-undo {
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.1);
+        box-shadow: 0 0 0 0.5rem rgb(251 191 36 / 0.35);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .list-submission-card-exit-complete,
+    .list-submission-card-exit-undo,
+    .list-submissions-enter > [data-list-submission-card],
+    .list-submissions-enter [data-list-submission-card],
+    .submission-toggle-pulse-complete,
+    .submission-toggle-pulse-undo {
+        animation: none !important;
+    }
+}

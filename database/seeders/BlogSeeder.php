@@ -23,7 +23,10 @@ class BlogSeeder extends Seeder
         foreach ($categories as $category) {
             BlogCategory::query()->updateOrCreate(
                 ['slug' => $category['slug']],
-                $category,
+                [
+                    ...$category,
+                    'show_in_resources_filter' => ! in_array($category['slug'], ['daily-duas', 'homepage'], true),
+                ],
             );
         }
 

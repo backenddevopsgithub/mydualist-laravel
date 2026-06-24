@@ -25,7 +25,7 @@
         @csrf
 
         <div class="space-y-6">
-            <x-ui.field name="start_date" label="Start date">
+            <x-ui.field name="start_date" label="Start date" required>
                 <input
                     id="start_date"
                     name="start_date"
@@ -39,7 +39,7 @@
                 >
             </x-ui.field>
 
-            <x-ui.field name="end_date" label="End date">
+            <x-ui.field name="end_date" label="End date" required>
                 <input
                     id="end_date"
                     name="end_date"
