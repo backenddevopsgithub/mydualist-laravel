@@ -12,10 +12,16 @@ class RestoreDuaListAction extends Action
         /** @var DuaList $duaList */
         $duaList = $args[0];
 
-        $duaList->forceFill([
+        $updates = [
             'status' => DuaList::STATUS_ACTIVE,
-        ])->save();
+        ];
 
-        return $duaList;
+        if ($duaList->published_at === null) {
+            $updates['published_at'] = now();
+        }
+
+        $duaList->forceFill($updates)->save();
+
+        return $duaList->fresh();
     }
 }

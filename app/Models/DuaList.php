@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Domains\Lists\Support\DuaListAvailability;
 use App\Enums\DuaSubmissionStatus;
 use App\Support\DuaListOccasions;
 use App\Support\CreatorMode;
@@ -164,45 +165,37 @@ class DuaList extends Model
         return $this->status === self::STATUS_ACTIVE;
     }
 
+    public function availability(): DuaListAvailability
+    {
+        return app(DuaListAvailability::class);
+    }
+
     public function isExpired(): bool
     {
-        return $this->end_date?->isPast() ?? false;
+        return $this->availability()->isExpired($this);
     }
 
     public function acceptsSubmissions(): bool
     {
-        return $this->isActive()
-            && ! $this->isExpired()
-            && $this->published_at !== null
-            && $this->published_at->lte(now());
+        return $this->availability()->acceptsSubmissions($this);
     }
 
     public function closedReason(): ?string
     {
-        if ($this->isArchived()) {
-            return $this->publicClosedMessage();
-        }
-
-        if ($this->isExpired()) {
-            return $this->publicClosedMessage();
-        }
-
-        if (! $this->published_at || $this->published_at->isFuture()) {
-            return 'This list is not open for submissions yet.';
-        }
-
-        return null;
+        return $this->availability()->closedReason($this);
     }
 
     public function publicClosedMessage(): string
     {
-        $owner = $this->user;
-        $firstName = trim((string) ($owner?->first_name ?: Str::before((string) $owner?->name, ' '))) ?: 'The list owner';
-        $possessive = $owner?->gender === 'female' ? 'her' : 'his';
-        $occasion = $this->occasionLabel();
-        $date = $this->start_date?->format('jS F Y') ?? 'upcoming date';
+        return $this->availability()->publicClosedMessage($this);
+    }
 
-        return "{$firstName} is no longer accepting dua requests for {$possessive} {$occasion} trip on the {$date}. They may have received too many requests or had a change of plans.";
+    /**
+     * @return 'active'|'closed'
+     */
+    public function dashboardAvailability(): string
+    {
+        return $this->availability()->dashboardAvailability($this);
     }
 
     public function publicInviteMessage(): string
@@ -248,7 +241,7 @@ class DuaList extends Model
             return 'Ended';
         }
 
-        return $days === 0 ? 'Ends today' : ((int) $days).'d left';
+        return (int) $days === 0 ? 'Ends today' : ((int) $days).'d left';
     }
 
     public function daysRemainingUntilEnd(): int
